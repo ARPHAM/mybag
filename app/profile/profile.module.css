@@ -199,7 +199,7 @@
   /* Khớp với góc trên-phải của viền trái */
   right: 0;
   /* Khớp với góc trên-trái của viền phải */
-  height: 2px;
+  height: 1px;
   background: #00f0ff;
 }
 
@@ -208,11 +208,11 @@
   content: '';
   position: absolute;
   top: 0;
-  left: 10px;
+  left: 130px;
   width: 15px;
-  height: 4px;
+  height: 3px;
   background: #00f0ff;
-  clip-path: polygon(0 100%, 20% 0, 80% 0, 100% 100%);
+  clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%);
 }
 
 /* Viền phải của Active (Vát chéo 2 đầu bằng clip-path) */
