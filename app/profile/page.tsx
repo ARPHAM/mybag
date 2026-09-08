@@ -78,6 +78,7 @@ export default function SciFiDashboard() {
                     <div className={styles.activeBorderTop}></div>
                     <div className={styles.activeBorderRight}></div>
                     <div className={styles.activeBorderBottom}></div>
+                    <div className={styles.activeBorderLeft}></div>
                   </div>
                 )}
               </div>

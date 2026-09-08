@@ -60,7 +60,8 @@
   transform: rotateY(15deg) translateZ(0);
   transform-style: preserve-3d;
   transform-origin: right center;
-  padding-left: 15px;
+  padding-top: 4px;
+  padding-left: 4px;
   /* Khoảng trống cho viền trái */
 }
 
@@ -80,12 +81,12 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 30px;
+  width: 120px;
   height: 30px;
-  border-top: 2px solid #00f0ff;
+  border-top: 4px solid #00f0ff;
   border-left: 4px solid #00f0ff;
   box-shadow: -2px -2px 10px rgba(0, 240, 255, 0.6);
-  clip-path: polygon(0 0, 100% 0, 0 100%);
+  clip-path: polygon(0 0, 59px 0px, 61px 2px, 118px 2px, 120px 4px, 0 100%);
 }
 
 .sidebarMenu {
@@ -96,7 +97,6 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
 }
 
 .menuItem {
@@ -177,9 +177,8 @@
   top: 0;
   left: 0;
   bottom: 0;
-  right: -5px;
+  right: 0;
   background: linear-gradient(90deg, rgba(0, 150, 255, 0.6) 0%, rgba(0, 100, 255, 0.2) 100%);
-  clip-path: polygon(0 0, 95% 0, 100% 20%, 100% 100%, 0 100%);
   z-index: 1;
 }
 
@@ -189,6 +188,7 @@
   inset: 0;
   pointer-events: none;
   z-index: 3;
+  filter: drop-shadow(0 0 5px #00f0ff);
 }
 
 /* Viền trên của Active */
@@ -196,10 +196,11 @@
   position: absolute;
   top: 0;
   left: 0;
-  right: 8px;
+  /* Khớp với góc trên-phải của viền trái */
+  right: 0;
+  /* Khớp với góc trên-trái của viền phải */
   height: 2px;
   background: #00f0ff;
-  box-shadow: 0 0 8px #00f0ff;
 }
 
 /* Cái khía (notch) nhô lên xíu ở viền trên */
@@ -214,40 +215,40 @@
   clip-path: polygon(0 100%, 20% 0, 80% 0, 100% 100%);
 }
 
-/* Viền phải của Active (có góc cắt) */
+/* Viền phải của Active (Vát chéo 2 đầu bằng clip-path) */
 .activeBorderRight {
   position: absolute;
   top: 0;
   bottom: 0;
-  right: -5px;
-  width: 2px;
+  right: -6px;
+  /* Đẩy hẳn ra ngoài 6px để bao bọc khối nền */
+  width: 60px;
   background: #00f0ff;
-  box-shadow: 0 0 8px #00f0ff;
-  clip-path: polygon(0 20%, 100% 20%, 100% 100%, 0 100%);
-}
-
-/* Góc cắt xéo viền phải nối với viền trên */
-.activeBorderRight::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  right: -8px;
-  width: 12px;
-  height: 15px;
-  border-left: 2px solid #00f0ff;
-  transform: rotate(45deg);
-  box-shadow: -2px 0 5px #00f0ff;
+  clip-path: polygon(0 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 90% 12%, 83% 7%, 7% 7%);
 }
 
 /* Viền dưới của Active */
 .activeBorderBottom {
   position: absolute;
   bottom: 0;
-  left: 0;
-  right: -5px;
+  left: -3px;
+  /* Đâm ra ngoài 3px để khớp đúng với mũi nhọn của viền trái (50% của 6px) */
+  right: 0;
+  /* Khớp với góc dưới-trái của viền phải */
   height: 2px;
   background: #00f0ff;
-  box-shadow: 0 0 8px #00f0ff;
+}
+
+/* Viền trái của Active (Trên vát, dưới có tam giác bằng clip-path) */
+.activeBorderLeft {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -16px;
+  width: 20px;
+  border-left: 2px solid #00f0ff;
+  border-right: 12px solid #00f0ff;
+  clip-path: polygon(80% 0, 100% 0, 100% 90%, 80% 100%, 60% 100%, 40% 90%, 0 90%, 0 75%, 10% 70%, 20% 75%, 20% 60%, 0 70%, 0 30%, 40% 30%, 40% 20%);
 }
 
 /* ĐUÔI SIDEBAR */
