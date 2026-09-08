@@ -1,0 +1,371 @@
+@import url('https://fonts.googleapis.com/css2?family=Tauri&display=swap');
+
+.saoContainer {
+  min-height: 100vh;
+  /* A beautiful fantasy sky background resembling Aincrad */
+  background: url('https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop') center/cover fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Tauri', sans-serif;
+  user-select: none;
+  overflow: hidden;
+  position: relative;
+}
+
+.saoContainer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.saoWindow {
+  position: relative;
+  width: 100%;
+  max-width: 850px;
+  height: 550px;
+  display: flex;
+  gap: 30px;
+  z-index: 10;
+  animation: materialise 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  padding: 20px;
+}
+
+@keyframes materialise {
+  0% { transform: scale(0.95) translateY(20px); opacity: 0; filter: blur(10px); }
+  100% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); }
+}
+
+/* Left Menu Ring */
+.mainMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 40px;
+  width: 60px;
+}
+
+.menuIcon {
+  width: 55px;
+  height: 55px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  color: #555;
+}
+
+.menuIcon.active {
+  background: rgba(255, 150, 0, 0.95);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(255, 150, 0, 0.6), inset 0 0 10px rgba(255,255,255,0.4);
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+.menuIcon:hover:not(.active) {
+  background: white;
+  transform: scale(1.05);
+}
+
+.crystalCursor {
+  width: 16px;
+  height: 16px;
+  background: #f90;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  position: absolute;
+  left: -25px;
+  top: 50%;
+  transform: translateY(-50%);
+  animation: pulse 1.5s infinite alternate;
+}
+
+@keyframes pulse {
+  from { filter: drop-shadow(0 0 2px rgba(255,150,0,0.5)); }
+  to { filter: drop-shadow(0 0 8px rgba(255,150,0,1)); }
+}
+
+/* Main Status Panel */
+.statusPanel {
+  flex: 1;
+  background: rgba(245, 245, 250, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.3), inset 0 0 20px rgba(255,255,255,0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Add that SAO diagonal line decoration on corners */
+.statusPanel::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 30px; height: 30px;
+  background: linear-gradient(135deg, transparent 50%, rgba(200,200,200,0.8) 50%);
+}
+
+.panelHeader {
+  height: 40px;
+  background: linear-gradient(90deg, rgba(210,210,220,0.9) 0%, rgba(230,230,240,0.7) 100%);
+  border-bottom: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font-weight: 600;
+  color: #444;
+  letter-spacing: 1.5px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.panelContent {
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  height: 100%;
+}
+
+/* Player Identity */
+.identitySection {
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+}
+
+.playerName {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #111;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.playerLevel {
+  font-size: 1.4rem;
+  color: #f90;
+  font-weight: bold;
+}
+
+/* HP Bar */
+.hpContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hpLabel {
+  font-weight: bold;
+  color: #333;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.hpBarWrapper {
+  width: 100%;
+  height: 22px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 12px;
+  position: relative;
+  border: 1px solid rgba(0,0,0,0.3);
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.hpBarFill {
+  height: 100%;
+  background: linear-gradient(180deg, #74e565 0%, #3bb92b 100%);
+  width: 82%;
+  border-radius: 12px 0 0 12px;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.8), inset -2px 0 4px rgba(0,0,0,0.2);
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hpText {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: white;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+/* Stats Section */
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px 40px;
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dotted rgba(0,0,0,0.2);
+  padding-bottom: 4px;
+}
+
+.statLabel {
+  color: #666;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.statValue {
+  color: #111;
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+
+/* Equipment Mock */
+.equipmentSection {
+  margin-top: auto;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  color: #444;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 5px;
+  margin-bottom: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.equipGrid {
+  display: flex;
+  gap: 15px;
+}
+
+.equipSlot {
+  width: 65px;
+  height: 65px;
+  background: rgba(255,255,255,0.6);
+  border: 1px solid #c0c0c0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.03);
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #888;
+}
+
+.equipSlot:hover {
+  background: rgba(255,255,255,1);
+  border-color: #f90;
+  color: #f90;
+  box-shadow: 0 0 10px rgba(255,153,0,0.3);
+  transform: translateY(-2px);
+}
+
+/* Inventory / Items List */
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 10px;
+  max-height: 420px;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.itemRow:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #f90;
+  transform: translateX(8px);
+  box-shadow: -4px 4px 15px rgba(255,153,0,0.15);
+}
+
+.itemInfo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.itemIcon {
+  width: 42px;
+  height: 42px;
+  background: rgba(0,0,0,0.06);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  transition: all 0.2s;
+}
+
+.itemRow:hover .itemIcon {
+  color: white;
+  background: #f90;
+  box-shadow: 0 0 10px rgba(255,153,0,0.4);
+}
+
+.itemName {
+  font-weight: 600;
+  color: #333;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+}
+
+.itemQuantity {
+  font-weight: bold;
+  color: #777;
+  font-size: 1rem;
+  background: rgba(0,0,0,0.05);
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+.itemRow:hover .itemName {
+  color: #111;
+}
+
+.itemRow:hover .itemQuantity {
+  color: #f90;
+  background: rgba(255,153,0,0.1);
+}
+
+/* Custom Scrollbar for itemList */
+.itemList::-webkit-scrollbar {
+  width: 8px;
+}
+.itemList::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.05);
+  border-radius: 4px;
+}
+.itemList::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+}
+.itemList::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,153,0,0.6);
+}
