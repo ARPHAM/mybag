@@ -1,9 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Tauri&display=swap');
 
-.saoContainer {
+/* Main Container */
+.dashboardContainer {
   min-height: 100vh;
-  /* A beautiful fantasy sky background resembling Aincrad */
-  background: url('https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop') center/cover fixed;
+  /* Dark sci-fi anime background */
+  background: url('/image.png') center/cover fixed;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,361 +12,528 @@
   user-select: none;
   overflow: hidden;
   position: relative;
+  color: #fff;
 }
 
-.saoContainer::before {
+.dashboardContainer::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 15, 30, 0.6);
+  /* Darker overlay for contrast */
 }
 
-.saoWindow {
+.dashboardLayout {
   position: relative;
   width: 100%;
-  max-width: 850px;
-  height: 550px;
+  max-width: 1400px;
+  height: 90vh;
   display: flex;
-  gap: 30px;
+  gap: 20px;
   z-index: 10;
-  animation: materialise 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   padding: 20px;
+  animation: fadeIn 0.8s ease-out;
+  /* Thêm perspective để tạo hiệu ứng 3D */
+  perspective: 1200px;
 }
 
-@keyframes materialise {
-  0% { transform: scale(0.95) translateY(20px); opacity: 0; filter: blur(10px); }
-  100% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); }
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    filter: blur(5px);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
 }
 
-/* Left Menu Ring */
-.mainMenu {
+/* --- SIDEBAR (ULTRA GAME UI STYLE) --- */
+.sidebarContainer {
+  width: 240px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-top: 40px;
-  width: 60px;
+  position: relative;
+
+  /* 3D tilt effect */
+  transform: rotateY(15deg) translateZ(0);
+  transform-style: preserve-3d;
+  transform-origin: right center;
+  padding-left: 15px;
+  /* Khoảng trống cho viền trái */
+}
+
+/* Thanh ray sáng bên trái ngoài cùng */
+.sidebarLeftRail {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 20px;
+  width: 4px;
+  background: #00f0ff;
+  box-shadow: 0 0 10px #00f0ff, 0 0 20px #00f0ff;
+}
+
+/* Cắt góc vát ở đỉnh của thanh ray */
+.sidebarTopAccent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 30px;
+  height: 30px;
+  border-top: 2px solid #00f0ff;
+  border-left: 4px solid #00f0ff;
+  box-shadow: -2px -2px 10px rgba(0, 240, 255, 0.6);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.sidebarMenu {
+  background: rgba(4, 15, 30, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(0, 150, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.menuItem {
+  position: relative;
+  cursor: pointer;
+  padding: 0 15px;
+}
+
+/* Đường line phân cách giữa các thẻ (trừ active) */
+.menuItem:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 15px;
+  right: 15px;
+  height: 1px;
+  background: rgba(0, 200, 255, 0.15);
+}
+
+.menuItemInner {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px 5px;
+  color: #a0c4ff;
+  transition: all 0.2s ease;
+  z-index: 2;
+  position: relative;
 }
 
 .menuIcon {
-  width: 55px;
-  height: 55px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(255, 255, 255, 1);
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  color: #555;
+  color: #a0c4ff;
 }
 
-.menuIcon.active {
-  background: rgba(255, 150, 0, 0.95);
-  color: white;
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(255, 150, 0, 0.6), inset 0 0 10px rgba(255,255,255,0.4);
-  border-color: rgba(255, 255, 255, 0.9);
+.menuText {
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  font-family: 'Tauri', sans-serif;
 }
 
-.menuIcon:hover:not(.active) {
-  background: white;
-  transform: scale(1.05);
+.menuItem:hover .menuItemInner {
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0, 200, 255, 0.8);
 }
 
-.crystalCursor {
-  width: 16px;
-  height: 16px;
-  background: #f90;
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  position: absolute;
-  left: -25px;
-  top: 50%;
-  transform: translateY(-50%);
-  animation: pulse 1.5s infinite alternate;
+.menuItem:hover .menuIcon {
+  color: #fff;
+  filter: drop-shadow(0 0 5px #00f0ff);
 }
 
-@keyframes pulse {
-  from { filter: drop-shadow(0 0 2px rgba(255,150,0,0.5)); }
-  to { filter: drop-shadow(0 0 8px rgba(255,150,0,1)); }
+/* ACTIVE STATE */
+.menuItem.active {
+  z-index: 10;
 }
 
-/* Main Status Panel */
-.statusPanel {
-  flex: 1;
-  background: rgba(245, 245, 250, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  border-radius: 6px;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.3), inset 0 0 20px rgba(255,255,255,0.5);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
+.menuItem.active .menuItemInner {
+  color: #fff;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.6);
 }
 
-/* Add that SAO diagonal line decoration on corners */
-.statusPanel::before {
+.menuItem.active .menuIcon {
+  color: #fff;
+  filter: drop-shadow(0 0 8px #fff);
+}
+
+.menuItem.active::after {
+  display: none;
+}
+
+/* Background Active (chứa dải gradient và cắt vát hông phải) */
+.menuItem.active::before {
   content: '';
   position: absolute;
-  top: 0; right: 0;
-  width: 30px; height: 30px;
-  background: linear-gradient(135deg, transparent 50%, rgba(200,200,200,0.8) 50%);
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: -5px;
+  background: linear-gradient(90deg, rgba(0, 150, 255, 0.6) 0%, rgba(0, 100, 255, 0.2) 100%);
+  clip-path: polygon(0 0, 95% 0, 100% 20%, 100% 100%, 0 100%);
+  z-index: 1;
 }
 
-.panelHeader {
+/* KHỐI TRANG TRÍ VIỀN CHO ACTIVE ITEM */
+.activeDecorators {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Viền trên của Active */
+.activeBorderTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 8px;
+  height: 2px;
+  background: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff;
+}
+
+/* Cái khía (notch) nhô lên xíu ở viền trên */
+.activeBorderTop::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10px;
+  width: 15px;
+  height: 4px;
+  background: #00f0ff;
+  clip-path: polygon(0 100%, 20% 0, 80% 0, 100% 100%);
+}
+
+/* Viền phải của Active (có góc cắt) */
+.activeBorderRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -5px;
+  width: 2px;
+  background: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff;
+  clip-path: polygon(0 20%, 100% 20%, 100% 100%, 0 100%);
+}
+
+/* Góc cắt xéo viền phải nối với viền trên */
+.activeBorderRight::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -8px;
+  width: 12px;
+  height: 15px;
+  border-left: 2px solid #00f0ff;
+  transform: rotate(45deg);
+  box-shadow: -2px 0 5px #00f0ff;
+}
+
+/* Viền dưới của Active */
+.activeBorderBottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: -5px;
+  height: 2px;
+  background: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff;
+}
+
+/* ĐUÔI SIDEBAR */
+.sidebarBottomAccent {
+  position: relative;
   height: 40px;
-  background: linear-gradient(90deg, rgba(210,210,220,0.9) 0%, rgba(230,230,240,0.7) 100%);
-  border-bottom: 1px solid #ccc;
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  font-weight: 600;
-  color: #444;
-  letter-spacing: 1.5px;
-  font-size: 0.9rem;
-  text-transform: uppercase;
 }
 
-.panelContent {
-  padding: 30px 40px;
+.bottomAngledCut {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: rgba(4, 15, 30, 0.65);
+  clip-path: polygon(0 0, 100% 0, 100% 20%, 75% 100%, 0 100%);
+  border-bottom: 2px solid #00f0ff;
+  border-right: 1px solid rgba(0, 150, 255, 0.3);
+}
+
+.bottomTechLine {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 25%;
+  height: 2px;
+  background: #00f0ff;
+  box-shadow: 0 0 15px #00f0ff;
+}
+
+/* Vạch sáng nằm lửng lơ ở dưới đáy */
+.bottomTechLine::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 10px;
+  width: 30px;
+  height: 2px;
+  background: rgba(0, 240, 255, 0.8);
+}
+
+/* --- MAIN CONTENT AREA --- */
+.mainContent {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 30px;
-  height: 100%;
+  gap: 20px;
+  overflow: hidden;
 }
 
-/* Player Identity */
-.identitySection {
+/* --- HEADER --- */
+.header {
   display: flex;
-  align-items: baseline;
-  gap: 15px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 15px 25px;
+  background: rgba(10, 25, 45, 0.7);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(0, 200, 255, 0.3);
+  border-radius: 12px;
+  clip-path: polygon(15% 0, 100% 0, 100% 100%, 0 100%, 0 25%);
 }
 
-.playerName {
-  font-size: 3rem;
-  font-weight: 700;
-  color: #111;
-  line-height: 1;
-  letter-spacing: -1px;
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
-.playerLevel {
-  font-size: 1.4rem;
-  color: #f90;
+.avatarHex {
+  width: 70px;
+  height: 70px;
+  background: url('https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=200&auto=format&fit=crop') center/cover;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  border: 2px solid #00f0ff;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+  position: relative;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+.userName {
+  font-size: 1.8rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.userName::before {
+  content: '✝';
+  color: #00f0ff;
+  font-size: 1.5rem;
+}
+
+.userLevel {
+  color: #00f0ff;
+  font-size: 1rem;
   font-weight: bold;
 }
 
-/* HP Bar */
-.hpContainer {
+.userQuote {
+  font-size: 0.85rem;
+  color: #8ab4f8;
+  font-style: italic;
+  margin-top: 5px;
+}
+
+/* HP / MP Bars */
+.statusBars {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  margin-left: 40px;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.barLabel {
+  width: 30px;
+  text-align: right;
+  display: flex;
+  align-items: center;
   gap: 5px;
 }
 
-.hpLabel {
-  font-weight: bold;
-  color: #333;
-  font-size: 0.9rem;
-  display: flex;
-  justify-content: space-between;
+.barLabel.hp {
+  color: #00ffaa;
 }
 
-.hpBarWrapper {
-  width: 100%;
-  height: 22px;
-  background: rgba(0,0,0,0.15);
-  border-radius: 12px;
-  position: relative;
-  border: 1px solid rgba(0,0,0,0.3);
+.barLabel.mp {
+  color: #00aaff;
+}
+
+.barWrapper {
+  width: 250px;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
   overflow: hidden;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+  position: relative;
+  clip-path: polygon(0 0, 95% 0, 100% 100%, 5% 100%);
 }
 
-.hpBarFill {
+.barFill {
   height: 100%;
-  background: linear-gradient(180deg, #74e565 0%, #3bb92b 100%);
-  width: 82%;
-  border-radius: 12px 0 0 12px;
-  box-shadow: inset 0 1px 2px rgba(255,255,255,0.8), inset -2px 0 4px rgba(0,0,0,0.2);
-  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px currentColor;
 }
 
-.hpText {
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: white;
-  font-weight: bold;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-  font-size: 0.85rem;
-  letter-spacing: 1px;
+.barFill.hp {
+  background: linear-gradient(90deg, #008855, #00ffaa);
+  color: #00ffaa;
 }
 
-/* Stats Section */
-.statsGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px 40px;
+.barFill.mp {
+  background: linear-gradient(90deg, #005588, #00aaff);
+  color: #00aaff;
 }
 
-.statRow {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px dotted rgba(0,0,0,0.2);
-  padding-bottom: 4px;
+.barValues {
+  width: 80px;
+  color: #ccc;
+  font-size: 0.8rem;
 }
 
-.statLabel {
-  color: #666;
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.statValue {
-  color: #111;
-  font-weight: bold;
-  font-size: 1.05rem;
-}
-
-/* Equipment Mock */
-.equipmentSection {
-  margin-top: auto;
-}
-
-.sectionTitle {
-  font-size: 1rem;
-  color: #444;
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 5px;
-  margin-bottom: 15px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.equipGrid {
-  display: flex;
-  gap: 15px;
-}
-
-.equipSlot {
-  width: 65px;
-  height: 65px;
-  background: rgba(255,255,255,0.6);
-  border: 1px solid #c0c0c0;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.03);
-  cursor: pointer;
-  transition: all 0.2s;
-  color: #888;
-}
-
-.equipSlot:hover {
-  background: rgba(255,255,255,1);
-  border-color: #f90;
-  color: #f90;
-  box-shadow: 0 0 10px rgba(255,153,0,0.3);
-  transform: translateY(-2px);
-}
-
-/* Inventory / Items List */
-.itemList {
+/* Date Time Section */
+.dateTime {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-  padding-right: 10px;
-  max-height: 420px;
+  align-items: flex-end;
+  color: #8ab4f8;
+  font-size: 0.9rem;
+  gap: 5px;
 }
 
-.itemRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 15px;
-  background: rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(0,0,0,0.1);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.itemRow:hover {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: #f90;
-  transform: translateX(8px);
-  box-shadow: -4px 4px 15px rgba(255,153,0,0.15);
-}
-
-.itemInfo {
+.weatherRow {
   display: flex;
   align-items: center;
   gap: 15px;
 }
 
-.itemIcon {
-  width: 42px;
-  height: 42px;
-  background: rgba(0,0,0,0.06);
-  border-radius: 6px;
+.time {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.date {
+  font-size: 0.85rem;
+}
+
+/* --- DASHBOARD GRID --- */
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 15px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Generic Widget Card */
+.widgetCard {
+  background: rgba(10, 25, 45, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.widgetCard:hover {
+  border-color: rgba(0, 200, 255, 0.5);
+  box-shadow: 0 0 15px rgba(0, 200, 255, 0.15);
+}
+
+.widgetHeader {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #555;
-  transition: all 0.2s;
+  gap: 10px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid rgba(0, 200, 255, 0.2);
+  padding-bottom: 8px;
 }
 
-.itemRow:hover .itemIcon {
-  color: white;
-  background: #f90;
-  box-shadow: 0 0 10px rgba(255,153,0,0.4);
+.widgetIcon {
+  color: #00f0ff;
 }
 
-.itemName {
-  font-weight: 600;
-  color: #333;
-  font-size: 1.05rem;
-  letter-spacing: 0.5px;
-}
-
-.itemQuantity {
+.widgetTitle {
   font-weight: bold;
-  color: #777;
-  font-size: 1rem;
-  background: rgba(0,0,0,0.05);
-  padding: 4px 12px;
-  border-radius: 12px;
+  font-size: 1.1rem;
+  color: #fff;
+  letter-spacing: 1px;
 }
 
-.itemRow:hover .itemName {
-  color: #111;
+.widgetSubtitle {
+  font-size: 0.75rem;
+  color: #8ab4f8;
+  margin-left: auto;
 }
 
-.itemRow:hover .itemQuantity {
-  color: #f90;
-  background: rgba(255,153,0,0.1);
+.widgetContent {
+  flex: 1;
+  overflow-y: auto;
 }
 
-/* Custom Scrollbar for itemList */
-.itemList::-webkit-scrollbar {
-  width: 8px;
+/* Custom Scrollbar for widget content */
+.widgetContent::-webkit-scrollbar {
+  width: 4px;
 }
-.itemList::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.05);
-  border-radius: 4px;
+
+.widgetContent::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
 }
-.itemList::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.2);
-  border-radius: 4px;
+
+.widgetContent::-webkit-scrollbar-thumb {
+  background: rgba(0, 200, 255, 0.3);
+  border-radius: 2px;
 }
-.itemList::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,153,0,0.6);
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #557;
+  gap: 10px;
+  text-align: center;
+  font-size: 0.9rem;
 }
