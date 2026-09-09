@@ -1,0 +1,273 @@
+.healthContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  animation: fadeIn 0.5s ease-out;
+  padding-right: 10px;
+}
+
+.healthContainer::-webkit-scrollbar {
+  width: 6px;
+}
+.healthContainer::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+.healthContainer::-webkit-scrollbar-thumb {
+  background: rgba(var(--sao-primary-rgb), 0.4);
+  border-radius: 3px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(10, 25, 45, 0.7);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  border-radius: 8px;
+  clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
+  padding: 15px 25px;
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.titleIcon {
+  color: var(--sao-primary-hex);
+  filter: drop-shadow(0 0 8px rgba(var(--sao-primary-rgb), 0.6));
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.gridStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.statCard {
+  background: rgba(10, 25, 45, 0.6);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.2);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.3s;
+  clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+  position: relative;
+}
+
+.statCard:hover {
+  background: rgba(15, 35, 60, 0.8);
+  border-color: rgba(var(--sao-primary-rgb), 0.5);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.2);
+}
+
+.statHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #a0c4ff;
+  font-size: 1rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.statValue {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.statUnit {
+  font-size: 1rem;
+  color: #a0c4ff;
+  font-weight: normal;
+}
+
+.statFooter {
+  font-size: 0.9rem;
+  color: var(--sao-primary-hex);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.warningText {
+  color: var(--sao-primary-hex);
+}
+
+.dangerText {
+  color: #ff4444;
+}
+
+.actionButton {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: transparent;
+  border: none;
+  color: var(--sao-primary-hex);
+  cursor: pointer;
+  transition: all 0.2s;
+  opacity: 0.5;
+}
+
+.actionButton:hover {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px var(--sao-primary-hex));
+  transform: scale(1.1);
+}
+
+/* CHART SECTION */
+.chartSection {
+  background: rgba(10, 25, 45, 0.6);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.2);
+  padding: 20px;
+  clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+  margin-top: 10px;
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chartTitle {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(var(--sao-primary-rgb), 0.1);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.5);
+  color: var(--sao-primary-hex);
+  padding: 8px 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  font-weight: bold;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.logButton:hover {
+  background: rgba(var(--sao-primary-rgb), 0.2);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.3);
+}
+
+.chartContainer {
+  height: 300px;
+  width: 100%;
+}
+
+/* FORM ELEMENTS FOR MODALS */
+.formGroup {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formGroup label {
+  font-size: 0.9rem;
+  color: #a0c4ff;
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  border-radius: 4px;
+  padding: 10px 15px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--sao-primary-hex);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.2);
+}
+
+.input[type="time"], .input[type="date"] {
+  color-scheme: dark;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.cancelBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.cancelBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.saveBtn {
+  background: rgba(var(--sao-primary-rgb), 0.15);
+  border: 1px solid var(--sao-primary-hex);
+  color: var(--sao-primary-hex);
+}
+
+.saveBtn:hover {
+  background: rgba(var(--sao-primary-rgb), 0.3);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.4);
+}

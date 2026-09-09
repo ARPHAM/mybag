@@ -1,0 +1,85 @@
+/* --- DASHBOARD GRID --- */
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 15px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Generic Widget Card */
+.widgetCard {
+  background: rgba(10, 25, 45, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.widgetCard:hover {
+  border-color: rgba(0, 200, 255, 0.5);
+  box-shadow: 0 0 15px rgba(0, 200, 255, 0.15);
+}
+
+.widgetHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid rgba(0, 200, 255, 0.2);
+  padding-bottom: 8px;
+}
+
+.widgetIcon {
+  color: #00f0ff;
+}
+
+.widgetTitle {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+.widgetSubtitle {
+  font-size: 0.75rem;
+  color: #8ab4f8;
+  margin-left: auto;
+}
+
+.widgetContent {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar for widget content */
+.widgetContent::-webkit-scrollbar {
+  width: 4px;
+}
+
+.widgetContent::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.widgetContent::-webkit-scrollbar-thumb {
+  background: rgba(0, 200, 255, 0.3);
+  border-radius: 2px;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #557;
+  gap: 10px;
+  text-align: center;
+  font-size: 0.9rem;
+}

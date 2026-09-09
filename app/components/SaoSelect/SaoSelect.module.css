@@ -1,0 +1,73 @@
+.selectContainer {
+  position: relative;
+  width: 100%;
+  font-family: inherit;
+}
+
+.selectTrigger {
+  width: 100%;
+  background: rgba(10, 25, 45, 0.6);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  color: #fff;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.selectTrigger:hover, .selectTrigger.isOpen {
+  border-color: var(--sao-primary-hex);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.2);
+  background: rgba(15, 35, 60, 0.8);
+}
+
+.arrow {
+  color: var(--sao-primary-hex);
+  transition: transform 0.3s;
+}
+
+.arrow.isOpen {
+  transform: rotate(180deg);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: 100%;
+  background: rgba(10, 25, 45, 0.95);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.5);
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+.option {
+  padding: 12px 15px;
+  color: #a0c4ff;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 1px solid rgba(var(--sao-primary-rgb), 0.1);
+}
+
+.option:last-child {
+  border-bottom: none;
+}
+
+.option:hover, .option.selected {
+  background: rgba(var(--sao-primary-rgb), 0.2);
+  color: #fff;
+  padding-left: 25px; /* SAO slide-in hover effect */
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

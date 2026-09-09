@@ -1,0 +1,348 @@
+.tasksContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(10, 25, 45, 0.7);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  border-radius: 8px;
+  clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
+  padding: 15px 25px;
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.titleIcon {
+  color: var(--sao-primary-hex);
+  filter: drop-shadow(0 0 8px rgba(var(--sao-primary-rgb), 0.6));
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.progressSection {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.progressText {
+  color: #a0c4ff;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.progressBarWrapper {
+  width: 200px;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--sao-primary-hex), #ffcc00);
+  box-shadow: 0 0 10px var(--sao-primary-hex);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.taskList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 10px;
+  padding-bottom: 20px;
+}
+
+.taskList::-webkit-scrollbar {
+  width: 6px;
+}
+.taskList::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+.taskList::-webkit-scrollbar-thumb {
+  background: rgba(var(--sao-primary-rgb), 0.4);
+  border-radius: 3px;
+}
+
+.taskCard {
+  display: flex;
+  align-items: center;
+  background: rgba(10, 25, 45, 0.6);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.2);
+  padding: 15px 25px;
+  gap: 20px;
+  transition: all 0.2s;
+  clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+  position: relative;
+}
+
+.taskCard:hover {
+  background: rgba(15, 35, 60, 0.8);
+  border-color: rgba(var(--sao-primary-rgb), 0.5);
+}
+
+.taskCard.completed {
+  background: rgba(5, 15, 25, 0.4);
+  border-color: rgba(var(--sao-primary-rgb), 0.2);
+}
+
+.checkboxContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.checkbox {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--sao-primary-hex);
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.taskCard:hover .checkbox {
+  border-color: var(--sao-primary-hex);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
+}
+
+.taskCard.completed .checkbox {
+  background: rgba(var(--sao-primary-rgb), 0.2);
+  border-color: var(--sao-primary-hex);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.5);
+}
+
+.checkIcon {
+  color: var(--sao-primary-hex);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.2s;
+}
+
+.taskCard.completed .checkIcon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.taskContent {
+  flex: 1;
+}
+
+.taskName {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #fff;
+  transition: all 0.2s;
+  margin-bottom: 4px;
+}
+
+.taskCard.completed .taskName {
+  color: #6c8caf;
+  text-decoration: line-through;
+}
+
+.taskDesc {
+  font-size: 0.9rem;
+  color: #a0c4ff;
+}
+
+.taskCard.completed .taskDesc {
+  color: #4a6a8a;
+}
+
+
+.addButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(var(--sao-primary-rgb), 0.1);
+  border: 1px dashed rgba(var(--sao-primary-rgb), 0.5);
+  color: var(--sao-primary-hex);
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  font-size: 1.1rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+.addButton:hover {
+  background: rgba(var(--sao-primary-rgb), 0.2);
+  border-style: solid;
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.3);
+}
+
+/* FORM ELEMENTS FOR MODAL CONTENT */
+.formGroup {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formGroup label {
+  font-size: 0.9rem;
+  color: #a0c4ff;
+  font-weight: 500;
+}
+
+.input, .textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  border-radius: 4px;
+  padding: 10px 15px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.input:focus, .textarea:focus {
+  outline: none;
+  border-color: var(--sao-primary-hex);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.2);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.cancelBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.cancelBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.saveBtn {
+  background: rgba(var(--sao-primary-rgb), 0.15);
+  border: 1px solid var(--sao-primary-hex);
+  color: var(--sao-primary-hex);
+}
+
+.saveBtn:hover {
+  background: rgba(var(--sao-primary-rgb), 0.3);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.4);
+}
+
+/* Confirm Delete Modal text */
+.confirmText {
+  color: #fff;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.deleteBtnConfirm {
+  background: rgba(255, 68, 68, 0.15);
+  border: 1px solid #ff4444;
+  color: #ff4444;
+}
+
+.deleteBtnConfirm:hover {
+  background: rgba(255, 68, 68, 0.3);
+  box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+}
+
+/* TASK ACTIONS */
+.taskActions {
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all 0.2s;
+}
+
+.taskCard:hover .taskActions {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.actionBtn {
+  background: transparent;
+  border: none;
+  color: #a0c4ff;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.actionBtn:hover {
+  color: var(--sao-primary-hex);
+  filter: drop-shadow(0 0 5px var(--sao-primary-hex));
+}
+
+.actionBtn.deleteBtn:hover {
+  color: #ff4444;
+  filter: drop-shadow(0 0 5px #ff4444);
+}
