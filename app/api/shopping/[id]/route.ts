@@ -4,7 +4,7 @@ import dbConnect from '@/lib/db';
 import ShoppingItem from '@/models/ShoppingItem';
 import { verifyToken } from '@/lib/auth';
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await dbConnect();
     const cookieStore = await cookies();
@@ -39,7 +39,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await dbConnect();
     const cookieStore = await cookies();

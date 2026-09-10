@@ -16,7 +16,7 @@ const EXP_REWARDS = {
 // Calculate required EXP for next level (simple scaling)
 const getExpForNextLevel = (level: number) => level * 500;
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await dbConnect();
     const cookieStore = await cookies();
@@ -130,7 +130,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await dbConnect();
     const cookieStore = await cookies();
