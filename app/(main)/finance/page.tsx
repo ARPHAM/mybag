@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from 'react';
-import { Wallet, Plus, ArrowUpRight, ArrowDownRight, Activity, CreditCard, Clock, Users, Package, ArrowRightLeft, Building2, Smartphone, Banknote, Coffee, Home as HomeIcon, ShoppingBag, Gamepad2, Car, AlertTriangle, ArrowDown, ArrowUp, CalendarDays, User, Calendar, CheckCircle2, Minus, ShieldAlert, Wheat, Edit3, Save, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Wallet, Plus, ArrowUpRight, ArrowDownRight, Activity, CreditCard, Clock, Users, Package, ArrowRightLeft, Building2, Smartphone, Banknote, Coffee, Home as HomeIcon, ShoppingBag, Gamepad2, Car, AlertTriangle, ArrowDown, ArrowUp, CalendarDays, User, Calendar, CheckCircle2, Minus, ShieldAlert, Wheat, Edit3, Save, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 import SaoModal from '../../components/SaoModal/SaoModal';
 import SaoSelect from '../../components/SaoSelect/SaoSelect';
 import SaoTabs from '../../components/SaoTabs/SaoTabs';
+import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
+import { useSaoAlert } from '../../contexts/AlertContext';
 import styles from './finance.module.css';
 
 type TabId = 'overview' | 'wallets' | 'budgets' | 'history' | 'debts' | 'inventory';
@@ -71,6 +73,74 @@ export default function FinancePage() {
   const [historyFilter, setHistoryFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [debtFilter, setDebtFilter] = useState<'all' | 'lent' | 'borrowed'>('all');
 
+  const [wallets, setWallets] = useState<WalletSource[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Form states
+  const [walletForm, setWalletForm] = useState({ name: '', type: 'bank', color: '#00f0ff', balance: '' });
+  const [txForm, setTxForm] = useState({ type: 'expense', amount: '', date: new Date().toISOString().split('T')[0], description: '', wallet_id: '', to_wallet_id: '' });
+
+  const { showAlert, showConfirm } = useSaoAlert();
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [wRes, tRes] = await Promise.all([
+        fetch('/api/finance/wallets'),
+        fetch('/api/finance/transactions')
+      ]);
+      const wData = await wRes.json();
+      const tData = await tRes.json();
+      
+      if (wRes.ok) {
+        setWallets(wData.map((w: any) => ({
+          id: w._id,
+          name: w.name,
+          balance: w.balance,
+          type: w.type,
+          color: w.color
+        })));
+      }
+      if (tRes.ok) {
+        setTransactions(tData.map((t: any) => ({
+          id: t._id,
+          type: t.type,
+          amount: t.amount,
+          date: t.date.split('T')[0],
+          description: t.description,
+          walletName: t.walletName
+        })));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    showConfirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được tính toán hoàn trả tương ứng.', async () => {
+      try {
+        const res = await fetch(`/api/finance/transactions/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          fetchData();
+          if (isModalOpen) setIsModalOpen(false);
+        } else {
+          const err = await res.json();
+          showAlert(err.error || 'Lỗi khi xóa giao dịch');
+        }
+      } catch (err) {
+        console.error(err);
+        showAlert('Lỗi hệ thống');
+      }
+    });
+  };
+
   const tabs: { id: TabId; label: string; icon: any }[] = [
     { id: 'overview', label: 'Tổng quan', icon: Activity },
     { id: 'wallets', label: 'Nguồn tiền', icon: Wallet },
@@ -80,28 +150,13 @@ export default function FinancePage() {
     { id: 'inventory', label: 'Dự trữ', icon: Package },
   ];
 
-  const [wallets, setWallets] = useState<WalletSource[]>([
-    { id: 'mb', name: 'MB Bank', balance: 12000000, type: 'bank', color: '#0055ff' },
-    { id: 'momo', name: 'Momo', balance: 2500000, type: 'ewallet', color: '#ff00aa' },
-    { id: 'cash', name: 'Tiền mặt', balance: 750000, type: 'cash', color: '#00ffaa' },
-  ]);
-
   const [budgets, setBudgets] = useState<BudgetPocket[]>([
     { id: 'food', name: 'Ăn uống', spent: 3500000, limit: 5000000, category: 'food' },
     { id: 'rent', name: 'Tiền nhà & Điện nước', spent: 4000000, limit: 4000000, category: 'housing' },
     { id: 'shopping', name: 'Mua sắm', spent: 1800000, limit: 2000000, category: 'shopping' },
-    { id: 'entertainment', name: 'Giải trí', spent: 1200000, limit: 1000000, category: 'entertainment' }, // Over budget example
+    { id: 'entertainment', name: 'Giải trí', spent: 1200000, limit: 1000000, category: 'entertainment' },
     { id: 'transport', name: 'Đi lại', spent: 250000, limit: 500000, category: 'transport' },
   ]);
-
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: 't1', type: 'expense', amount: 55000, date: '2023-10-25', description: 'Ăn trưa', walletName: 'Momo' },
-    { id: 't2', type: 'transfer', amount: 1000000, date: '2023-10-25', description: 'Chuyển tiền ăn', walletName: 'MB Bank -> Momo' },
-    { id: 't3', type: 'income', amount: 25000000, date: '2023-10-24', description: 'Lương tháng 10', walletName: 'MB Bank' },
-    { id: 't4', type: 'expense', amount: 4000000, date: '2023-10-22', description: 'Đóng tiền nhà', walletName: 'MB Bank' },
-    { id: 't5', type: 'expense', amount: 200000, date: '2023-10-22', description: 'Đổ xăng', walletName: 'Tiền mặt' },
-  ]);
-
   const [debts, setDebts] = useState<DebtItem[]>([
     { 
       id: 'd1', personName: 'Nguyễn Văn A', type: 'lent', status: 'unpaid', dueDate: '2023-11-05',
@@ -147,6 +202,16 @@ export default function FinancePage() {
   const openModal = (type: TabId | 'transaction', item: any = null) => {
     setModalType(type);
     setEditingItem(item);
+    if (type === 'wallets') {
+      setWalletForm(item ? { name: item.name, type: item.type, color: item.color, balance: item.balance.toString() } : { name: '', type: 'bank', color: '#00f0ff', balance: '' });
+    }
+    if (type === 'transaction') {
+      setTxForm(item ? { 
+        type: item.type, amount: item.amount.toString(), wallet_id: '', to_wallet_id: '', date: item.date, description: item.description 
+      } : { 
+        type: 'expense', amount: '', wallet_id: '', to_wallet_id: '', date: new Date().toISOString().split('T')[0], description: '' 
+      });
+    }
     setIsModalOpen(true);
   };
 
@@ -157,10 +222,11 @@ export default function FinancePage() {
     setIsModalOpen(true);
   };
 
-  // Dummy data for overview
-  const totalBalance = 15250000;
-  const monthlyIncome = 25000000;
-  const monthlyExpense = 9750000;
+  // Tính toán Overview từ dữ liệu thật
+  const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthlyIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(currentMonth)).reduce((sum, t) => sum + t.amount, 0);
+  const monthlyExpense = transactions.filter(t => t.type === 'expense' && t.date.startsWith(currentMonth)).reduce((sum, t) => sum + t.amount, 0);
 
   const formatMoney = (amount: number) => {
     return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -359,6 +425,9 @@ export default function FinancePage() {
                           {tx.description}
                           <button style={{ background: 'none', border: 'none', color: 'rgba(0, 240, 255, 0.5)', cursor: 'pointer', marginLeft: 8 }} onClick={() => openModal('history', tx)}>
                             <Edit3 size={12} />
+                          </button>
+                          <button style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', marginLeft: 8, opacity: 0.7 }} onClick={() => handleDeleteTransaction(tx.id)}>
+                            <Trash2 size={12} />
                           </button>
                         </div>
                         <div className={styles.historyMeta}>
@@ -596,85 +665,171 @@ export default function FinancePage() {
   );
 
   const renderModalContent = () => {
+    // Dummy handler for UI parts not yet integrated with real APIs
     const handleSave = (e: React.FormEvent) => {
       e.preventDefault();
-      // Dummy submit handler - in a real app, dispatch to a store
       setIsModalOpen(false);
+    };
+
+    const handleSaveWallet = async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+        const res = await fetch('/api/finance/wallets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: walletForm.name, 
+            type: walletForm.type, 
+            color: walletForm.color, 
+            balance: parseFloat(walletForm.balance) || 0 
+          })
+        });
+        if (res.ok) {
+          fetchData();
+          setIsModalOpen(false);
+        } else {
+          const err = await res.json();
+          showAlert(err.error);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const handleSaveTransaction = async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+        const res = await fetch('/api/finance/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            type: txForm.type, 
+            amount: parseFloat(txForm.amount) || 0, 
+            date: txForm.date, 
+            description: txForm.description,
+            wallet_id: txForm.wallet_id,
+            to_wallet_id: txForm.to_wallet_id
+          })
+        });
+        if (res.ok) {
+          fetchData();
+          setIsModalOpen(false);
+        } else {
+          const err = await res.json();
+          showAlert(err.error);
+        }
+      } catch (err) {
+        console.error(err);
+      }
     };
 
     if (modalType === 'transaction' || modalType === 'history') {
       return (
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSaveTransaction}>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Loại giao dịch</label>
               <div className={styles.formRadioGroup}>
                 <label className={styles.formRadioLabel}>
-                  <input type="radio" name="type" defaultChecked={editingItem?.type === 'expense'} /> Chi tiêu
+                  <input type="radio" name="type" checked={txForm.type === 'expense'} onChange={() => setTxForm({...txForm, type: 'expense'})} /> Chi tiêu
                 </label>
                 <label className={styles.formRadioLabel}>
-                  <input type="radio" name="type" defaultChecked={editingItem?.type === 'income'} /> Thu nhập
+                  <input type="radio" name="type" checked={txForm.type === 'income'} onChange={() => setTxForm({...txForm, type: 'income'})} /> Thu nhập
                 </label>
                 <label className={styles.formRadioLabel}>
-                  <input type="radio" name="type" defaultChecked={editingItem?.type === 'transfer'} /> Chuyển khoản
+                  <input type="radio" name="type" checked={txForm.type === 'transfer'} onChange={() => setTxForm({...txForm, type: 'transfer'})} /> Chuyển khoản
                 </label>
               </div>
             </div>
           </div>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Số tiền (VND)</label>
-            <input type="number" className={styles.formInput} placeholder="Nhập số tiền..." defaultValue={editingItem?.amount || ''} />
+            <input type="number" className={styles.formInput} placeholder="Nhập số tiền..." value={txForm.amount} onChange={e => setTxForm({...txForm, amount: e.target.value})} required />
           </div>
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Nguồn tiền</label>
-            <SaoSelect
-              initialValue={editingItem?.walletName || ''}
-              placeholder="Chọn nguồn tiền"
-              options={wallets.map(w => ({ value: w.name, label: w.name }))}
-            />
-          </div>
+          
+          {txForm.type === 'transfer' ? (
+            <div className={styles.formRow}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Từ nguồn tiền (Trừ)</label>
+                <SaoSelect
+                  initialValue={txForm.wallet_id}
+                  placeholder="Chọn nguồn tiền gửi"
+                  options={wallets.map(w => ({ value: w.id, label: `${w.name} (${formatMoney(w.balance)})` }))}
+                  onChange={v => setTxForm({...txForm, wallet_id: v})}
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Đến nguồn tiền (Cộng)</label>
+                <SaoSelect
+                  initialValue={txForm.to_wallet_id}
+                  placeholder="Chọn nguồn tiền nhận"
+                  options={wallets.map(w => ({ value: w.id, label: w.name }))}
+                  onChange={v => setTxForm({...txForm, to_wallet_id: v})}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Nguồn tiền</label>
+              <SaoSelect
+                initialValue={txForm.wallet_id}
+                placeholder="Chọn nguồn tiền"
+                options={wallets.map(w => ({ value: w.id, label: `${w.name} (${formatMoney(w.balance)})` }))}
+                onChange={v => setTxForm({...txForm, wallet_id: v})}
+              />
+            </div>
+          )}
+
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Ngày giao dịch</label>
-            <input type="date" className={styles.formInput} defaultValue={editingItem?.date || new Date().toISOString().split('T')[0]} />
+            <SaoDatePicker value={txForm.date} onChange={v => setTxForm({...txForm, date: v})} required />
           </div>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Diễn giải (Hỗ trợ Quét Bill AI)</label>
-            <textarea className={styles.formTextarea} placeholder="Nhập diễn giải hoặc dán text bill vào đây để AI phân tích sau này..." defaultValue={editingItem?.description || ''}></textarea>
+            <textarea className={styles.formTextarea} placeholder="Nhập diễn giải..." value={txForm.description} onChange={e => setTxForm({...txForm, description: e.target.value})} required></textarea>
           </div>
-          <button type="submit" className={styles.submitBtn}>
-            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm giao dịch'}
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="submit" className={styles.submitBtn}>
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm giao dịch'}
+            </button>
+            {editingItem && (
+              <button type="button" onClick={() => handleDeleteTransaction(editingItem.id)} className={styles.submitBtn} style={{ background: 'rgba(255, 68, 68, 0.1)', borderColor: '#ff4444', color: '#ff4444' }}>
+                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
+              </button>
+            )}
+          </div>
         </form>
       );
     }
 
     if (modalType === 'wallets') {
       return (
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSaveWallet}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Tên nguồn tiền</label>
-            <input type="text" className={styles.formInput} placeholder="VD: Vietcombank, Tiền mặt..." defaultValue={editingItem?.name || ''} />
+            <input type="text" className={styles.formInput} placeholder="VD: Vietcombank, Tiền mặt..." value={walletForm.name} onChange={e => setWalletForm({...walletForm, name: e.target.value})} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Loại</label>
               <SaoSelect
-                initialValue={editingItem?.type || 'bank'}
+                initialValue={walletForm.type}
                 options={[
                   { value: 'bank', label: 'Ngân hàng' },
                   { value: 'ewallet', label: 'Ví điện tử' },
                   { value: 'cash', label: 'Tiền mặt' }
                 ]}
+                onChange={v => setWalletForm({...walletForm, type: v})}
               />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Màu sắc (Theme)</label>
-              <input type="color" className={styles.formInput} style={{ padding: '0 5px' }} defaultValue={editingItem?.color || '#00f0ff'} />
+              <input type="color" className={styles.formInput} style={{ padding: '0 5px' }} value={walletForm.color} onChange={e => setWalletForm({...walletForm, color: e.target.value})} required />
             </div>
           </div>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Số dư ban đầu (VND)</label>
-            <input type="number" className={styles.formInput} placeholder="0" defaultValue={editingItem?.balance || ''} />
+            <input type="number" className={styles.formInput} placeholder="0" value={walletForm.balance} onChange={e => setWalletForm({...walletForm, balance: e.target.value})} />
           </div>
           <button type="submit" className={styles.submitBtn}>
             <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm nguồn tiền'}
@@ -749,7 +904,7 @@ export default function FinancePage() {
           </div>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Ngày thực hiện</label>
-            <input type="date" className={styles.formInput} defaultValue={new Date().toISOString().split('T')[0]} required />
+            <SaoDatePicker defaultValue={new Date().toISOString().split('T')[0]} required />
           </div>
           <button type="submit" className={styles.submitBtn}>
             <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> Ghi nhận giao dịch
@@ -794,8 +949,8 @@ export default function FinancePage() {
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Hạn chót</label>
-              <input type="date" className={styles.formInput} defaultValue={editingItem?.dueDate || ''} />
+              <label className={styles.formLabel}>Ngày đến hạn (Tùy chọn)</label>
+              <SaoDatePicker defaultValue={editingItem?.dueDate || ''} />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Nguồn tiền Trừ/Cộng</label>
@@ -833,7 +988,7 @@ export default function FinancePage() {
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Hạn sử dụng (Tùy chọn)</label>
-              <input type="text" className={styles.formInput} placeholder="VD: 15/12/2023" defaultValue={editingItem?.expiryDate || ''} />
+              <SaoDatePicker defaultValue={editingItem?.expiryDate || ''} />
             </div>
           </div>
           <div className={styles.formRow}>

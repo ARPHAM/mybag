@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Activity, Edit2, Plus, Scale, Ruler } from 'lucide-react';
 import {
   LineChart,
@@ -14,6 +14,8 @@ import {
 } from 'recharts';
 import styles from './health.module.css';
 import SaoModal from '../../components/SaoModal/SaoModal';
+import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
+import { useSaoAlert } from '../../contexts/AlertContext';
 
 interface WeightEntry {
   date: string;
@@ -22,20 +24,43 @@ interface WeightEntry {
 
 export default function HealthPage() {
   const [height, setHeight] = useState<number>(170); // cm
-  const [weightHistory, setWeightHistory] = useState<WeightEntry[]>([
-    { date: '01/09', weight: 65.2 },
-    { date: '03/09', weight: 65.0 },
-    { date: '05/09', weight: 64.8 },
-    { date: '07/09', weight: 64.9 },
-    { date: '09/09', weight: 64.5 },
-  ]);
+  const [weightHistory, setWeightHistory] = useState<WeightEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchHealthData();
+  }, []);
+
+  const fetchHealthData = async () => {
+    try {
+      const res = await fetch('/api/health');
+      const data = await res.json();
+      if (res.ok) {
+        setHeight(data.height || 170);
+        setHeightForm(data.height?.toString() || '170');
+        if (data.history) setWeightHistory(data.history);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Modals state
   const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
 
+  const openWeightModal = () => {
+    setWeightForm({ weight: '', date: new Date().toISOString().split('T')[0] });
+    setHeightForm(height.toString());
+    setIsWeightModalOpen(true);
+  };
+
   // Form states
   const [weightForm, setWeightForm] = useState({ weight: '', date: new Date().toISOString().split('T')[0] });
   const [heightForm, setHeightForm] = useState(height.toString());
+
+  const { showAlert } = useSaoAlert();
 
   const currentWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight : 0;
   
@@ -54,16 +79,34 @@ export default function HealthPage() {
 
   const bmiStatus = getBmiStatus(parseFloat(bmi.toString()));
 
-  const handleSaveWeight = (e: React.FormEvent) => {
+  const handleSaveWeight = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!weightForm.weight) return;
     
-    const newWeight = parseFloat(weightForm.weight);
-    // Add to history (in a real app, we'd sort by date)
-    const formattedDate = new Date(weightForm.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-    setWeightHistory([...weightHistory, { date: formattedDate, weight: newWeight }]);
-    setHeight(parseFloat(heightForm));
-    setIsWeightModalOpen(false);
+    try {
+      const res = await fetch('/api/health', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          weight: parseFloat(weightForm.weight), 
+          height: parseFloat(heightForm),
+          date: weightForm.date
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.rewardExp) {
+          showAlert(`🎉 ${data.message}\nThưởng: +${data.rewardExp} EXP!`);
+          window.dispatchEvent(new CustomEvent('sao-user-updated'));
+        } else {
+          showAlert(data.message);
+        }
+        fetchHealthData();
+        setIsWeightModalOpen(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -98,7 +141,7 @@ export default function HealthPage() {
           <div className={styles.statFooter}>
             Đã cập nhật hôm nay
           </div>
-          <button className={styles.actionButton} onClick={() => setIsWeightModalOpen(true)}>
+          <button className={styles.actionButton} onClick={openWeightModal}>
             <Edit2 size={18} />
           </button>
         </div>
@@ -113,7 +156,7 @@ export default function HealthPage() {
           <div className={styles.statFooter}>
             Ít biến động
           </div>
-          <button className={styles.actionButton} onClick={() => setIsWeightModalOpen(true)}>
+          <button className={styles.actionButton} onClick={openWeightModal}>
             <Edit2 size={18} />
           </button>
         </div>
@@ -134,7 +177,7 @@ export default function HealthPage() {
       <div className={styles.chartSection}>
         <div className={styles.chartHeader}>
           <div className={styles.chartTitle}>Biến động cân nặng (30 ngày)</div>
-          <button className={styles.logButton} onClick={() => setIsWeightModalOpen(true)}>
+          <button className={styles.logButton} onClick={openWeightModal}>
             <Plus size={16} /> Cập nhật
           </button>
         </div>
@@ -168,11 +211,9 @@ export default function HealthPage() {
         <form onSubmit={handleSaveWeight}>
           <div className={styles.formGroup}>
             <label>Ngày ghi nhận</label>
-            <input 
-              type="date" 
-              className={styles.input}
+            <SaoDatePicker 
               value={weightForm.date}
-              onChange={e => setWeightForm({...weightForm, date: e.target.value})}
+              onChange={v => setWeightForm({...weightForm, date: v})}
               required
             />
           </div>

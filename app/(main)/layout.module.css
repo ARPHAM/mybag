@@ -447,9 +447,10 @@
 }
 
 .barValues {
-  width: 80px;
+  width: 100px;
   color: #ccc;
   font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 /* Date Time Section */

@@ -1,0 +1,153 @@
+.alertOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 5, 15, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.alertBox {
+  background: rgba(10, 25, 45, 0.95);
+  width: 100%;
+  max-width: 400px;
+  padding: 30px;
+  position: relative;
+  transform: translateY(0);
+  animation: zoomIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Pseudo-element for the clipping and border so it doesn't clip content if we had any absolute children */
+.alertBox::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(10, 25, 45, 0.95);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.6);
+  box-shadow: 0 0 20px rgba(var(--sao-primary-rgb), 0.3), inset 0 0 15px rgba(var(--sao-primary-rgb), 0.1);
+  clip-path: polygon(25px 0, 100% 0, 100% calc(100% - 25px), calc(100% - 25px) 100%, 0 100%, 0 25px);
+}
+
+.alertBox.error::before {
+  border-color: rgba(255, 68, 68, 0.6);
+  box-shadow: 0 0 20px rgba(255, 68, 68, 0.3), inset 0 0 15px rgba(255, 68, 68, 0.1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.iconContainer {
+  margin-bottom: 20px;
+  color: var(--sao-primary-hex);
+  animation: pulse 2s infinite;
+}
+
+.iconContainer.error {
+  color: #ff4444;
+}
+
+@keyframes pulse {
+  0% { filter: drop-shadow(0 0 5px currentColor); }
+  50% { filter: drop-shadow(0 0 15px currentColor); }
+  100% { filter: drop-shadow(0 0 5px currentColor); }
+}
+
+.message {
+  font-size: 1.1rem;
+  color: #fff;
+  line-height: 1.5;
+  margin-bottom: 30px;
+  word-wrap: break-word;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  position: relative;
+  color: #fff;
+  transition: all 0.3s;
+}
+
+/* Shared SAO Button Style via pseudo-element */
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid currentColor;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  transition: all 0.3s;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn:hover::before {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btnPrimary {
+  color: var(--sao-primary-hex);
+}
+
+.btnPrimary:hover {
+  text-shadow: 0 0 8px currentColor;
+}
+
+.btnPrimary::before {
+  background: rgba(var(--sao-primary-rgb), 0.1);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.2);
+}
+
+.btnPrimary:hover::before {
+  background: rgba(var(--sao-primary-rgb), 0.3);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.4);
+}
+
+.btnCancel {
+  color: #a0c4ff;
+}
+
+.btnCancel:hover {
+  color: #fff;
+}
+
+/* Error/Destructive state */
+.btnDestructive {
+  color: #ff4444;
+}
+
+.btnDestructive::before {
+  background: rgba(255, 68, 68, 0.1);
+}
+
+.btnDestructive:hover::before {
+  background: rgba(255, 68, 68, 0.3);
+  box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+}

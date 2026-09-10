@@ -5,6 +5,7 @@ import { ChefHat, Flame, Clock, Plus, Edit3, Utensils, History, Sparkles, Save, 
 import SaoModal from '../../components/SaoModal/SaoModal';
 import SaoSelect from '../../components/SaoSelect/SaoSelect';
 import SaoTabs from '../../components/SaoTabs/SaoTabs';
+import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
 import styles from './menu.module.css';
 
 type TabId = 'recipes' | 'history';
@@ -145,7 +146,7 @@ export default function MenuPage() {
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Ngày (Mặc định hôm nay)</label>
-              <input type="date" className={styles.formInput} defaultValue={new Date().toISOString().split('T')[0]} required />
+              <SaoDatePicker defaultValue={new Date().toISOString().split('T')[0]} required />
             </div>
           </div>
 
@@ -307,7 +308,7 @@ export default function MenuPage() {
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Ngày</label>
-              <input type="date" className={styles.formInput} defaultValue={new Date().toISOString().split('T')[0]} required />
+              <SaoDatePicker defaultValue={new Date().toISOString().split('T')[0]} required />
             </div>
           </div>
           <div className={styles.formRow}>

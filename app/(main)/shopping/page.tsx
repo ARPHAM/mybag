@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShoppingCart, Check, Plus, Trash2, Apple, Home as HomeIcon, Package, AlertTriangle } from 'lucide-react';
 import styles from './shopping.module.css';
 import SaoModal from '../../components/SaoModal/SaoModal';
@@ -9,7 +9,7 @@ import SaoTabs from '../../components/SaoTabs/SaoTabs';
 type CategoryType = 'all' | 'food' | 'household' | 'other';
 
 interface GroceryItem {
-  id: string;
+  _id: string;
   name: string;
   quantity: number;
   unit: string;
@@ -18,34 +18,25 @@ interface GroceryItem {
 }
 
 export default function ShoppingPage() {
-  const [items, setItems] = useState<GroceryItem[]>([
-    {
-      id: '1',
-      name: 'Thịt heo',
-      quantity: 500,
-      unit: 'g',
-      category: 'food',
-      checked: false,
-    },
-    {
-      id: '2',
-      name: 'Rau muống',
-      quantity: 2,
-      unit: 'bó',
-      category: 'food',
-      checked: false,
-    },
-    {
-      id: '3',
-      name: 'Nước rửa bát',
-      quantity: 1,
-      unit: 'chai',
-      category: 'household',
-      checked: true,
-    },
-  ]);
-
+  const [items, setItems] = useState<GroceryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'food' | 'household' | 'other'>('all');
+
+  useEffect(() => {
+    fetchItems();
+  }, []);
+
+  const fetchItems = async () => {
+    try {
+      const res = await fetch('/api/shopping');
+      const data = await res.json();
+      if (res.ok) setItems(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -61,10 +52,17 @@ export default function ShoppingPage() {
     item => activeTab === 'all' || item.category === activeTab
   );
 
-  const toggleCheck = (id: string) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, checked: !item.checked } : item
-    ));
+  const toggleCheck = async (item: GroceryItem) => {
+    try {
+      await fetch(`/api/shopping/${item._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checked: !item.checked }),
+      });
+      fetchItems();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const confirmDelete = (e: React.MouseEvent, id: string) => {
@@ -72,9 +70,14 @@ export default function ShoppingPage() {
     setItemToDelete(id);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (itemToDelete) {
-      setItems(items.filter(t => t.id !== itemToDelete));
+      try {
+        await fetch(`/api/shopping/${itemToDelete}`, { method: 'DELETE' });
+        fetchItems();
+      } catch (err) {
+        console.error(err);
+      }
       setItemToDelete(null);
     }
   };
@@ -84,20 +87,21 @@ export default function ShoppingPage() {
     setIsAddModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
-    const newItem: GroceryItem = {
-      id: Date.now().toString(),
-      name: formData.name,
-      quantity: Number(formData.quantity),
-      unit: formData.unit,
-      category: formData.category,
-      checked: false
-    };
+    try {
+      await fetch('/api/shopping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      fetchItems();
+    } catch (err) {
+      console.error(err);
+    }
     
-    setItems([...items, newItem]);
     setIsAddModalOpen(false);
   };
 
@@ -157,15 +161,18 @@ export default function ShoppingPage() {
 
       {/* GROCERY LIST */}
       <div className={styles.groceryList}>
-        {filteredItems.map(item => (
-          <div 
-            key={item.id} 
-            className={`${styles.groceryItem} ${item.checked ? styles.checked : ''}`}
-            onClick={() => toggleCheck(item.id)}
-          >
-            <div className={styles.itemCheckBtn}>
-              <Check size={16} className={styles.checkIcon} strokeWidth={3} />
-            </div>
+        {isLoading ? (
+          <div style={{color: '#fff', textAlign: 'center', marginTop: '20px'}}>Đang tải danh sách...</div>
+        ) : (
+          filteredItems.map(item => (
+            <div 
+              key={item._id} 
+              className={`${styles.groceryItem} ${item.checked ? styles.checked : ''}`}
+              onClick={() => toggleCheck(item)}
+            >
+              <div className={styles.itemCheckBtn}>
+                <Check size={16} className={styles.checkIcon} strokeWidth={3} />
+              </div>
             
             <div className={styles.itemContent}>
               <div className={styles.itemName}>{item.name}</div>
@@ -181,13 +188,13 @@ export default function ShoppingPage() {
 
             <button 
               className={styles.deleteBtn}
-              onClick={(e) => confirmDelete(e, item.id)}
-              title="Xóa"
-            >
+              onClick={(e) => confirmDelete(e, item._id)}
+              title="Xóa món"
+            >            
               <Trash2 size={20} />
             </button>
           </div>
-        ))}
+        )))}
         
         <button className={styles.addButton} onClick={openAddModal}>
           <Plus size={20} /> Thêm Mục Mới

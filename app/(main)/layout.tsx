@@ -16,8 +16,11 @@ import {
   Plus,
   Shield,
   Sun,
-  Clock
+  Clock,
+  Brain
 } from 'lucide-react';
+import { AlertProvider } from '../contexts/AlertContext';
+import SaoAlert from '../components/SaoAlert/SaoAlert';
 import styles from './layout.module.css';
 
 export default function DashboardLayout({
@@ -27,11 +30,33 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    fetchUser();
+    
+    // Listen for custom event from other pages
+    const handleUserUpdate = () => fetchUser();
+    window.addEventListener('sao-user-updated', handleUserUpdate);
+    return () => window.removeEventListener('sao-user-updated', handleUserUpdate);
+  }, []);
+
+  const fetchUser = async () => {
+    try {
+      const res = await fetch('/api/user/me');
+      const data = await res.json();
+      if (res.ok && data.user) {
+        setUser(data.user);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const menuItems = [
     { id: 'profile', path: '/profile', icon: Home, label: 'Trang chủ' },
@@ -70,6 +95,14 @@ export default function DashboardLayout({
     }
   };
 
+  // Apply theme variables globally so that portals (like modals) can inherit them
+  useEffect(() => {
+    const vars = getThemeVars();
+    for (const [key, value] of Object.entries(vars)) {
+      document.documentElement.style.setProperty(key, value);
+    }
+  }, [themeColor]);
+
   const formatDate = (date: Date) => {
     const days = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
     return `${days[date.getDay()]}, ${date.getDate()} Tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
@@ -80,36 +113,35 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className={styles.dashboardContainer} style={getThemeVars() as React.CSSProperties}>
+    <div className={styles.dashboardContainer}>
       {/* GLOBAL HEADER (TOP) */}
       <div className={styles.topHeader}>
         <div className={styles.headerLeft}>
           <div className={styles.userInfo}>
             <div className={styles.avatarHex}></div>
             <div className={styles.userDetails}>
-              <div className={styles.userName}>ARPHAM</div>
-              <div className={styles.userLevel}>Level 42</div>
-              <div className={styles.userQuote}>"Từng chút một, hướng tới phiên bản tốt hơn."</div>
+              <div className={styles.userName}>{user ? user.username : 'GUEST'}</div>
+              <div className={styles.userLevel}>Level {user ? user.level : 1}</div>
             </div>
 
             <div className={styles.statusBars}>
-              <div className={styles.barRow}>
+              <div className={styles.barRow} title="Năng lượng (HP) - Tụt nhanh nếu nhịn đói, hồi phục khi ăn bữa chính">
                 <div className={`${styles.barLabel} ${styles.hp}`}>
-                  <Plus size={16} /> HP
+                  <Utensils size={16} /> HP
                 </div>
                 <div className={styles.barWrapper}>
-                  <div className={`${styles.barFill} ${styles.hp}`} style={{ width: '100%' }}></div>
+                  <div className={`${styles.barFill} ${styles.hp}`} style={{ width: user ? `${(user.current_hp / user.max_hp) * 100}%` : '100%' }}></div>
                 </div>
-                <div className={styles.barValues}>315 / 315</div>
+                <div className={styles.barValues}>{user ? `${Math.floor(user.current_hp)} / ${user.max_hp}` : '...'}</div>
               </div>
-              <div className={styles.barRow}>
+              <div className={styles.barRow} title="Tinh thần (MP) - Cạn kiệt nếu có task trễ hạn (Stress/Quá tải)">
                 <div className={`${styles.barLabel} ${styles.mp}`}>
-                  <Shield size={16} /> MP
+                  <Brain size={16} /> MP
                 </div>
                 <div className={styles.barWrapper}>
-                  <div className={`${styles.barFill} ${styles.mp}`} style={{ width: '100%' }}></div>
+                  <div className={`${styles.barFill} ${styles.mp}`} style={{ width: user ? `${(user.current_mp / user.max_mp) * 100}%` : '100%' }}></div>
                 </div>
-                <div className={styles.barValues}>7842 / 7842</div>
+                <div className={styles.barValues}>{user ? `${Math.floor(user.current_mp)} / ${user.max_mp}` : '...'}</div>
               </div>
             </div>
           </div>
@@ -171,9 +203,11 @@ export default function DashboardLayout({
 
         {/* MAIN CONTENT */}
         <div className={styles.mainContent}>
-
           {/* PAGE CONTENT */}
-          {children}
+          <AlertProvider>
+            {children}
+            <SaoAlert />
+          </AlertProvider>
         </div>
       </div>
     </div>

@@ -11,16 +11,23 @@
 }
 
 .modalContent {
-  background: rgba(10, 25, 45, 0.95);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.4);
-  box-shadow: 0 0 30px rgba(var(--sao-primary-rgb), 0.2);
-  border-radius: 4px;
   width: 100%;
   max-width: 500px;
   padding: 25px;
   position: relative;
   transform: translateY(0);
   animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modalContent::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(10, 25, 45, 0.95);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.4);
+  box-shadow: 0 0 30px rgba(var(--sao-primary-rgb), 0.2);
+  border-radius: 4px;
   clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
 }
 
