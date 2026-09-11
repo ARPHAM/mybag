@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const body = await req.json();
-    const { type, amount, date, description, wallet_id, to_wallet_id } = body;
+    const { type, amount, date, description, category, wallet_id, to_wallet_id } = body;
 
     if (!type || !amount || !description || amount <= 0) {
       return NextResponse.json({ error: 'Thông tin không hợp lệ' }, { status: 400 });
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       const wallet = await Wallet.findOneAndUpdate(
         { _id: wallet_id, user_id: decoded.userId },
         { $inc: { balance: amount } },
-        { new: true }
+        { returnDocument: 'after' }
       );
       if (!wallet) return NextResponse.json({ error: 'Ví không tồn tại' }, { status: 404 });
       walletName = wallet.name;
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
       const wallet = await Wallet.findOneAndUpdate(
         { _id: wallet_id, user_id: decoded.userId, balance: { $gte: amount } },
         { $inc: { balance: -amount } },
-        { new: true }
+        { returnDocument: 'after' }
       );
       if (!wallet) {
         // Kiểm tra xem ví có tồn tại hay không
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
       const sourceWallet = await Wallet.findOneAndUpdate(
         { _id: wallet_id, user_id: decoded.userId, balance: { $gte: amount } },
         { $inc: { balance: -amount } },
-        { new: true }
+        { returnDocument: 'after' }
       );
       if (!sourceWallet) {
         const exists = await Wallet.findById(wallet_id);
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       const destWallet = await Wallet.findOneAndUpdate(
         { _id: to_wallet_id, user_id: decoded.userId },
         { $inc: { balance: amount } },
-        { new: true }
+        { returnDocument: 'after' }
       );
 
       // Nếu lỗi ví nhận, Rollback ví nguồn (Rất hiếm khi xảy ra)
@@ -104,8 +104,9 @@ export async function POST(req: Request) {
       user_id: decoded.userId,
       type,
       amount,
-      date: date ? new Date(date) : new Date(),
+      date: date ? new Date(`${date.split('T')[0]}T12:00:00.000Z`) : new Date(),
       description,
+      category,
       wallet_id,
       to_wallet_id: type === 'transfer' ? to_wallet_id : undefined,
       walletName

@@ -62,10 +62,13 @@ interface InventoryItem {
   quantity: number;
   originalQuantity: number;
   unit: string;
+  purchaseDate?: string;
   expiryDate?: string;
   category: 'food' | 'spices' | 'utilities';
   totalValue: number;
-  walletName: string;
+  isGift?: boolean;
+  wallet_id?: string;
+  walletName?: string;
 }
 
 export default function FinancePage() {
@@ -79,7 +82,11 @@ export default function FinancePage() {
 
   // Form states
   const [walletForm, setWalletForm] = useState({ name: '', type: 'bank', color: '#00f0ff', balance: '' });
-  const [txForm, setTxForm] = useState({ type: 'expense', amount: '', date: new Date().toISOString().split('T')[0], description: '', wallet_id: '', to_wallet_id: '' });
+  const [txForm, setTxForm] = useState({ type: 'expense', amount: '', date: new Date().toISOString().split('T')[0], description: '', wallet_id: '', to_wallet_id: '', category: 'food' });
+  const [budgetForm, setBudgetForm] = useState({ name: '', month: new Date().toISOString().slice(0, 7), category: 'food', limit: '' });
+  const [debtForm, setDebtForm] = useState({ personName: '', type: 'lent', status: 'unpaid', amount: '', dueDate: '', wallet_id: '' });
+  const [debtActionForm, setDebtActionForm] = useState({ amount: '', wallet_id: '', date: new Date().toISOString().split('T')[0] });
+  const [inventoryForm, setInventoryForm] = useState({ name: '', category: 'food', purchaseDate: new Date().toISOString().split('T')[0], expiryDate: '', quantity: '', unit: '', isGift: false, totalValue: '', wallet_id: '' });
 
   const { showAlert, showConfirm } = useSaoAlert();
 
@@ -90,12 +97,16 @@ export default function FinancePage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [wRes, tRes] = await Promise.all([
+      const [wRes, tRes, bRes, dRes] = await Promise.all([
         fetch('/api/finance/wallets'),
-        fetch('/api/finance/transactions')
+        fetch('/api/finance/transactions'),
+        fetch('/api/finance/budgets'),
+        fetch('/api/finance/debts')
       ]);
       const wData = await wRes.json();
       const tData = await tRes.json();
+      const bData = await bRes.json();
+      const dData = await dRes.json();
       
       if (wRes.ok) {
         setWallets(wData.map((w: any) => ({
@@ -114,6 +125,54 @@ export default function FinancePage() {
           date: t.date.split('T')[0],
           description: t.description,
           walletName: t.walletName
+        })));
+      }
+      if (bRes.ok) {
+        setBudgets(bData.map((b: any) => ({
+          id: b._id,
+          name: b.name,
+          category: b.category,
+          month: b.month,
+          limit: b.limit,
+          spent: b.spent
+        })));
+      }
+      if (dRes.ok) {
+        setDebts(dData.map((d: any) => ({
+          id: d._id,
+          personName: d.personName,
+          type: d.type,
+          status: d.status,
+          totalAmount: d.totalAmount,
+          remainingAmount: d.remainingAmount,
+          dueDate: d.dueDate ? d.dueDate.split('T')[0] : undefined,
+          completedDate: d.completedDate ? d.completedDate.split('T')[0] : undefined,
+          history: d.history.map((h: any) => ({
+            id: h._id,
+            date: h.date.split('T')[0],
+            amount: h.amount,
+            type: h.type,
+            walletName: h.walletName
+          }))
+        })));
+      }
+      
+      const iRes = await fetch('/api/finance/inventory');
+      if (iRes.ok) {
+        const iData = await iRes.json();
+        setInventory(iData.map((i: any) => ({
+          id: i._id,
+          name: i.name,
+          category: i.category,
+          quantity: i.quantity,
+          originalQuantity: i.originalQuantity,
+          unit: i.unit,
+          purchaseDate: i.purchaseDate ? i.purchaseDate.split('T')[0] : undefined,
+          expiryDate: i.expiryDate ? i.expiryDate.split('T')[0] : undefined,
+          isGift: i.isGift,
+          totalValue: i.totalValue,
+          wallet_id: i.wallet_id,
+          walletName: i.walletName
         })));
       }
     } catch (err) {
@@ -150,31 +209,8 @@ export default function FinancePage() {
     { id: 'inventory', label: 'Dự trữ', icon: Package },
   ];
 
-  const [budgets, setBudgets] = useState<BudgetPocket[]>([
-    { id: 'food', name: 'Ăn uống', spent: 3500000, limit: 5000000, category: 'food' },
-    { id: 'rent', name: 'Tiền nhà & Điện nước', spent: 4000000, limit: 4000000, category: 'housing' },
-    { id: 'shopping', name: 'Mua sắm', spent: 1800000, limit: 2000000, category: 'shopping' },
-    { id: 'entertainment', name: 'Giải trí', spent: 1200000, limit: 1000000, category: 'entertainment' },
-    { id: 'transport', name: 'Đi lại', spent: 250000, limit: 500000, category: 'transport' },
-  ]);
-  const [debts, setDebts] = useState<DebtItem[]>([
-    { 
-      id: 'd1', personName: 'Nguyễn Văn A', type: 'lent', status: 'unpaid', dueDate: '2023-11-05',
-      totalAmount: 500000, remainingAmount: 500000, history: []
-    },
-    { 
-      id: 'd2', personName: 'Trần Thị B', type: 'borrowed', status: 'partial', dueDate: '2023-10-30',
-      totalAmount: 2000000, remainingAmount: 1500000, history: [
-        { id: 'h1', date: '2023-10-25', amount: 500000, type: 'pay_back', walletName: 'MB Bank' }
-      ]
-    },
-    { 
-      id: 'd3', personName: 'Lê C', type: 'lent', status: 'paid', dueDate: '2023-10-20',
-      totalAmount: 150000, remainingAmount: 0, completedDate: '2023-10-22', history: [
-        { id: 'h2', date: '2023-10-22', amount: 150000, type: 'pay_back', walletName: 'Momo' }
-      ]
-    },
-  ]);
+  const [budgets, setBudgets] = useState<BudgetPocket[]>([]);
+  const [debts, setDebts] = useState<DebtItem[]>([]);
 
   const [inventory, setInventory] = useState<InventoryItem[]>([
     { id: 'i1', name: 'Gạo ST25', quantity: 5, originalQuantity: 10, unit: 'kg', category: 'food', totalValue: 350000, walletName: 'MB Bank' },
@@ -184,14 +220,24 @@ export default function FinancePage() {
     { id: 'i3', name: 'Dầu ăn Tường An', quantity: 0, originalQuantity: 1, unit: 'chai', category: 'spices', totalValue: 55000, walletName: 'Momo' },
   ]);
 
-  const updateInventoryQty = (id: string, delta: number) => {
-    setInventory(inventory.map(item => {
-      if (item.id === id) {
-        const newQty = Math.max(0, item.quantity + delta);
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    }));
+  const updateInventoryQty = async (id: string, delta: number) => {
+    const item = inventory.find(i => i.id === id);
+    if (!item) return;
+    const newQty = Math.max(1, item.quantity + delta);
+    
+    // Optimistic update
+    setInventory(inventory.map(i => i.id === id ? { ...i, quantity: newQty } : i));
+
+    try {
+      await fetch(`/api/finance/inventory/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ justUpdateQty: true, quantity: newQty })
+      });
+    } catch (err) {
+      console.error('Lỗi khi cập nhật số lượng', err);
+      fetchData(); // Rollback on error
+    }
   };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -207,9 +253,32 @@ export default function FinancePage() {
     }
     if (type === 'transaction') {
       setTxForm(item ? { 
-        type: item.type, amount: item.amount.toString(), wallet_id: '', to_wallet_id: '', date: item.date, description: item.description 
+        type: item.type, amount: item.amount.toString(), wallet_id: '', to_wallet_id: '', date: item.date, description: item.description, category: item.category || 'food'
       } : { 
-        type: 'expense', amount: '', wallet_id: '', to_wallet_id: '', date: new Date().toISOString().split('T')[0], description: '' 
+        type: 'expense', amount: '', wallet_id: '', to_wallet_id: '', date: new Date().toISOString().split('T')[0], description: '', category: 'food'
+      });
+    }
+    if (type === 'budgets') {
+      setBudgetForm(item ? {
+        name: item.name, month: item.month, category: item.category, limit: item.limit.toString()
+      } : {
+        name: '', month: new Date().toISOString().slice(0, 7), category: 'food', limit: ''
+      });
+    }
+    if (type === 'debts') {
+      setDebtForm(item ? {
+        personName: item.personName, type: item.type, status: item.status, amount: item.totalAmount?.toString(), dueDate: item.dueDate || '', wallet_id: ''
+      } : {
+        personName: '', type: 'lent', status: 'unpaid', amount: '', dueDate: '', wallet_id: ''
+      });
+    }
+    if (type === 'inventory') {
+      setInventoryForm(item ? {
+        name: item.name, category: item.category, purchaseDate: item.purchaseDate || new Date().toISOString().split('T')[0], expiryDate: item.expiryDate || '',
+        quantity: item.quantity?.toString(), unit: item.unit, isGift: item.isGift,
+        totalValue: item.totalValue?.toString() || '', wallet_id: item.wallet_id || ''
+      } : {
+        name: '', category: 'food', purchaseDate: new Date().toISOString().split('T')[0], expiryDate: '', quantity: '', unit: '', isGift: false, totalValue: '', wallet_id: ''
       });
     }
     setIsModalOpen(true);
@@ -219,6 +288,7 @@ export default function FinancePage() {
     setModalType('debt_action');
     setEditingItem(debt);
     setDebtActionType(action);
+    setDebtActionForm({ amount: '', wallet_id: '', date: new Date().toISOString().split('T')[0] });
     setIsModalOpen(true);
   };
 
@@ -608,14 +678,22 @@ export default function FinancePage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <span>Phân loại: {item.category === 'food' ? 'Thực phẩm' : item.category === 'spices' ? 'Gia vị' : 'Đồ dùng'}</span>
                       <span style={{ color: '#00f0ff' }}>
-                        <Wallet size={10} style={{ display: 'inline', marginRight: 4 }} />
-                        {item.walletName}
+                        {item.isGift ? '🎁 Được tặng' : (
+                          <>
+                            <Wallet size={10} style={{ display: 'inline', marginRight: 4 }} />
+                            {item.walletName}
+                          </>
+                        )}
                       </span>
                     </div>
-                    <div style={{ color: '#fff', fontSize: '0.85rem', marginBottom: '4px' }}>
-                      Tổng mua: {formatMoney(item.totalValue)}
-                      <span style={{ color: '#a0c4ff' }}> (≈ {formatMoney(Math.round(item.totalValue / item.originalQuantity))} đ/{item.unit})</span>
-                    </div>
+                    {(item.totalValue !== undefined && item.totalValue > 0) && (
+                      <div style={{ color: '#fff', fontSize: '0.85rem', marginBottom: '4px' }}>
+                        {item.isGift ? 'Ước tính giá:' : 'Tổng giá trị:'} {formatMoney(item.totalValue)}
+                        {item.quantity > 0 && (
+                          <span style={{ color: '#a0c4ff' }}> (≈ {formatMoney(Math.round(item.totalValue / item.quantity))} đ/{item.unit})</span>
+                        )}
+                      </div>
+                    )}
                     {item.expiryDate && (
                       <span className={styles.inventoryWarning}>
                         <ShieldAlert size={12} /> {item.expiryDate}
@@ -628,8 +706,8 @@ export default function FinancePage() {
                 <button
                   className={styles.qtyBtn}
                   onClick={() => updateInventoryQty(item.id, -1)}
-                  disabled={item.quantity === 0}
-                  style={{ opacity: item.quantity === 0 ? 0.5 : 1, cursor: item.quantity === 0 ? 'not-allowed' : 'pointer' }}
+                  disabled={item.quantity <= 1}
+                  style={{ opacity: item.quantity <= 1 ? 0.5 : 1, cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer' }}
                 >
                   <Minus size={16} />
                 </button>
@@ -665,10 +743,152 @@ export default function FinancePage() {
   );
 
   const renderModalContent = () => {
-    // Dummy handler for UI parts not yet integrated with real APIs
     const handleSave = (e: React.FormEvent) => {
       e.preventDefault();
       setIsModalOpen(false);
+    };
+
+    const handleSaveBudget = async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+        const method = editingItem ? 'PUT' : 'POST';
+        const url = editingItem ? `/api/finance/budgets/${editingItem.id}` : '/api/finance/budgets';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: budgetForm.name,
+            month: budgetForm.month,
+            category: budgetForm.category,
+            limit: parseFloat(budgetForm.limit) || 0
+          })
+        });
+        if (res.ok) {
+          fetchData();
+          setIsModalOpen(false);
+        } else {
+          const err = await res.json();
+          showAlert(err.error);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const handleSaveDebt = async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+        const method = editingItem ? 'PUT' : 'POST';
+        const url = editingItem ? `/api/finance/debts/${editingItem.id}` : '/api/finance/debts';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            personName: debtForm.personName,
+            type: debtForm.type,
+            status: debtForm.status, // Actually POST ignores status, PUT uses personName, dueDate
+            amount: parseFloat(debtForm.amount) || 0,
+            dueDate: debtForm.dueDate,
+            wallet_id: debtForm.wallet_id
+          })
+        });
+        if (res.ok) {
+          fetchData();
+          setIsModalOpen(false);
+        } else {
+          const err = await res.json();
+          showAlert(err.error);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const handleSaveDebtAction = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editingItem || !debtActionType) return;
+      try {
+        const res = await fetch(`/api/finance/debts/${editingItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: debtActionType,
+            actionAmount: parseFloat(debtActionForm.amount) || 0,
+            wallet_id: debtActionForm.wallet_id
+          })
+        });
+        if (res.ok) {
+          fetchData();
+          setIsModalOpen(false);
+        } else {
+          const err = await res.json();
+          showAlert(err.error);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const handleSaveInventory = async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+        const method = editingItem ? 'PUT' : 'POST';
+        const url = editingItem ? `/api/finance/inventory/${editingItem.id}` : '/api/finance/inventory';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: inventoryForm.name,
+            category: inventoryForm.category,
+            quantity: parseFloat(inventoryForm.quantity) || 0,
+            unit: inventoryForm.unit,
+            purchaseDate: inventoryForm.purchaseDate,
+            expiryDate: inventoryForm.expiryDate,
+            isGift: inventoryForm.isGift,
+            totalValue: parseFloat(inventoryForm.totalValue) || 0,
+            wallet_id: inventoryForm.wallet_id
+          })
+        });
+        if (res.ok) {
+          fetchData();
+          setIsModalOpen(false);
+        } else {
+          const err = await res.json();
+          showAlert(err.error);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const handleDeleteBudget = async (id: string) => {
+      showConfirm('Bạn có chắc muốn xóa hạn mức này?', async () => {
+        const res = await fetch(`/api/finance/budgets/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          fetchData();
+          if (isModalOpen) setIsModalOpen(false);
+        }
+      });
+    };
+
+    const handleDeleteDebt = async (id: string) => {
+      showConfirm('Bạn có chắc muốn xóa sổ nợ này? Lưu ý: Xóa sổ nợ sẽ không hoàn lại các giao dịch đã ghi nhận trong ví.', async () => {
+        const res = await fetch(`/api/finance/debts/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          fetchData();
+          if (isModalOpen) setIsModalOpen(false);
+        }
+      });
+    };
+
+    const handleDeleteInventory = async (id: string) => {
+      showConfirm('Bạn có chắc muốn xóa mặt hàng này khỏi kho? Số tiền mua hàng sẽ được hoàn lại vào ví nếu có.', async () => {
+        const res = await fetch(`/api/finance/inventory/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          fetchData();
+          if (isModalOpen) setIsModalOpen(false);
+        }
+      });
     };
 
     const handleSaveWallet = async (e: React.FormEvent) => {
@@ -707,6 +927,7 @@ export default function FinancePage() {
             amount: parseFloat(txForm.amount) || 0, 
             date: txForm.date, 
             description: txForm.description,
+            category: txForm.type === 'expense' ? txForm.category : undefined,
             wallet_id: txForm.wallet_id,
             to_wallet_id: txForm.to_wallet_id
           })
@@ -742,9 +963,29 @@ export default function FinancePage() {
               </div>
             </div>
           </div>
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Số tiền (VND)</label>
-            <input type="number" className={styles.formInput} placeholder="Nhập số tiền..." value={txForm.amount} onChange={e => setTxForm({...txForm, amount: e.target.value})} required />
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Số tiền (VND)</label>
+              <input type="number" className={styles.formInput} placeholder="Nhập số tiền..." value={txForm.amount} onChange={e => setTxForm({...txForm, amount: e.target.value})} required />
+            </div>
+            {txForm.type === 'expense' && (
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Danh mục</label>
+                <SaoSelect
+                  initialValue={txForm.category}
+                  options={[
+                    { value: 'food', label: 'Ăn uống' },
+                    { value: 'housing', label: 'Nhà cửa & Sinh hoạt' },
+                    { value: 'transport', label: 'Đi lại' },
+                    { value: 'entertainment', label: 'Giải trí' },
+                    { value: 'shopping', label: 'Mua sắm' },
+                    { value: 'health', label: 'Sức khoẻ' },
+                    { value: 'other', label: 'Khác' }
+                  ]}
+                  onChange={v => setTxForm({...txForm, category: v})}
+                />
+              </div>
+            )}
           </div>
           
           {txForm.type === 'transfer' ? (
@@ -840,37 +1081,47 @@ export default function FinancePage() {
 
     if (modalType === 'budgets') {
       return (
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSaveBudget}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Tên hạn mức (Túi chi tiêu)</label>
-            <input type="text" className={styles.formInput} placeholder="VD: Ăn uống, Giải trí..." defaultValue={editingItem?.name || ''} />
+            <input type="text" className={styles.formInput} placeholder="VD: Ăn uống, Giải trí..." value={budgetForm.name} onChange={e => setBudgetForm({...budgetForm, name: e.target.value})} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Tháng áp dụng</label>
-              <input type="month" className={styles.formInput} defaultValue={new Date().toISOString().slice(0,7)} />
+              <input type="month" className={styles.formInput} value={budgetForm.month} onChange={e => setBudgetForm({...budgetForm, month: e.target.value})} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Icon / Danh mục</label>
               <SaoSelect
-                initialValue={editingItem?.category || 'food'}
+                initialValue={budgetForm.category}
                 options={[
                   { value: 'food', label: 'Ăn uống' },
-                  { value: 'housing', label: 'Sinh hoạt' },
+                  { value: 'housing', label: 'Nhà cửa & Sinh hoạt' },
                   { value: 'transport', label: 'Đi lại' },
                   { value: 'entertainment', label: 'Giải trí' },
-                  { value: 'shopping', label: 'Mua sắm' }
+                  { value: 'shopping', label: 'Mua sắm' },
+                  { value: 'health', label: 'Sức khoẻ' },
+                  { value: 'other', label: 'Khác' }
                 ]}
+                onChange={v => setBudgetForm({...budgetForm, category: v})}
               />
             </div>
           </div>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Số tiền giới hạn (VND)</label>
-            <input type="number" className={styles.formInput} placeholder="VD: 5000000" defaultValue={editingItem?.limit || ''} />
+            <input type="number" className={styles.formInput} placeholder="VD: 5000000" value={budgetForm.limit} onChange={e => setBudgetForm({...budgetForm, limit: e.target.value})} required />
           </div>
-          <button type="submit" className={styles.submitBtn}>
-            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thiết lập hạn mức'}
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="submit" className={styles.submitBtn}>
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thiết lập hạn mức'}
+            </button>
+            {editingItem && (
+              <button type="button" onClick={() => handleDeleteBudget(editingItem.id)} className={styles.submitBtn} style={{ background: 'rgba(255, 68, 68, 0.1)', borderColor: '#ff4444', color: '#ff4444' }}>
+                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
+              </button>
+            )}
+          </div>
         </form>
       );
     }
@@ -882,7 +1133,7 @@ export default function FinancePage() {
         : (editingItem?.type === 'lent' ? 'Thu Nợ' : 'Trả Nợ');
 
       return (
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSaveDebtAction}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Giao dịch với: <span style={{ color: '#fff' }}>{editingItem?.personName}</span></label>
             <div style={{ padding: '10px', background: 'rgba(0, 240, 255, 0.1)', borderRadius: '8px', color: '#00f0ff', margin: '5px 0 15px' }}>
@@ -892,19 +1143,21 @@ export default function FinancePage() {
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Số tiền (VND)</label>
-              <input type="number" className={styles.formInput} placeholder="VD: 500000" required />
+              <input type="number" className={styles.formInput} placeholder="VD: 500000" value={debtActionForm.amount} onChange={e => setDebtActionForm({...debtActionForm, amount: e.target.value})} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Nguồn tiền</label>
               <SaoSelect
+                initialValue={debtActionForm.wallet_id}
                 placeholder="Chọn nguồn tiền..."
-                options={wallets.map(w => ({ value: w.name, label: w.name }))}
+                options={wallets.map(w => ({ value: w.id, label: w.name }))}
+                onChange={v => setDebtActionForm({...debtActionForm, wallet_id: v})}
               />
             </div>
           </div>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Ngày thực hiện</label>
-            <SaoDatePicker defaultValue={new Date().toISOString().split('T')[0]} required />
+            <SaoDatePicker value={debtActionForm.date} onChange={v => setDebtActionForm({...debtActionForm, date: v})} required />
           </div>
           <button type="submit" className={styles.submitBtn}>
             <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> Ghi nhận giao dịch
@@ -915,112 +1168,180 @@ export default function FinancePage() {
 
     if (modalType === 'debts') {
       return (
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSaveDebt}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Người vay / Chủ nợ</label>
-            <input type="text" className={styles.formInput} placeholder="Tên người đó..." defaultValue={editingItem?.personName || ''} />
+            <input type="text" className={styles.formInput} placeholder="Tên người đó..." value={debtForm.personName} onChange={e => setDebtForm({...debtForm, personName: e.target.value})} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Loại nợ</label>
               <SaoSelect
-                initialValue={editingItem?.type || 'lent'}
+                initialValue={debtForm.type}
                 options={[
                   { value: 'lent', label: 'Cho vay (Người ta nợ mình)' },
                   { value: 'borrowed', label: 'Đi vay (Mình nợ người ta)' }
                 ]}
+                onChange={v => setDebtForm({...debtForm, type: v})}
               />
             </div>
+            {editingItem && (
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Trạng thái</label>
+                <SaoSelect
+                  initialValue={debtForm.status}
+                  options={[
+                    { value: 'unpaid', label: 'Chưa trả' },
+                    { value: 'partial', label: 'Trả 1 phần' },
+                    { value: 'paid', label: 'Đã thanh toán' }
+                  ]}
+                  onChange={v => setDebtForm({...debtForm, status: v})}
+                />
+              </div>
+            )}
+          </div>
+          {!editingItem && (
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Trạng thái</label>
-              <SaoSelect
-                initialValue={editingItem?.status || 'unpaid'}
-                options={[
-                  { value: 'unpaid', label: 'Chưa trả' },
-                  { value: 'partial', label: 'Trả 1 phần' },
-                  { value: 'paid', label: 'Đã thanh toán' }
-                ]}
-              />
+              <label className={styles.formLabel}>Số tiền (VND)</label>
+              <input type="number" className={styles.formInput} placeholder="VD: 1000000" value={debtForm.amount} onChange={e => setDebtForm({...debtForm, amount: e.target.value})} required />
             </div>
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Số tiền (VND)</label>
-            <input type="number" className={styles.formInput} placeholder="VD: 1000000" defaultValue={editingItem?.amount || ''} />
-          </div>
+          )}
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Ngày đến hạn (Tùy chọn)</label>
-              <SaoDatePicker defaultValue={editingItem?.dueDate || ''} />
+              <SaoDatePicker value={debtForm.dueDate} onChange={v => setDebtForm({...debtForm, dueDate: v})} />
             </div>
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Nguồn tiền Trừ/Cộng</label>
-              <SaoSelect
-                placeholder="Chọn nguồn tiền"
-                options={wallets.map(w => ({ value: w.name, label: w.name }))}
-              />
-            </div>
+            {!editingItem && (
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Nguồn tiền Trừ/Cộng</label>
+                <SaoSelect
+                  initialValue={debtForm.wallet_id}
+                  placeholder="Chọn nguồn tiền"
+                  options={wallets.map(w => ({ value: w.id, label: w.name }))}
+                  onChange={v => setDebtForm({...debtForm, wallet_id: v})}
+                />
+              </div>
+            )}
           </div>
-          <button type="submit" className={styles.submitBtn}>
-            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm sổ nợ'}
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="submit" className={styles.submitBtn}>
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm sổ nợ'}
+            </button>
+            {editingItem && (
+              <button type="button" onClick={() => handleDeleteDebt(editingItem.id)} className={styles.submitBtn} style={{ background: 'rgba(255, 68, 68, 0.1)', borderColor: '#ff4444', color: '#ff4444' }}>
+                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
+              </button>
+            )}
+          </div>
         </form>
       );
     }
 
     if (modalType === 'inventory') {
       return (
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSaveInventory}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Tên món đồ / Gia vị</label>
-            <input type="text" className={styles.formInput} placeholder="VD: Gạo ST25, Mì tôm..." defaultValue={editingItem?.name || ''} />
+            <input type="text" className={styles.formInput} placeholder="VD: Gạo ST25, Mì tôm..." value={inventoryForm.name} onChange={e => setInventoryForm({...inventoryForm, name: e.target.value})} required />
+          </div>
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Ngày mua</label>
+              <SaoDatePicker value={inventoryForm.purchaseDate} onChange={v => setInventoryForm({...inventoryForm, purchaseDate: v})} required />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Hạn sử dụng (Tùy chọn)</label>
+              <SaoDatePicker value={inventoryForm.expiryDate} onChange={v => setInventoryForm({...inventoryForm, expiryDate: v})} />
+            </div>
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Phân loại</label>
               <SaoSelect
-                initialValue={editingItem?.category || 'food'}
+                initialValue={inventoryForm.category}
                 options={[
                   { value: 'food', label: 'Thực phẩm' },
                   { value: 'spices', label: 'Gia vị' },
                   { value: 'utilities', label: 'Đồ dùng' }
                 ]}
+                onChange={v => setInventoryForm({...inventoryForm, category: v})}
               />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Hạn sử dụng (Tùy chọn)</label>
-              <SaoDatePicker defaultValue={editingItem?.expiryDate || ''} />
             </div>
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Số lượng</label>
-              <input type="number" className={styles.formInput} placeholder="VD: 5" defaultValue={editingItem?.quantity || editingItem?.originalQuantity || ''} />
+              <input type="number" min="1" step="1" className={styles.formInput} placeholder="VD: 5" value={inventoryForm.quantity} onChange={e => setInventoryForm({...inventoryForm, quantity: e.target.value})} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Đơn vị</label>
-              <input type="text" className={styles.formInput} placeholder="VD: kg, gói, chai..." defaultValue={editingItem?.unit || ''} />
-            </div>
-          </div>
-          <div className={styles.formRow}>
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Tổng tiền mua</label>
-              <input type="number" className={styles.formInput} placeholder="Nhập 0 nếu được tặng..." defaultValue={editingItem?.totalValue || ''} />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Nguồn chi tiền</label>
               <SaoSelect
-                initialValue={editingItem?.walletName || ''}
-                placeholder="Chọn nguồn tiền"
+                initialValue={inventoryForm.unit}
+                placeholder="VD: kg, gói, chai..."
+                allowCustom={true}
                 options={[
-                  { value: 'Được tặng', label: '🎁 Được tặng (Miễn phí)' },
-                  ...wallets.map(w => ({ value: w.name, label: w.name }))
+                  { value: 'kg', label: 'kg' },
+                  { value: 'gram', label: 'gram' },
+                  { value: 'gói', label: 'gói' },
+                  { value: 'chai', label: 'chai' },
+                  { value: 'lon', label: 'lon' },
+                  { value: 'thùng', label: 'thùng' },
+                  { value: 'phần', label: 'phần' },
+                  { value: 'mớ', label: 'mớ' },
+                  { value: 'quả', label: 'quả' },
+                  { value: 'củ', label: 'củ' }
                 ]}
+                onChange={v => setInventoryForm({...inventoryForm, unit: v})}
               />
             </div>
           </div>
-          <button type="submit" className={styles.submitBtn}>
-            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm vào kho'}
-          </button>
+          
+          <div className={styles.formGroup} style={{ marginTop: 10, marginBottom: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: '#a0c4ff' }}>
+              <input 
+                type="checkbox" 
+                checked={inventoryForm.isGift} 
+                onChange={e => {
+                  setInventoryForm({...inventoryForm, isGift: e.target.checked, wallet_id: e.target.checked ? '' : inventoryForm.wallet_id});
+                }} 
+                style={{ width: 18, height: 18 }} 
+              />
+              Đây là đồ được cho/tặng (Không mất tiền ví)
+            </label>
+          </div>
+
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Tổng tiền mua / Ước tính giá</label>
+              <input type="number" className={styles.formInput} placeholder="VD: 200000" value={inventoryForm.totalValue} onChange={e => setInventoryForm({...inventoryForm, totalValue: e.target.value})} />
+              {inventoryForm.quantity && inventoryForm.totalValue && Number(inventoryForm.quantity) > 0 && (
+                 <small style={{ color: '#a0c4ff', marginTop: 6, display: 'block' }}>
+                   Tỉ lệ: ≈ {formatMoney(Math.round(Number(inventoryForm.totalValue) / Number(inventoryForm.quantity)))} đ / {inventoryForm.unit || 'đơn vị'}
+                 </small>
+              )}
+            </div>
+            {!inventoryForm.isGift && (
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Nguồn chi tiền</label>
+                <SaoSelect
+                  initialValue={inventoryForm.wallet_id}
+                  placeholder="Chọn nguồn tiền"
+                  options={wallets.map(w => ({ value: w.id, label: w.name }))}
+                  onChange={v => setInventoryForm({...inventoryForm, wallet_id: v})}
+                />
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="submit" className={styles.submitBtn}>
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm vào kho'}
+            </button>
+            {editingItem && (
+              <button type="button" onClick={() => handleDeleteInventory(editingItem.id)} className={styles.submitBtn} style={{ background: 'rgba(255, 68, 68, 0.1)', borderColor: '#ff4444', color: '#ff4444' }}>
+                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
+              </button>
+            )}
+          </div>
         </form>
       );
     }
