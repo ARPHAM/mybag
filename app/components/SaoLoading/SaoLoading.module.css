@@ -4,42 +4,102 @@
   align-items: center;
   justify-content: center;
   padding: 3rem;
-  color: var(--sao-blue);
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .fullPage {
   min-height: 50vh;
 }
 
-.spinner {
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-  filter: drop-shadow(0 0 10px rgba(0, 195, 255, 0.5));
+.saoLoader {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.outerRing {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px dashed rgba(0, 240, 255, 0.5);
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  animation: spinRight 3s linear infinite;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+}
+
+.innerRing {
+  position: absolute;
+  width: 70%;
+  height: 70%;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 255, 170, 0.8);
+  border-left-color: transparent;
+  border-right-color: transparent;
+  animation: spinLeft 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+  box-shadow: 0 0 10px rgba(0, 255, 170, 0.4), inset 0 0 10px rgba(0, 255, 170, 0.2);
+}
+
+.corePulse {
+  position: absolute;
+  width: 20%;
+  height: 20%;
+  background: #ffffff;
+  transform: rotate(45deg);
+  animation: pulseCore 1.5s ease-in-out infinite;
+  box-shadow: 0 0 20px #ffffff, 0 0 40px rgba(0, 240, 255, 0.8);
+}
+
+.textContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: monospace;
+}
+
+.textBracket {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1.2rem;
+  font-weight: 300;
 }
 
 .text {
-  font-size: 1.1rem;
-  font-weight: 500;
-  letter-spacing: 1px;
+  font-size: 1rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #00f0ff;
   text-transform: uppercase;
-  text-shadow: 0 0 5px rgba(0, 195, 255, 0.3);
+  text-shadow: 0 0 5px rgba(0, 240, 255, 0.6);
+  animation: textGlitch 2s infinite;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
+@keyframes spinRight {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spinLeft {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes pulseCore {
+  0%, 100% { 
+    transform: rotate(45deg) scale(0.8); 
+    opacity: 0.7; 
   }
-  to {
-    transform: rotate(360deg);
+  50% { 
+    transform: rotate(45deg) scale(1.2); 
+    opacity: 1; 
   }
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+@keyframes textGlitch {
+  0%, 96%, 100% { opacity: 1; }
+  98% { opacity: 0; }
+  99% { opacity: 0.5; }
 }
