@@ -3,7 +3,8 @@ import { cookies } from 'next/headers';
 import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import Inventory from '@/models/Inventory';
-import Recipe from '@/models/Recipe'; // Cần import để mongoose hiểu ref 'Recipe' khi populate
+import Recipe from '@/models/Recipe';
+import User from '@/models/User'; // Tránh lỗi MissingSchemaError cho User
 import { verifyToken } from '@/lib/auth';
 
 export async function GET(req: Request) {
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Server Error' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Server Error', stack: error instanceof Error ? error.stack : undefined }, { status: 500 });
   }
 }
 
@@ -105,6 +106,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'Đã lưu bữa ăn!', mealLog: newMealLog }, { status: 201 });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Server Error' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Server Error', stack: error instanceof Error ? error.stack : undefined }, { status: 500 });
   }
 }
