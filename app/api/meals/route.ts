@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import Inventory from '@/models/Inventory';
+import Recipe from '@/models/Recipe'; // Cần import để mongoose hiểu ref 'Recipe' khi populate
 import { verifyToken } from '@/lib/auth';
 
 export async function GET(req: Request) {
