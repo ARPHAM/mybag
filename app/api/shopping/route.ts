@@ -4,6 +4,8 @@ import dbConnect from '@/lib/db';
 import ShoppingItem from '@/models/ShoppingItem';
 import { verifyToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -20,7 +22,11 @@ export async function GET(req: Request) {
     }
 
     const items = await ShoppingItem.find({ user_id: decoded.userId }).sort({ createdAt: -1 });
-    return NextResponse.json(items);
+    return NextResponse.json(items, {
+      headers: {
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30', // Cache 15s
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

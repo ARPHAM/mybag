@@ -6,6 +6,8 @@ import Budget from '@/models/Budget';
 import Transaction from '@/models/Transaction';
 import { verifyToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -55,7 +57,11 @@ export async function GET(req: Request) {
       spent: spentMap[b.category] || 0
     }));
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120', // Cache 1 phút
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

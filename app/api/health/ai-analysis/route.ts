@@ -8,6 +8,8 @@ import WeightLog from '@/models/WeightLog';
 import { verifyToken } from '@/lib/auth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -19,7 +21,12 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const latest = await HealthAnalysis.findOne({ user_id: decoded.userId }).sort({ analyzed_at: -1 });
-    return NextResponse.json(latest || null, { status: 200 });
+    return NextResponse.json(latest || null, { 
+      status: 200,
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120', // Cache 1 phút
+      }
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });

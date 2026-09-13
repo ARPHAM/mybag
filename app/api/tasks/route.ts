@@ -20,7 +20,11 @@ export async function GET(req: Request) {
     }
 
     const tasks = await Task.find({ user_id: decoded.userId }).sort({ createdAt: -1 });
-    return NextResponse.json(tasks);
+    return NextResponse.json(tasks, {
+      headers: {
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30', // Cache 15s
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

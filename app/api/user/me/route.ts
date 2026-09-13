@@ -4,6 +4,8 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { verifyToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -53,7 +55,11 @@ export async function GET(req: Request) {
     user.last_active_at = now;
     await user.save();
 
-    return NextResponse.json({ user });
+    return NextResponse.json({ user }, {
+      headers: {
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30', // Cache 15s
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

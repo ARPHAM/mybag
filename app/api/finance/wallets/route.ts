@@ -4,6 +4,8 @@ import dbConnect from '@/lib/db';
 import Wallet from '@/models/Wallet';
 import { verifyToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -15,7 +17,11 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const wallets = await Wallet.find({ user_id: decoded.userId }).sort({ createdAt: 1 });
-    return NextResponse.json(wallets);
+    return NextResponse.json(wallets, {
+      headers: {
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30', // Cache 15s
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

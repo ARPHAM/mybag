@@ -17,7 +17,11 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const items = await Inventory.find({ user_id: decoded.userId }).sort({ createdAt: -1 });
-    return NextResponse.json(items);
+    return NextResponse.json(items, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120', // Cache 1 phút
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

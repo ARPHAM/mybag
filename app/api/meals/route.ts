@@ -21,7 +21,11 @@ export async function GET(req: Request) {
     }
 
     const meals = await MealLog.find({ user_id: decoded.userId }).populate('recipe_id').sort({ consumed_at: -1 });
-    return NextResponse.json(meals);
+    return NextResponse.json(meals, {
+      headers: {
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30', // Cache 15s
+      }
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });

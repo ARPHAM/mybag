@@ -20,7 +20,11 @@ export async function GET(req: Request) {
     }
 
     const recipes = await Recipe.find({ user_id: decoded.userId }).sort({ created_at: -1 });
-    return NextResponse.json(recipes);
+    return NextResponse.json(recipes, {
+      headers: {
+        'Cache-Control': 'private, max-age=300, stale-while-revalidate=600', // Cache 5 phút
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

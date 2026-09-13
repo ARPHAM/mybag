@@ -6,6 +6,8 @@ import Wallet from '@/models/Wallet';
 import Transaction from '@/models/Transaction';
 import { verifyToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -17,7 +19,11 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const debts = await Debt.find({ user_id: decoded.userId }).sort({ createdAt: -1 });
-    return NextResponse.json(debts);
+    return NextResponse.json(debts, {
+      headers: {
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30', // Cache 15s
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

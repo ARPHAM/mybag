@@ -5,6 +5,8 @@ import User from '@/models/User';
 import WeightLog from '@/models/WeightLog';
 import { verifyToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -33,7 +35,11 @@ export async function GET(req: Request) {
       weight: log.weight,
     }));
 
-    return NextResponse.json({ height: user.height, history });
+    return NextResponse.json({ height: user.height, history }, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120', // Cache 1 phút
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

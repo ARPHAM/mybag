@@ -4,6 +4,8 @@ import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import { verifyToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -61,7 +63,12 @@ export async function GET(req: Request) {
       sugar: Math.round(item.sugar),
     }));
 
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(result, { 
+      status: 200,
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120', // Cache 1 phút
+      }
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
