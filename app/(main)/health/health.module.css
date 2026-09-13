@@ -271,3 +271,14 @@
   background: rgba(var(--sao-primary-rgb), 0.3);
   box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.4);
 }
+
+.markdownContent {
+  line-height: 1.6;
+  font-size: 0.95rem;
+  color: #e0e0e0;
+}
+.markdownContent p { margin-bottom: 1rem; }
+.markdownContent h3 { color: #00f0ff; margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.1rem; }
+.markdownContent ul { margin-left: 1.5rem; margin-bottom: 1rem; list-style-type: disc; }
+.markdownContent li { margin-bottom: 0.25rem; }
+.markdownContent strong { color: #fff; font-weight: 600; }

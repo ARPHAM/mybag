@@ -6,6 +6,16 @@ export interface IMealLog extends mongoose.Document {
   meal_tier: 'HEAVY' | 'LIGHT' | 'DRINK';
   hp_restored: number;
   consumed_at: Date;
+  calo?: number;
+  protein?: number;
+  fat?: number;
+  carbs?: number;
+  sugar?: number;
+  cost?: number;
+  ai_status: 'pending' | 'completed' | 'failed';
+  recipe_id?: mongoose.Types.ObjectId;
+  source: 'home' | 'eat_out';
+  ingredients_text?: string;
 }
 
 const MealLogSchema = new mongoose.Schema<IMealLog>({
@@ -18,6 +28,25 @@ const MealLogSchema = new mongoose.Schema<IMealLog>({
   },
   hp_restored: { type: Number, required: true },
   consumed_at: { type: Date, required: true, default: Date.now },
+  calo: { type: Number },
+  protein: { type: Number },
+  fat: { type: Number },
+  carbs: { type: Number },
+  sugar: { type: Number },
+  cost: { type: Number },
+  ai_status: { 
+    type: String, 
+    enum: ['pending', 'completed', 'failed'], 
+    default: 'pending' 
+  },
+  recipe_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' },
+  source: { 
+    type: String, 
+    enum: ['home', 'eat_out'], 
+    required: true,
+    default: 'home'
+  },
+  ingredients_text: { type: String }
 });
 
 export default mongoose.models.MealLog || mongoose.model<IMealLog>('MealLog', MealLogSchema);

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { signToken } from '@/lib/auth';
+import { signAccessToken, signRefreshToken } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
@@ -28,14 +28,27 @@ export async function POST(req: Request) {
       // Core stats default are handled in Schema (Level 1, HP 2000, MP 1000)
     });
 
-    const token = await signToken({ userId: newUser._id.toString(), username: newUser.username });
+    const accessToken = await signAccessToken({ userId: newUser._id.toString(), username: newUser.username });
+    const refreshToken = await signRefreshToken({ userId: newUser._id.toString() });
+
+    newUser.refresh_token = refreshToken;
+    await newUser.save();
 
     const response = NextResponse.json({ message: 'Tạo nhân vật thành công', user: { username: newUser.username } }, { status: 201 });
     
-    // Set HTTP-only cookie
+    // Set HTTP-only cookies
     response.cookies.set({
       name: 'auth_token',
-      value: token,
+      value: accessToken,
+      httpOnly: true,
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 15, // 15 minutes
+    });
+
+    response.cookies.set({
+      name: 'refresh_token',
+      value: refreshToken,
       httpOnly: true,
       path: '/',
       secure: process.env.NODE_ENV === 'production',

@@ -12,7 +12,9 @@ export interface IUser extends mongoose.Document {
   current_mp: number;
   height: number;
   last_active_at: Date;
+  last_hp_mp_update: Date;
   ai_daily_buff?: string;
+  refresh_token?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,13 +25,15 @@ const UserSchema = new mongoose.Schema<IUser>({
   password_hash: { type: String, required: true },
   level: { type: Number, required: true, default: 1 },
   current_exp: { type: Number, required: true, default: 0 },
-  max_hp: { type: Number, required: true, default: 2000 },
-  current_hp: { type: Number, required: true, default: 2000 },
-  max_mp: { type: Number, required: true, default: 1000 },
-  current_mp: { type: Number, required: true, default: 1000 },
+  max_hp: { type: Number, required: true, default: 1200 },
+  current_hp: { type: Number, required: true, default: 1200 },
+  max_mp: { type: Number, required: true, default: 500 },
+  current_mp: { type: Number, required: true, default: 500 },
   height: { type: Number, required: true, default: 170 },
   last_active_at: { type: Date, required: true, default: Date.now },
+  last_hp_mp_update: { type: Date, required: true, default: Date.now },
   ai_daily_buff: { type: String },
+  refresh_token: { type: String },
 }, { timestamps: true });
 
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { signToken } from '@/lib/auth';
+import { signAccessToken, signRefreshToken } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
@@ -25,16 +25,29 @@ export async function POST(req: Request) {
 
     // Update last active time upon login
     user.last_active_at = new Date();
-    await user.save();
+    
+    const accessToken = await signAccessToken({ userId: user._id.toString(), username: user.username });
+    const refreshToken = await signRefreshToken({ userId: user._id.toString() });
 
-    const token = await signToken({ userId: user._id.toString(), username: user.username });
+    // Save refresh token to user
+    user.refresh_token = refreshToken;
+    await user.save();
 
     const response = NextResponse.json({ message: 'Link Start!', user: { username: user.username } }, { status: 200 });
     
-    // Set HTTP-only cookie
+    // Set HTTP-only cookies
     response.cookies.set({
       name: 'auth_token',
-      value: token,
+      value: accessToken,
+      httpOnly: true,
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 15, // 15 minutes
+    });
+
+    response.cookies.set({
+      name: 'refresh_token',
+      value: refreshToken,
       httpOnly: true,
       path: '/',
       secure: process.env.NODE_ENV === 'production',

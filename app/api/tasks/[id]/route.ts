@@ -59,18 +59,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         while (user.current_exp >= requiredExp) {
           user.current_exp -= requiredExp;
           user.level += 1;
-          // Tăng giới hạn base máu và MP khi level up
-          user.max_hp += 50; 
-          user.max_mp += 20;
+          // Loại bỏ việc tăng max_hp và max_mp để giữ vững Game Balance
           
           leveledUp = true;
           requiredExp = getExpForNextLevel(user.level);
         }
 
-        // Hồi lại máu và MP một chút khi hoàn thành task (Optional)
-        if (user.current_mp < user.max_mp) {
-          user.current_mp = Math.min(user.max_mp, user.current_mp + 20); // +20 MP
-        }
+        // Hồi lại MP khi hoàn thành task (có chút ngẫu nhiên)
+        const mpReward = Math.floor(Math.random() * 21) + 40; // 40 - 60 MP
+        
+        user.current_mp = Math.min(user.max_mp, user.current_mp + mpReward);
 
         await user.save();
 

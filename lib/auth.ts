@@ -8,11 +8,20 @@ const getJwtSecretKey = () => {
   return new TextEncoder().encode(secret);
 };
 
-export async function signToken(payload: { userId: string; username: string }) {
+export async function signAccessToken(payload: { userId: string; username: string }) {
   const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('30d') // Token lives for 30 days
+    .setExpirationTime('15m') // Access token lives for 15 minutes
+    .sign(getJwtSecretKey());
+  return token;
+}
+
+export async function signRefreshToken(payload: { userId: string }) {
+  const token = await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('30d') // Refresh token lives for 30 days
     .sign(getJwtSecretKey());
   return token;
 }

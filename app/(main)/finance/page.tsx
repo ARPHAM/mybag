@@ -6,7 +6,9 @@ import SaoModal from '../../components/SaoModal/SaoModal';
 import SaoSelect from '../../components/SaoSelect/SaoSelect';
 import SaoTabs from '../../components/SaoTabs/SaoTabs';
 import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
+import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import { useSaoAlert } from '../../contexts/AlertContext';
+import { getWallets, getTransactions, getBudgets, getDebts, getInventory, createWallet, createTransaction, createBudget, createDebt, createInventory, updateWallet, updateTransaction, updateBudget, updateDebt, updateInventory, deleteWallet, deleteTransaction, deleteBudget, deleteDebt, deleteInventory } from './api';
 import styles from './finance.module.css';
 
 type TabId = 'overview' | 'wallets' | 'budgets' | 'history' | 'debts' | 'inventory';
@@ -97,18 +99,14 @@ export default function FinancePage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [wRes, tRes, bRes, dRes] = await Promise.all([
-        fetch('/api/finance/wallets'),
-        fetch('/api/finance/transactions'),
-        fetch('/api/finance/budgets'),
-        fetch('/api/finance/debts')
+      const [wData, tData, bData, dData]: any = await Promise.all([
+        getWallets(),
+        getTransactions(),
+        getBudgets(),
+        getDebts()
       ]);
-      const wData = await wRes.json();
-      const tData = await tRes.json();
-      const bData = await bRes.json();
-      const dData = await dRes.json();
       
-      if (wRes.ok) {
+      if (wData) {
         setWallets(wData.map((w: any) => ({
           id: w._id,
           name: w.name,
@@ -117,7 +115,7 @@ export default function FinancePage() {
           color: w.color
         })));
       }
-      if (tRes.ok) {
+      if (tData) {
         setTransactions(tData.map((t: any) => ({
           id: t._id,
           type: t.type,
@@ -127,7 +125,7 @@ export default function FinancePage() {
           walletName: t.walletName
         })));
       }
-      if (bRes.ok) {
+      if (bData) {
         setBudgets(bData.map((b: any) => ({
           id: b._id,
           name: b.name,
@@ -137,7 +135,7 @@ export default function FinancePage() {
           spent: b.spent
         })));
       }
-      if (dRes.ok) {
+      if (dData) {
         setDebts(dData.map((d: any) => ({
           id: d._id,
           personName: d.personName,
@@ -157,9 +155,8 @@ export default function FinancePage() {
         })));
       }
       
-      const iRes = await fetch('/api/finance/inventory');
-      if (iRes.ok) {
-        const iData = await iRes.json();
+      const iData: any = await getInventory();
+      if (iData) {
         setInventory(iData.map((i: any) => ({
           id: i._id,
           name: i.name,
@@ -185,17 +182,12 @@ export default function FinancePage() {
   const handleDeleteTransaction = async (id: string) => {
     showConfirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được tính toán hoàn trả tương ứng.', async () => {
       try {
-        const res = await fetch(`/api/finance/transactions/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          fetchData();
-          if (isModalOpen) setIsModalOpen(false);
-        } else {
-          const err = await res.json();
-          showAlert(err.error || 'Lỗi khi xóa giao dịch');
-        }
-      } catch (err) {
+        await deleteTransaction(id);
+        fetchData();
+        if (isModalOpen) setIsModalOpen(false);
+      } catch (err: any) {
         console.error(err);
-        showAlert('Lỗi hệ thống');
+        showAlert(err.message || 'Lỗi hệ thống');
       }
     });
   };
@@ -229,11 +221,7 @@ export default function FinancePage() {
     setInventory(inventory.map(i => i.id === id ? { ...i, quantity: newQty } : i));
 
     try {
-      await fetch(`/api/finance/inventory/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ justUpdateQty: true, quantity: newQty })
-      });
+      await updateInventory(id, { justUpdateQty: true, quantity: newQty });
     } catch (err) {
       console.error('Lỗi khi cập nhật số lượng', err);
       fetchData(); // Rollback on error
@@ -751,56 +739,46 @@ export default function FinancePage() {
     const handleSaveBudget = async (e: React.FormEvent) => {
       e.preventDefault();
       try {
-        const method = editingItem ? 'PUT' : 'POST';
-        const url = editingItem ? `/api/finance/budgets/${editingItem.id}` : '/api/finance/budgets';
-        const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: budgetForm.name,
-            month: budgetForm.month,
-            category: budgetForm.category,
-            limit: parseFloat(budgetForm.limit) || 0
-          })
-        });
-        if (res.ok) {
-          fetchData();
-          setIsModalOpen(false);
+        const reqData = {
+          name: budgetForm.name,
+          month: budgetForm.month,
+          category: budgetForm.category,
+          limit: parseFloat(budgetForm.limit) || 0
+        };
+        if (editingItem) {
+          await updateBudget(editingItem.id, reqData);
         } else {
-          const err = await res.json();
-          showAlert(err.error);
+          await createBudget(reqData);
         }
-      } catch (err) {
+        fetchData();
+        setIsModalOpen(false);
+      } catch (err: any) {
         console.error(err);
+        showAlert(err.message || 'Lỗi lưu hạn mức');
       }
     };
 
     const handleSaveDebt = async (e: React.FormEvent) => {
       e.preventDefault();
       try {
-        const method = editingItem ? 'PUT' : 'POST';
-        const url = editingItem ? `/api/finance/debts/${editingItem.id}` : '/api/finance/debts';
-        const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            personName: debtForm.personName,
-            type: debtForm.type,
-            status: debtForm.status, // Actually POST ignores status, PUT uses personName, dueDate
-            amount: parseFloat(debtForm.amount) || 0,
-            dueDate: debtForm.dueDate,
-            wallet_id: debtForm.wallet_id
-          })
-        });
-        if (res.ok) {
-          fetchData();
-          setIsModalOpen(false);
+        const reqData = {
+          personName: debtForm.personName,
+          type: debtForm.type,
+          status: debtForm.status,
+          amount: parseFloat(debtForm.amount) || 0,
+          dueDate: debtForm.dueDate,
+          wallet_id: debtForm.wallet_id
+        };
+        if (editingItem) {
+          await updateDebt(editingItem.id, reqData);
         } else {
-          const err = await res.json();
-          showAlert(err.error);
+          await createDebt(reqData);
         }
-      } catch (err) {
+        fetchData();
+        setIsModalOpen(false);
+      } catch (err: any) {
         console.error(err);
+        showAlert(err.message || 'Lỗi lưu sổ nợ');
       }
     };
 
@@ -808,85 +786,78 @@ export default function FinancePage() {
       e.preventDefault();
       if (!editingItem || !debtActionType) return;
       try {
-        const res = await fetch(`/api/finance/debts/${editingItem.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: debtActionType,
-            actionAmount: parseFloat(debtActionForm.amount) || 0,
-            wallet_id: debtActionForm.wallet_id
-          })
+        await updateDebt(editingItem.id, {
+          action: debtActionType,
+          actionAmount: parseFloat(debtActionForm.amount) || 0,
+          wallet_id: debtActionForm.wallet_id
         });
-        if (res.ok) {
-          fetchData();
-          setIsModalOpen(false);
-        } else {
-          const err = await res.json();
-          showAlert(err.error);
-        }
-      } catch (err) {
+        fetchData();
+        setIsModalOpen(false);
+      } catch (err: any) {
         console.error(err);
+        showAlert(err.message || 'Lỗi giao dịch nợ');
       }
     };
 
     const handleSaveInventory = async (e: React.FormEvent) => {
       e.preventDefault();
       try {
-        const method = editingItem ? 'PUT' : 'POST';
-        const url = editingItem ? `/api/finance/inventory/${editingItem.id}` : '/api/finance/inventory';
-        const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: inventoryForm.name,
-            category: inventoryForm.category,
-            quantity: parseFloat(inventoryForm.quantity) || 0,
-            unit: inventoryForm.unit,
-            purchaseDate: inventoryForm.purchaseDate,
-            expiryDate: inventoryForm.expiryDate,
-            isGift: inventoryForm.isGift,
-            totalValue: parseFloat(inventoryForm.totalValue) || 0,
-            wallet_id: inventoryForm.wallet_id
-          })
-        });
-        if (res.ok) {
-          fetchData();
-          setIsModalOpen(false);
+        const reqData = {
+          name: inventoryForm.name,
+          category: inventoryForm.category,
+          quantity: parseFloat(inventoryForm.quantity) || 0,
+          unit: inventoryForm.unit,
+          purchaseDate: inventoryForm.purchaseDate,
+          expiryDate: inventoryForm.expiryDate,
+          isGift: inventoryForm.isGift,
+          totalValue: parseFloat(inventoryForm.totalValue) || 0,
+          wallet_id: inventoryForm.wallet_id
+        };
+        if (editingItem) {
+          await updateInventory(editingItem.id, reqData);
         } else {
-          const err = await res.json();
-          showAlert(err.error);
+          await createInventory(reqData);
         }
-      } catch (err) {
+        fetchData();
+        setIsModalOpen(false);
+      } catch (err: any) {
         console.error(err);
+        showAlert(err.message || 'Lỗi lưu kho');
       }
     };
 
     const handleDeleteBudget = async (id: string) => {
       showConfirm('Bạn có chắc muốn xóa hạn mức này?', async () => {
-        const res = await fetch(`/api/finance/budgets/${id}`, { method: 'DELETE' });
-        if (res.ok) {
+        try {
+          await deleteBudget(id);
           fetchData();
           if (isModalOpen) setIsModalOpen(false);
+        } catch (e: any) {
+          showAlert(e.message || 'Lỗi xóa hạn mức');
         }
       });
     };
 
     const handleDeleteDebt = async (id: string) => {
       showConfirm('Bạn có chắc muốn xóa sổ nợ này? Lưu ý: Xóa sổ nợ sẽ không hoàn lại các giao dịch đã ghi nhận trong ví.', async () => {
-        const res = await fetch(`/api/finance/debts/${id}`, { method: 'DELETE' });
-        if (res.ok) {
+        try {
+          await deleteDebt(id);
           fetchData();
           if (isModalOpen) setIsModalOpen(false);
+        } catch (e: any) {
+          showAlert(e.message || 'Lỗi xóa sổ nợ');
         }
       });
     };
 
     const handleDeleteInventory = async (id: string) => {
       showConfirm('Bạn có chắc muốn xóa mặt hàng này khỏi kho? Số tiền mua hàng sẽ được hoàn lại vào ví nếu có.', async () => {
-        const res = await fetch(`/api/finance/inventory/${id}`, { method: 'DELETE' });
-        if (res.ok) {
+        try {
+          await deleteInventory(id);
           fetchData();
           if (isModalOpen) setIsModalOpen(false);
+        } catch (e: any) {
+          showAlert(e.message || 'Lỗi xóa hàng tồn');
         }
       });
     };
@@ -894,53 +865,47 @@ export default function FinancePage() {
     const handleSaveWallet = async (e: React.FormEvent) => {
       e.preventDefault();
       try {
-        const res = await fetch('/api/finance/wallets', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            name: walletForm.name, 
-            type: walletForm.type, 
-            color: walletForm.color, 
-            balance: parseFloat(walletForm.balance) || 0 
-          })
-        });
-        if (res.ok) {
-          fetchData();
-          setIsModalOpen(false);
+        const reqData = { 
+          name: walletForm.name, 
+          type: walletForm.type, 
+          color: walletForm.color, 
+          balance: parseFloat(walletForm.balance) || 0 
+        };
+        if (editingItem) {
+          await updateWallet(editingItem.id, reqData);
         } else {
-          const err = await res.json();
-          showAlert(err.error);
+          await createWallet(reqData);
         }
-      } catch (err) {
+        fetchData();
+        setIsModalOpen(false);
+      } catch (err: any) {
         console.error(err);
+        showAlert(err.message || 'Lỗi lưu nguồn tiền');
       }
     };
 
     const handleSaveTransaction = async (e: React.FormEvent) => {
       e.preventDefault();
       try {
-        const res = await fetch('/api/finance/transactions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            type: txForm.type, 
-            amount: parseFloat(txForm.amount) || 0, 
-            date: txForm.date, 
-            description: txForm.description,
-            category: txForm.type === 'expense' ? txForm.category : undefined,
-            wallet_id: txForm.wallet_id,
-            to_wallet_id: txForm.to_wallet_id
-          })
-        });
-        if (res.ok) {
-          fetchData();
-          setIsModalOpen(false);
+        const reqData = { 
+          type: txForm.type, 
+          amount: parseFloat(txForm.amount) || 0, 
+          date: txForm.date, 
+          description: txForm.description,
+          category: txForm.type === 'expense' ? txForm.category : undefined,
+          wallet_id: txForm.wallet_id,
+          to_wallet_id: txForm.to_wallet_id
+        };
+        if (editingItem) {
+          await updateTransaction(editingItem.id, reqData);
         } else {
-          const err = await res.json();
-          showAlert(err.error);
+          await createTransaction(reqData);
         }
-      } catch (err) {
+        fetchData();
+        setIsModalOpen(false);
+      } catch (err: any) {
         console.error(err);
+        showAlert(err.message || 'Lỗi lưu giao dịch');
       }
     };
 
@@ -1348,6 +1313,20 @@ export default function FinancePage() {
 
     return null;
   };
+
+  if (isLoading) {
+    return (
+      <div className={styles.financeContainer}>
+        <div className={styles.header}>
+          <div className={styles.titleWrapper}>
+            <Wallet className={styles.titleIcon} size={28} />
+            <h1 className={styles.title}>Finance Center</h1>
+          </div>
+        </div>
+        <SaoLoading fullPage />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.financeContainer}>

@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { ShoppingCart, Check, Plus, Trash2, Apple, Home as HomeIcon, Package, AlertTriangle } from 'lucide-react';
 import styles from './shopping.module.css';
 import SaoModal from '../../components/SaoModal/SaoModal';
+import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import SaoTabs from '../../components/SaoTabs/SaoTabs';
+import { getShoppingItems, createShoppingItem, updateShoppingItem, deleteShoppingItem } from './api';
 
 type CategoryType = 'all' | 'food' | 'household' | 'other';
 
@@ -28,9 +30,8 @@ export default function ShoppingPage() {
 
   const fetchItems = async () => {
     try {
-      const res = await fetch('/api/shopping');
-      const data = await res.json();
-      if (res.ok) setItems(data);
+      const data: any = await getShoppingItems();
+      setItems(data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -54,11 +55,7 @@ export default function ShoppingPage() {
 
   const toggleCheck = async (item: GroceryItem) => {
     try {
-      await fetch(`/api/shopping/${item._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ checked: !item.checked }),
-      });
+      await updateShoppingItem(item._id, { checked: !item.checked });
       fetchItems();
     } catch (err) {
       console.error(err);
@@ -73,7 +70,7 @@ export default function ShoppingPage() {
   const handleDelete = async () => {
     if (itemToDelete) {
       try {
-        await fetch(`/api/shopping/${itemToDelete}`, { method: 'DELETE' });
+        await deleteShoppingItem(itemToDelete);
         fetchItems();
       } catch (err) {
         console.error(err);
@@ -92,11 +89,7 @@ export default function ShoppingPage() {
     if (!formData.name.trim()) return;
 
     try {
-      await fetch('/api/shopping', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      await createShoppingItem(formData);
       fetchItems();
     } catch (err) {
       console.error(err);
@@ -162,7 +155,7 @@ export default function ShoppingPage() {
       {/* GROCERY LIST */}
       <div className={styles.groceryList}>
         {isLoading ? (
-          <div style={{color: '#fff', textAlign: 'center', marginTop: '20px'}}>Đang tải danh sách...</div>
+          <SaoLoading fullPage />
         ) : (
           filteredItems.map(item => (
             <div 

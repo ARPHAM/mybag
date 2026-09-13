@@ -48,13 +48,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const hasFinancialChange = (oldIsGift !== isGift) || (oldTotalValue !== totalValue) || (oldWalletId !== wallet_id);
 
     if (hasFinancialChange) {
+      let oldTxAmount = 0;
+
       // 1. Revert old transaction if existed
       if (oldTransactionId) {
         const oldTx = await Transaction.findById(oldTransactionId);
         if (oldTx && oldWalletId) {
+          oldTxAmount = oldTx.amount;
           const oldWallet = await Wallet.findById(oldWalletId);
           if (oldWallet) {
-            oldWallet.balance += oldTx.amount; // Hoàn tiền
+            oldWallet.balance += oldTx.amount; // Hoàn tiền toàn bộ
             await oldWallet.save();
           }
           await Transaction.findByIdAndDelete(oldTransactionId);
@@ -64,32 +67,39 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
 
       // 2. Apply new transaction if it's not a gift and has cost
-      if (!isGift && totalValue && totalValue > 0) {
+      if (!isGift && totalValue !== undefined && totalValue !== null) {
         if (!wallet_id) return NextResponse.json({ error: 'Cần chọn ví thanh toán' }, { status: 400 });
         
         const wallet = await Wallet.findOne({ _id: wallet_id, user_id: decoded.userId });
         if (!wallet) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
         
-        if (wallet.balance < totalValue) {
-          // Rollback not implemented here for brevity, usually we should use DB transactions
-          return NextResponse.json({ error: 'Số dư ví không đủ' }, { status: 400 });
+        // Số tiền giao dịch mới = Tiền gốc ban đầu + (Giá trị tổng mới - Giá trị tổng hiện tại)
+        // Nếu user đã ăn 200đ (còn 1800đ), rồi sửa giá thành 2000đ -> diff = +200đ
+        // Giao dịch mới sẽ là: 2000 (gốc) + 200 = 2200đ.
+        const diff = totalValue - oldTotalValue;
+        const newTxAmount = oldTxAmount + diff;
+
+        if (newTxAmount > 0) {
+          if (wallet.balance < newTxAmount) {
+            return NextResponse.json({ error: 'Số dư ví không đủ' }, { status: 400 });
+          }
+
+          wallet.balance -= newTxAmount;
+          await wallet.save();
+          newWalletName = wallet.name;
+
+          const transaction = await Transaction.create({
+            user_id: decoded.userId,
+            type: 'expense',
+            amount: newTxAmount,
+            date: purchaseDate ? new Date(`${purchaseDate.split('T')[0]}T12:00:00.000Z`) : new Date(),
+            description: `Mua dự trữ: ${name}`,
+            category: category,
+            wallet_id,
+            walletName: newWalletName
+          });
+          newTransactionId = transaction._id;
         }
-
-        wallet.balance -= totalValue;
-        await wallet.save();
-        newWalletName = wallet.name;
-
-        const transaction = await Transaction.create({
-          user_id: decoded.userId,
-          type: 'expense',
-          amount: totalValue,
-          date: purchaseDate ? new Date(`${purchaseDate.split('T')[0]}T12:00:00.000Z`) : new Date(),
-          description: `Mua dự trữ: ${name}`,
-          category: category,
-          wallet_id,
-          walletName: newWalletName
-        });
-        newTransactionId = transaction._id;
       }
     } else if (oldTransactionId) {
       // If no financial change but name/category/date changed, update description and date

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Settings, Palette, CheckCircle2 } from 'lucide-react';
+import { Settings, Palette, CheckCircle2, LogOut } from 'lucide-react';
+import { logoutUser } from './api';
+import { useSaoAlert } from '../../contexts/AlertContext';
 import styles from './settings.module.css';
 
 const THEMES = [
@@ -17,6 +19,7 @@ const THEMES = [
 
 export default function SettingsPage() {
   const [activeTheme, setActiveTheme] = useState('cyan');
+  const { showConfirm } = useSaoAlert();
 
   useEffect(() => {
     const saved = localStorage.getItem('sao-theme');
@@ -32,6 +35,18 @@ export default function SettingsPage() {
     // Dispatch event to layout to update variables instantly
     const event = new CustomEvent('sao-theme-changed', { detail: themeId });
     window.dispatchEvent(event);
+  };
+
+  const handleLogout = async () => {
+    showConfirm('Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?', async () => {
+      try {
+        await logoutUser();
+      } catch (err) {
+        console.error(err);
+      } finally {
+        window.location.href = '/login';
+      }
+    });
   };
 
   return (
@@ -64,6 +79,33 @@ export default function SettingsPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className={styles.section} style={{ marginTop: '30px' }}>
+        <div className={styles.sectionTitle} style={{ color: '#ff4444' }}>
+          <LogOut size={20} />
+          <span>Quản lý tài khoản</span>
+        </div>
+        <button 
+          onClick={handleLogout}
+          style={{
+            background: 'rgba(255, 68, 68, 0.1)',
+            border: '1px solid #ff4444',
+            color: '#ff4444',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 68, 68, 0.2)'}
+          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 68, 68, 0.1)'}
+        >
+          <LogOut size={18} /> Đăng xuất khỏi hệ thống
+        </button>
       </div>
     </div>
   );

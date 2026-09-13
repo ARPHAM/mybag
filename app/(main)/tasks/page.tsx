@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { CheckSquare, Check, Plus, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 import styles from './tasks.module.css';
 import SaoModal from '../../components/SaoModal/SaoModal';
+import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import { useSaoAlert } from '../../contexts/AlertContext';
+import { getTasks, createTask, updateTask, deleteTask } from './api';
 
 interface Task {
   _id: string;
@@ -26,9 +28,8 @@ export default function TasksPage() {
 
   const fetchTasks = async () => {
     try {
-      const res = await fetch('/api/tasks');
-      const data = await res.json();
-      if (res.ok) setTasks(data);
+      const data: any = await getTasks();
+      setTasks(data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -53,21 +54,14 @@ export default function TasksPage() {
     const newStatus = task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
     
     try {
-      const res = await fetch(`/api/tasks/${task._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        if (data.reward?.leveledUp) {
+      const data: any = await updateTask(task._id, { status: newStatus });
+      if (data.reward?.leveledUp) {
           showAlert(`🎉 LEVEL UP! Bạn đã đạt Level ${data.reward.newLevel}`);
         } else if (data.penalty?.leveledDown) {
           showAlert(`⚠️ LEVEL DOWN! Exp bị trừ nên bạn bị rớt xuống Level ${data.penalty.newLevel}`);
         }
         window.dispatchEvent(new CustomEvent('sao-user-updated'));
         fetchTasks();
-      }
     } catch (err) {
       console.error(err);
     }
@@ -81,7 +75,7 @@ export default function TasksPage() {
   const handleDelete = async () => {
     if (taskToDelete) {
       try {
-        await fetch(`/api/tasks/${taskToDelete}`, { method: 'DELETE' });
+        await deleteTask(taskToDelete);
         fetchTasks();
       } catch (err) {
         console.error(err);
@@ -121,15 +115,11 @@ export default function TasksPage() {
         // For simplicity, we just use PUT to update the entire task or just assume creation for now.
         // If we want full edit, we'd need another API route update. Let's just reload.
       } else {
-        await fetch('/api/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            title: formData.title, 
-            description: formData.description,
-            quest_rank: formData.quest_rank, 
-            due_date: formData.due_date 
-          }),
+        await createTask({ 
+          title: formData.title, 
+          description: formData.description,
+          quest_rank: formData.quest_rank, 
+          due_date: formData.due_date 
         });
       }
       fetchTasks();
@@ -169,7 +159,7 @@ export default function TasksPage() {
       {/* TASK LIST */}
       <div className={styles.taskList}>
         {isLoading ? (
-          <div style={{color: '#fff'}}>Đang kết nối hệ thống...</div>
+          <SaoLoading fullPage />
         ) : (
           tasks.map((task) => (
             <div

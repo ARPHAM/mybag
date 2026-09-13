@@ -20,6 +20,7 @@ import {
   Brain
 } from 'lucide-react';
 import { AlertProvider } from '../contexts/AlertContext';
+import { getUserProfile } from './api';
 import SaoAlert from '../components/SaoAlert/SaoAlert';
 import styles from './layout.module.css';
 
@@ -33,13 +34,27 @@ export default function DashboardLayout({
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+      
+      // FE tự động nội suy (simulate) HP mượt mà theo công thức BE
+      // 50 HP / giờ = 50 / 3600 HP mỗi giây
+      setUser((prevUser: any) => {
+        if (!prevUser) return prevUser;
+        const newHp = Math.max(0, prevUser.current_hp - (50 / 3600));
+        return {
+          ...prevUser,
+          current_hp: newHp
+        };
+      });
+
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
     fetchUser();
-    
+
     // Listen for custom event from other pages
     const handleUserUpdate = () => fetchUser();
     window.addEventListener('sao-user-updated', handleUserUpdate);
@@ -48,9 +63,8 @@ export default function DashboardLayout({
 
   const fetchUser = async () => {
     try {
-      const res = await fetch('/api/user/me');
-      const data = await res.json();
-      if (res.ok && data.user) {
+      const data: any = await getUserProfile();
+      if (data.user) {
         setUser(data.user);
       }
     } catch (err) {
@@ -73,7 +87,7 @@ export default function DashboardLayout({
   useEffect(() => {
     const saved = localStorage.getItem('sao-theme');
     if (saved) setThemeColor(saved);
-    
+
     // Custom Event listener for when settings page changes the theme
     const handleThemeChange = (e: any) => {
       if (e.detail) setThemeColor(e.detail);
@@ -132,7 +146,7 @@ export default function DashboardLayout({
                 <div className={styles.barWrapper}>
                   <div className={`${styles.barFill} ${styles.hp}`} style={{ width: user ? `${(user.current_hp / user.max_hp) * 100}%` : '100%' }}></div>
                 </div>
-                <div className={styles.barValues}>{user ? `${Math.floor(user.current_hp)} / ${user.max_hp}` : '...'}</div>
+                <div className={styles.barValues}>{user ? `${Math.floor(user.current_hp)} / ${user.max_hp}` : '0 / 0'}</div>
               </div>
               <div className={styles.barRow} title="Tinh thần (MP) - Cạn kiệt nếu có task trễ hạn (Stress/Quá tải)">
                 <div className={`${styles.barLabel} ${styles.mp}`}>
@@ -141,7 +155,7 @@ export default function DashboardLayout({
                 <div className={styles.barWrapper}>
                   <div className={`${styles.barFill} ${styles.mp}`} style={{ width: user ? `${(user.current_mp / user.max_mp) * 100}%` : '100%' }}></div>
                 </div>
-                <div className={styles.barValues}>{user ? `${Math.floor(user.current_mp)} / ${user.max_mp}` : '...'}</div>
+                <div className={styles.barValues}>{user ? `${Math.floor(user.current_mp)} / ${user.max_mp}` : '0 / 0'}</div>
               </div>
             </div>
           </div>
@@ -167,7 +181,7 @@ export default function DashboardLayout({
           <div className={styles.sidebarMenu}>
             {menuItems.map((item) => {
               const isActive = pathname === item.path || (pathname === '/' && item.id === 'profile');
-              
+
               return (
                 <Link
                   key={item.id}
