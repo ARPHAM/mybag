@@ -5,7 +5,7 @@ export const getTasks = () => {
 };
 
 export const updateTask = (id: string, updates: any) => {
-  return axiosClient.patch(`/api/tasks/${id}`, updates);
+  return axiosClient.put(`/api/tasks/${id}`, updates);
 };
 
 export const deleteTask = (id: string) => {

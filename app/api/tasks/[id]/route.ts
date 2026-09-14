@@ -95,8 +95,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           user.level -= 1;
           const requiredExpForPrevLevel = getExpForNextLevel(user.level);
           user.current_exp += requiredExpForPrevLevel;
-          user.max_hp = Math.max(100, user.max_hp - 50); // don't go below base
-          user.max_mp = Math.max(50, user.max_mp - 20); // don't go below base
           leveledDown = true;
         }
 

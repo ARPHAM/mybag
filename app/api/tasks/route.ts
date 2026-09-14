@@ -19,13 +19,26 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
     }
 
+    const user = await import('@/models/User').then(m => m.default).then(User => User.findById(decoded.userId));
+    
+    // Auto-fail overdue tasks
+    const now = new Date();
+    await Task.updateMany({
+      user_id: decoded.userId,
+      status: 'PENDING',
+      due_date: { $lt: now }
+    }, {
+      $set: { status: 'OVERDUE' }
+    });
+
     const tasks = await Task.find({ user_id: decoded.userId }).sort({ createdAt: -1 });
     return NextResponse.json(tasks, {
       headers: {
-        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30', // Cache 15s
+        'Cache-Control': 'no-store, max-age=0',
       }
     });
   } catch (error) {
+    console.error("GET /api/tasks error:", error);
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }
 }

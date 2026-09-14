@@ -12,6 +12,10 @@
   padding-top: 2vh;
   font-family: 'Tauri', sans-serif;
   user-select: none;
+  
+  /* Đưa perspective lên Root Container để đồng nhất không gian 3D cho toàn bộ màn hình */
+  perspective: 1200px;
+  transform-style: preserve-3d;
   overflow: hidden;
   position: relative;
   color: #fff;
@@ -35,8 +39,7 @@
   z-index: 10;
   padding: 0 20px 20px 20px;
   animation: fadeIn 0.8s ease-out;
-  /* Thêm perspective để tạo hiệu ứng 3D */
-  perspective: 1200px;
+  transform-style: preserve-3d;
 }
 
 @keyframes fadeIn {
@@ -310,31 +313,154 @@
   align-items: flex-start;
   z-index: 20;
   animation: fadeIn 0.8s ease-out;
-  margin-bottom: 40px;
+  margin-top: 20px;    /* Kéo Header xuống, tránh chạm kịch trần */
+  margin-bottom: 20px; /* Thu hẹp khoảng cách với phần bên dưới */
   padding: 0 20px;
+  position: relative;
+  transform-style: preserve-3d;
 }
 
-.headerLeft {
+.topHeaderLine {
+  position: absolute;
+  top: 55px;
+  left: 450px;
+  right: 350px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(var(--sao-primary-rgb), 0.5), transparent);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.8);
+  z-index: 1;
+}
+
+/* HEADER LEFT COMPLEX - CONTAINER */
+.headerLeftContainer {
+  display: flex;
+  position: relative;
+  z-index: 2;
+  margin-left: 0; /* KHÔNG margin âm để khớp với vị trí Sidebar X=0 */
+  height: 90px; /* Cố định chiều cao để 2 khối phẳng và nghiêng không bị lệch height */
+  transform-style: preserve-3d;
+}
+
+/* Nửa trái (Tilted) - Khớp 100% với độ nghiêng của Sidebar */
+.headerLeftTilted {
   display: flex;
   align-items: center;
-  background: rgba(10, 25, 45, 0.7);
+  background: rgba(10, 25, 45, 0.85);
   backdrop-filter: blur(15px);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.4);
+  padding: 0 10px 0 25px; /* Giảm padding để vừa avatar 70px trong 90px */
+  width: 240px; /* Bằng đúng width của sidebar */
+  height: 100%;
+  
+  /* 3D Bend */
+  transform: rotateY(15deg);
+  transform-origin: right center;
+  
+  /* Viền trái phát sáng + mép phải thẳng để nối với nửa phẳng */
   border-left: 4px solid var(--sao-primary-hex);
-  padding: 15px 50px 15px 25px;
-  clip-path: polygon(0 0, 100% 0, 95% 100%, 0 100%);
-  margin-left: -20px;
+  border-top: 3px solid var(--sao-primary-hex);
+  border-bottom: 3px solid var(--sao-primary-hex);
+  box-shadow: -2px 0 10px rgba(var(--sao-primary-rgb), 0.6);
+  
+  /* Vát mép dưới trái */
+  clip-path: polygon(
+    0 0, 
+    100% 0, 
+    100% 100%, 
+    15px 100%,
+    0 calc(100% - 15px)
+  );
 }
 
-.headerRight {
+/* Nửa phải (Flat) - Phẳng 2D, chứa thanh HP/MP */
+.headerLeftFlat {
   display: flex;
   align-items: center;
-  background: rgba(10, 25, 45, 0.7);
+  background: rgba(10, 25, 45, 0.75);
   backdrop-filter: blur(15px);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.4);
-  border-right: 4px solid var(--sao-primary-hex);
-  padding: 15px 25px 15px 40px;
-  clip-path: polygon(5% 0, 100% 0, 100% 100%, 0 100%);
+  padding: 0 50px 0 20px;
+  height: 100%;
+  
+  /* Khớp viền với nửa trái */
+  border-top: 3px solid var(--sao-primary-hex);
+  border-bottom: 3px solid var(--sao-primary-hex);
+  
+  /* Vát mép phải (SAO Style) */
+  clip-path: polygon(
+    0 0, 
+    calc(100% - 30px) 0, 
+    100% 30px, 
+    100% calc(100% - 15px), 
+    calc(100% - 15px) 100%, 
+    0 100%
+  );
+}
+
+/* Kẻ viền phải giả (Decor) cho nửa Flat */
+.headerLeftFlat::after {
+  content: "";
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  pointer-events: none;
+  border-right: 2px solid var(--sao-primary-hex);
+  clip-path: polygon(
+    0 0, 
+    calc(100% - 30px) 0, 
+    100% 30px, 
+    100% calc(100% - 15px), 
+    calc(100% - 15px) 100%, 
+    0 100%
+  );
+}
+
+
+/* HEADER RIGHT COMPLEX */
+.headerRight {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(10, 25, 45, 0.75);
+  backdrop-filter: blur(15px);
+  padding: 15px 35px 15px 50px;
+  margin-right: 0; /* Xóa margin âm để lề phải khớp hoàn toàn với khối bên dưới */
+  z-index: 2;
+  
+  /* Mirror of Left */
+  clip-path: polygon(
+    30px 0, 
+    100% 0, 
+    100% calc(100% - 15px), 
+    calc(100% - 15px) calc(100% - 15px), 
+    calc(100% - 30px) 100%, 
+    15px 100%, 
+    0 calc(100% - 15px), 
+    0 30px
+  );
+}
+
+/* Decorators for Right Header */
+.hrDecorTop {
+  position: absolute;
+  top: 0; left: 29px; right: 0;
+  height: 3px;
+  background: var(--sao-primary-hex);
+  box-shadow: 0 0 8px var(--sao-primary-hex);
+}
+
+.hrDecorBottom {
+  position: absolute;
+  bottom: 0; left: 14px; right: 29px;
+  height: 3px;
+  background: var(--sao-primary-hex);
+  box-shadow: 0 0 8px var(--sao-primary-hex);
+}
+
+.hrDecorLeft {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 40px; height: 100%;
+  background: linear-gradient(270deg, transparent, rgba(var(--sao-primary-rgb), 0.2));
+  clip-path: polygon(0 30px, 0 calc(100% - 15px), 15px 100%, 100% 100%, 70% 30px);
+  border-left: 2px solid var(--sao-primary-hex);
 }
 
 .userInfo {

@@ -17,7 +17,8 @@ import {
   Shield,
   Sun,
   Clock,
-  Brain
+  Brain,
+  Calendar
 } from 'lucide-react';
 import { AlertProvider } from '../contexts/AlertContext';
 import { getUserProfile } from './api';
@@ -37,8 +38,6 @@ export default function DashboardLayout({
     const timer = setInterval(() => {
       setCurrentTime(new Date());
       
-      // FE tự động nội suy (simulate) HP mượt mà theo công thức BE
-      // 50 HP / giờ = 50 / 3600 HP mỗi giây
       setUser((prevUser: any) => {
         if (!prevUser) return prevUser;
         const newHp = Math.max(0, prevUser.current_hp - (50 / 3600));
@@ -77,6 +76,7 @@ export default function DashboardLayout({
     { id: 'finance', path: '/finance', icon: Wallet, label: 'Tài chính' },
     { id: 'health', path: '/health', icon: Activity, label: 'Sức khoẻ' },
     { id: 'tasks', path: '/tasks', icon: CheckSquare, label: 'Nhiệm vụ' },
+    { id: 'calendar', path: '/calendar', icon: Calendar, label: 'Lịch trình' },
     { id: 'menu', path: '/menu', icon: Utensils, label: 'Thực đơn' },
     { id: 'shopping', path: '/shopping', icon: ShoppingCart, label: 'Mua sắm' },
     { id: 'settings', path: '/settings', icon: Settings, label: 'Cài đặt' },
@@ -130,14 +130,21 @@ export default function DashboardLayout({
     <div className={styles.dashboardContainer}>
       {/* GLOBAL HEADER (TOP) */}
       <div className={styles.topHeader}>
-        <div className={styles.headerLeft}>
-          <div className={styles.userInfo}>
+        <div className={styles.topHeaderLine}></div>
+
+        <div className={styles.headerLeftContainer}>
+          
+          {/* Nửa trái nghiêng 3D - Khớp với sidebar */}
+          <div className={styles.headerLeftTilted}>
             <div className={styles.avatarHex}></div>
             <div className={styles.userDetails}>
               <div className={styles.userName}>{user ? user.username : 'GUEST'}</div>
               <div className={styles.userLevel}>Level {user ? user.level : 1}</div>
             </div>
+          </div>
 
+          {/* Nửa phải phẳng 2D */}
+          <div className={styles.headerLeftFlat}>
             <div className={styles.statusBars}>
               <div className={styles.barRow} title="Năng lượng (HP) - Tụt nhanh nếu nhịn đói, hồi phục khi ăn bữa chính">
                 <div className={`${styles.barLabel} ${styles.hp}`}>
@@ -159,15 +166,20 @@ export default function DashboardLayout({
               </div>
             </div>
           </div>
+
         </div>
 
         <div className={styles.headerRight}>
+          <div className={styles.hrDecorTop}></div>
+          <div className={styles.hrDecorBottom}></div>
+          <div className={styles.hrDecorLeft}></div>
+
           <div className={styles.dateTime}>
             <div className={styles.weatherRow}>
               <Sun size={18} color="#00f0ff" /> Today <Clock size={18} color="#00f0ff" style={{ marginLeft: 10 }} />
-              <span className={styles.time}>{formatTime(currentTime)}</span>
+              <span className={styles.time} suppressHydrationWarning>{formatTime(currentTime)}</span>
             </div>
-            <div className={styles.date}>{formatDate(currentTime)}</div>
+            <div className={styles.date} suppressHydrationWarning>{formatDate(currentTime)}</div>
           </div>
         </div>
       </div>

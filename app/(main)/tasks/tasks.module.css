@@ -210,6 +210,11 @@
   box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.3);
 }
 
+.failedCheckbox {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
 /* FORM ELEMENTS FOR MODAL CONTENT */
 .formGroup {
   margin-bottom: 15px;

@@ -5,6 +5,8 @@ import { CheckSquare, Check, Plus, Edit2, Trash2, AlertTriangle } from 'lucide-r
 import styles from './tasks.module.css';
 import SaoModal from '../../components/SaoModal/SaoModal';
 import SaoLoading from '../../components/SaoLoading/SaoLoading';
+import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
+import SaoSelect from '../../components/SaoSelect/SaoSelect';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { getTasks, createTask, updateTask, deleteTask } from './api';
 
@@ -47,12 +49,18 @@ export default function TasksPage() {
     title: '',
     description: '',
     quest_rank: 'C',
-    due_date: ''
+    due_date_date: '',
+    due_date_time: '23:59'
   });
 
   const toggleTask = async (task: Task) => {
     const newStatus = task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
     
+    // Optimistic UI Update
+    setTasks(prevTasks => prevTasks.map(t => 
+      t._id === task._id ? { ...t, status: newStatus } : t
+    ));
+
     try {
       const data: any = await updateTask(task._id, { status: newStatus });
       if (data.reward?.leveledUp) {
@@ -64,6 +72,10 @@ export default function TasksPage() {
         fetchTasks();
     } catch (err) {
       console.error(err);
+      // Revert Optimistic UI Update on failure
+      setTasks(prevTasks => prevTasks.map(t => 
+        t._id === task._id ? { ...t, status: task.status } : t
+      ));
     }
   };
 
@@ -86,18 +98,30 @@ export default function TasksPage() {
 
   const openAddModal = () => {
     setEditingTask(null);
-    setFormData({ title: '', description: '', quest_rank: 'C', due_date: '' });
+    setFormData({ 
+      title: '', 
+      description: '', 
+      quest_rank: 'C', 
+      due_date_date: new Date().toISOString().split('T')[0],
+      due_date_time: '23:59'
+    });
     setIsModalOpen(true);
   };
 
   const openEditModal = (e: React.MouseEvent, task: Task) => {
     e.stopPropagation();
     setEditingTask(task);
+    const dueDateObj = new Date(task.due_date);
+    const tzOffset = dueDateObj.getTimezoneOffset() * 60000; // offset in ms
+    const localISOTime = new Date(dueDateObj.getTime() - tzOffset).toISOString().slice(0, 16);
+    const [datePart, timePart] = localISOTime.split('T');
+
     setFormData({
       title: task.title,
       description: task.description || '',
       quest_rank: task.quest_rank,
-      due_date: new Date(task.due_date).toISOString().slice(0, 16)
+      due_date_date: datePart,
+      due_date_time: timePart
     });
     setIsModalOpen(true);
   };
@@ -108,7 +132,8 @@ export default function TasksPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title.trim() || !formData.due_date) return;
+    const finalDueDate = `${formData.due_date_date}T${formData.due_date_time}`;
+    if (!formData.title.trim() || !formData.due_date_date) return;
 
     try {
       if (editingTask) {
@@ -119,7 +144,7 @@ export default function TasksPage() {
           title: formData.title, 
           description: formData.description,
           quest_rank: formData.quest_rank, 
-          due_date: formData.due_date 
+          due_date: finalDueDate 
         });
       }
       fetchTasks();
@@ -168,15 +193,16 @@ export default function TasksPage() {
               onClick={() => toggleTask(task)}
             >
               <div className={styles.checkboxContainer}>
-                <div className={styles.checkbox}>
+                <div className={`${styles.checkbox} ${task.status === 'OVERDUE' ? styles.failedCheckbox : ''}`}>
                   {task.status === 'COMPLETED' && <Check size={16} className={styles.checkIcon} strokeWidth={3} />}
+                  {task.status === 'OVERDUE' && <span className="text-red-500 font-bold leading-none">X</span>}
                 </div>
               </div>
 
               <div className={styles.taskContent}>
-                <div className={styles.taskName}>[{task.quest_rank}] {task.title}</div>
-                <div className={styles.taskDesc}>
-                  Hạn chót: {new Date(task.due_date).toLocaleString('vi-VN')}
+                <div className={`${styles.taskName} ${task.status === 'OVERDUE' ? 'text-red-400 line-through opacity-70' : ''}`}>[{task.quest_rank}] {task.title}</div>
+                <div className={`${styles.taskDesc} ${task.status === 'OVERDUE' ? 'text-red-500/70' : ''}`}>
+                  Hạn chót: {new Date(task.due_date).toLocaleString('vi-VN')} {task.status === 'OVERDUE' ? '(QUÁ HẠN)' : ''}
                 </div>
               </div>
 
@@ -245,15 +271,38 @@ export default function TasksPage() {
             </select>
           </div>
 
-          <div className={styles.formGroup}>
-            <label>Hạn chót</label>
-            <input
-              type="datetime-local"
-              className={styles.input}
-              value={formData.due_date}
-              onChange={e => setFormData({...formData, due_date: e.target.value})}
-              required
-            />
+          <div className="flex gap-4">
+            <div className={styles.formGroup} style={{flex: 1}}>
+              <label>Ngày hạn chót</label>
+              <SaoDatePicker 
+                value={formData.due_date_date}
+                onChange={(val) => setFormData({...formData, due_date_date: val})}
+                required
+              />
+            </div>
+
+            <div className={styles.formGroup} style={{flex: 1}}>
+              <label>Giờ hạn chót</label>
+              <div className="flex items-center gap-2 bg-black/30 border border-zinc-700/50 p-1 rounded font-mono text-sm">
+                <div className="flex-1">
+                  <SaoSelect 
+                    options={Array.from({length: 24}, (_, i) => ({ value: i.toString().padStart(2, '0'), label: i.toString().padStart(2, '0') }))}
+                    initialValue={formData.due_date_time.split(':')[0] || '23'}
+                    onChange={(val) => setFormData({...formData, due_date_time: `${val}:${formData.due_date_time.split(':')[1] || '59'}`})}
+                    allowCustom
+                  />
+                </div>
+                <span className="text-zinc-400 font-bold">:</span>
+                <div className="flex-1">
+                  <SaoSelect 
+                    options={Array.from({length: 12}, (_, i) => ({ value: (i*5).toString().padStart(2, '0'), label: (i*5).toString().padStart(2, '0') }))}
+                    initialValue={formData.due_date_time.split(':')[1] || '59'}
+                    onChange={(val) => setFormData({...formData, due_date_time: `${formData.due_date_time.split(':')[0] || '23'}:${val}`})}
+                    allowCustom
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className={styles.modalFooter}>
