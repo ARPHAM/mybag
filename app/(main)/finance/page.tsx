@@ -7,6 +7,8 @@ import SaoSelect from '../../components/SaoSelect/SaoSelect';
 import SaoTabs from '../../components/SaoTabs/SaoTabs';
 import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
 import SaoLoading from '../../components/SaoLoading/SaoLoading';
+import SaoInput from '../../components/SaoInput/SaoInput';
+import SaoButton from '../../components/SaoButton/SaoButton';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { getWallets, getTransactions, getBudgets, getDebts, getInventory, createWallet, createTransaction, createBudget, createDebt, createInventory, updateWallet, updateTransaction, updateBudget, updateDebt, updateInventory, deleteWallet, deleteTransaction, deleteBudget, deleteDebt, deleteInventory } from './api';
 import styles from './finance.module.css';
@@ -320,9 +322,9 @@ export default function FinancePage() {
       </div>
 
       {/* Nút to bự góc dưới */}
-      <button className={styles.floatingActionBtn} title="Ghi chép giao dịch">
+      <SaoButton variant="primary" style={{borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)"}}  title="Ghi chép giao dịch">
         <Plus size={32} />
-      </button>
+      </SaoButton>
     </div>
   );
 
@@ -340,9 +342,9 @@ export default function FinancePage() {
       <div className={styles.walletsGrid}>
         {wallets.map(wallet => (
           <div key={wallet.id} className={styles.walletCard} style={{ '--wallet-color': wallet.color } as React.CSSProperties}>
-            <button className={styles.editBtn} onClick={(e) => { e.stopPropagation(); openModal('wallets', wallet); }}>
+            <SaoButton variant="ghost" className={styles.editBtn} onClick={(e) => { e.stopPropagation(); openModal('wallets', wallet); }}>
               <Edit3 size={16} />
-            </button>
+            </SaoButton>
             <div className={styles.walletTop}>
               <div className={styles.walletName}>
                 {getWalletIcon(wallet.type)}
@@ -362,9 +364,9 @@ export default function FinancePage() {
       </div>
 
       {/* Nút to bự góc dưới - Dùng chung cho mọi tab để thống nhất UX */}
-      <button className={styles.floatingActionBtn} title="Thêm nguồn tiền mới" onClick={() => openModal('wallets')}>
+      <SaoButton variant="primary" style={{borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)"}}  title="Thêm nguồn tiền mới" onClick={() => openModal('wallets')}>
         <Plus size={32} />
-      </button>
+      </SaoButton>
     </div>
   );
 
@@ -393,9 +395,9 @@ export default function FinancePage() {
 
           return (
             <div key={pocket.id} className={styles.budgetCard}>
-              <button className={styles.editBtn} onClick={(e) => { e.stopPropagation(); openModal('budgets', pocket); }}>
+              <SaoButton variant="ghost" className={styles.editBtn} onClick={(e) => { e.stopPropagation(); openModal('budgets', pocket); }}>
                 <Edit3 size={16} />
-              </button>
+              </SaoButton>
               <div className={styles.budgetHeader}>
                 <div className={styles.budgetName}>
                   {getCategoryIcon(pocket.category)}
@@ -424,9 +426,9 @@ export default function FinancePage() {
         })}
       </div>
 
-      <button className={styles.floatingActionBtn} title="Thiết lập hạn mức mới" onClick={() => openModal('budgets')}>
+      <SaoButton variant="primary" style={{borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)"}}  title="Thiết lập hạn mức mới" onClick={() => openModal('budgets')}>
         <Plus size={32} />
-      </button>
+      </SaoButton>
     </div>
   );
 
@@ -443,22 +445,22 @@ export default function FinancePage() {
     return (
       <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
         <div className={styles.historyFilterBar}>
-          <button
+          <SaoButton
             className={`${styles.filterBtn} ${historyFilter === 'all' ? styles.active : ''}`}
             onClick={() => setHistoryFilter('all')}
-          >Tất cả</button>
-          <button
+          >Tất cả</SaoButton>
+          <SaoButton
             className={`${styles.filterBtn} ${historyFilter === 'income' ? styles.active : ''}`}
             onClick={() => setHistoryFilter('income')}
-          >Thu nhập</button>
-          <button
+          >Thu nhập</SaoButton>
+          <SaoButton
             className={`${styles.filterBtn} ${historyFilter === 'expense' ? styles.active : ''}`}
             onClick={() => setHistoryFilter('expense')}
-          >Chi tiêu</button>
-          <button
+          >Chi tiêu</SaoButton>
+          <SaoButton
             className={`${styles.filterBtn} ${historyFilter === 'transfer' ? styles.active : ''}`}
             onClick={() => setHistoryFilter('transfer')}
-          >Chuyển khoản</button>
+          >Chuyển khoản</SaoButton>
         </div>
 
         <div className={styles.historyList}>
@@ -481,12 +483,12 @@ export default function FinancePage() {
                       <div className={styles.historyDetails}>
                         <div className={styles.historyTitle}>
                           {tx.description}
-                          <button style={{ background: 'none', border: 'none', color: 'rgba(0, 240, 255, 0.5)', cursor: 'pointer', marginLeft: 8 }} onClick={() => openModal('history', tx)}>
-                            <Edit3 size={12} />
-                          </button>
-                          <button style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', marginLeft: 8, opacity: 0.7 }} onClick={() => handleDeleteTransaction(tx.id)}>
-                            <Trash2 size={12} />
-                          </button>
+                          <SaoButton variant="ghost" style={{ marginLeft: 8, padding: 4 }} onClick={() => openModal('history', tx)}>
+                            <Edit3 size={14} />
+                          </SaoButton>
+                          <SaoButton variant="ghost" ghostType="danger" style={{ marginLeft: 8, padding: 4 }} onClick={() => handleDeleteTransaction(tx.id)}>
+                            <Trash2 size={14} />
+                          </SaoButton>
                         </div>
                         <div className={styles.historyMeta}>
                           <span><Wallet size={12} /> {tx.walletName}</span>
@@ -509,9 +511,9 @@ export default function FinancePage() {
           )}
         </div>
 
-        <button className={styles.floatingActionBtn} title="Ghi chép giao dịch" onClick={() => openModal('transaction')}>
+        <SaoButton variant="primary" style={{borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)"}}  title="Ghi chép giao dịch" onClick={() => openModal('transaction')}>
           <Plus size={32} />
-        </button>
+        </SaoButton>
       </div>
     );
   };
@@ -528,18 +530,18 @@ export default function FinancePage() {
     return (
       <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
         <div className={styles.historyFilterBar}>
-          <button
+          <SaoButton
             className={`${styles.filterBtn} ${debtFilter === 'all' ? styles.active : ''}`}
             onClick={() => setDebtFilter('all')}
-          >Tất cả</button>
-          <button
+          >Tất cả</SaoButton>
+          <SaoButton
             className={`${styles.filterBtn} ${debtFilter === 'lent' ? styles.active : ''}`}
             onClick={() => setDebtFilter('lent')}
-          >Cho vay</button>
-          <button
+          >Cho vay</SaoButton>
+          <SaoButton
             className={`${styles.filterBtn} ${debtFilter === 'borrowed' ? styles.active : ''}`}
             onClick={() => setDebtFilter('borrowed')}
-          >Đi vay</button>
+          >Đi vay</SaoButton>
         </div>
 
         <div className={styles.debtsGrid}>
@@ -550,9 +552,9 @@ export default function FinancePage() {
               <div key={debt.id} className={`${styles.debtCard} ${styles[debt.type]} ${debt.status === 'paid' ? styles.paid : ''}`}>
                 {debt.status === 'paid' && <div className={styles.debtCleared}>CLEARED</div>}
                 
-                <button className={styles.editBtn} onClick={(e) => { e.stopPropagation(); openModal('debts', debt); }}>
+                <SaoButton variant="ghost" className={styles.editBtn} onClick={(e) => { e.stopPropagation(); openModal('debts', debt); }}>
                   <Edit3 size={16} />
-                </button>
+                </SaoButton>
                 <div className={styles.debtTop}>
                   <div className={styles.debtPerson}>
                     <div className={styles.debtAvatar}>
@@ -611,12 +613,12 @@ export default function FinancePage() {
 
                 {debt.status !== 'paid' && (
                   <div className={styles.debtActionBtns}>
-                    <button className={styles.btnPay} onClick={() => openDebtActionModal(debt, 'pay_back')}>
+                    <SaoButton variant="primary"  onClick={() => openDebtActionModal(debt, 'pay_back')}>
                       <CheckCircle2 size={16} /> {debt.type === 'lent' ? 'Thu Nợ' : 'Trả Nợ'}
-                    </button>
-                    <button className={styles.btnBorrow} onClick={() => openDebtActionModal(debt, 'borrow_more')}>
+                    </SaoButton>
+                    <SaoButton variant="primary"  onClick={() => openDebtActionModal(debt, 'borrow_more')}>
                       <Plus size={16} /> {debt.type === 'lent' ? 'Cho Vay Thêm' : 'Vay Thêm'}
-                    </button>
+                    </SaoButton>
                   </div>
                 )}
               </div>
@@ -629,9 +631,9 @@ export default function FinancePage() {
           )}
         </div>
 
-        <button className={styles.floatingActionBtn} title="Thêm khoản nợ mới" onClick={() => openModal('debts')}>
+        <SaoButton variant="primary" style={{borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)"}}  title="Thêm khoản nợ mới" onClick={() => openModal('debts')}>
           <Plus size={32} />
-        </button>
+        </SaoButton>
       </div>
     );
   };
@@ -654,9 +656,9 @@ export default function FinancePage() {
 
             return (
               <div key={item.id} className={`${styles.inventoryCard} ${stockClass}`}>
-                <button className={styles.editBtn} onClick={(e) => { e.stopPropagation(); openModal('inventory', item); }}>
+                <SaoButton variant="ghost" className={styles.editBtn} onClick={(e) => { e.stopPropagation(); openModal('inventory', item); }}>
                   <Edit3 size={16} />
-                </button>
+                </SaoButton>
                 <div className={styles.inventoryContent}>
                   <div className={styles.inventoryName}>
                     {item.category === 'food' ? <Wheat size={18} color="#00ffaa" /> : <Package size={18} color="#a0c4ff" />}
@@ -691,33 +693,36 @@ export default function FinancePage() {
                 </div>
 
               <div className={styles.inventoryActions}>
-                <button
+                <SaoButton
+                  variant="ghost"
                   className={styles.qtyBtn}
                   onClick={() => updateInventoryQty(item.id, -1)}
                   disabled={item.quantity <= 1}
-                  style={{ opacity: item.quantity <= 1 ? 0.5 : 1, cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer' }}
+                  style={{ opacity: item.quantity <= 1 ? 0.5 : 1, cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer', padding: 0 }}
                 >
                   <Minus size={16} />
-                </button>
+                </SaoButton>
                 <div className={styles.qtyValue}>
                   {item.quantity}
                   <span className={styles.qtyUnit}>{item.unit}</span>
                 </div>
-                <button
+                <SaoButton
+                  variant="ghost"
                   className={styles.qtyBtn}
                   onClick={() => updateInventoryQty(item.id, 1)}
+                  style={{ padding: 0 }}
                 >
                   <Plus size={16} />
-                </button>
+                </SaoButton>
               </div>
             </div>
           );
         })}
       </div>
 
-      <button className={styles.floatingActionBtn} title="Thêm đồ dự trữ mới" onClick={() => openModal('inventory')}>
+      <SaoButton variant="primary" style={{borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)"}}  title="Thêm đồ dự trữ mới" onClick={() => openModal('inventory')}>
         <Plus size={32} />
-      </button>
+      </SaoButton>
     </div>
   );
 };
@@ -931,7 +936,7 @@ export default function FinancePage() {
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Số tiền (VND)</label>
-              <input type="number" className={styles.formInput} placeholder="Nhập số tiền..." value={txForm.amount} onChange={e => setTxForm({...txForm, amount: e.target.value})} required />
+              <SaoInput type="number"  placeholder="Nhập số tiền..." value={txForm.amount} onChange={e => setTxForm({...txForm, amount: e.target.value})} required />
             </div>
             {txForm.type === 'expense' && (
               <div className={styles.formGroup}>
@@ -992,16 +997,16 @@ export default function FinancePage() {
           </div>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Diễn giải (Hỗ trợ Quét Bill AI)</label>
-            <textarea className={styles.formTextarea} placeholder="Nhập diễn giải..." value={txForm.description} onChange={e => setTxForm({...txForm, description: e.target.value})} required></textarea>
+            <SaoInput isTextarea  placeholder="Nhập diễn giải..." value={txForm.description} onChange={e => setTxForm({...txForm, description: e.target.value})} required></SaoInput>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="submit" className={styles.submitBtn}>
+            <SaoButton variant="primary" type="submit" >
               <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm giao dịch'}
-            </button>
+            </SaoButton>
             {editingItem && (
-              <button type="button" onClick={() => handleDeleteTransaction(editingItem.id)} className={styles.submitBtn} style={{ background: 'rgba(255, 68, 68, 0.1)', borderColor: '#ff4444', color: '#ff4444' }}>
+              <SaoButton variant="danger" type="button" onClick={() => handleDeleteTransaction(editingItem.id)}>
                 <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
-              </button>
+              </SaoButton>
             )}
           </div>
         </form>
@@ -1013,7 +1018,7 @@ export default function FinancePage() {
         <form onSubmit={handleSaveWallet}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Tên nguồn tiền</label>
-            <input type="text" className={styles.formInput} placeholder="VD: Vietcombank, Tiền mặt..." value={walletForm.name} onChange={e => setWalletForm({...walletForm, name: e.target.value})} required />
+            <SaoInput type="text"  placeholder="VD: Vietcombank, Tiền mặt..." value={walletForm.name} onChange={e => setWalletForm({...walletForm, name: e.target.value})} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
@@ -1030,16 +1035,16 @@ export default function FinancePage() {
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Màu sắc (Theme)</label>
-              <input type="color" className={styles.formInput} style={{ padding: '0 5px' }} value={walletForm.color} onChange={e => setWalletForm({...walletForm, color: e.target.value})} required />
+              <SaoInput type="color"  style={{ padding: '0 5px' }} value={walletForm.color} onChange={e => setWalletForm({...walletForm, color: e.target.value})} required />
             </div>
           </div>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Số dư ban đầu (VND)</label>
-            <input type="number" className={styles.formInput} placeholder="0" value={walletForm.balance} onChange={e => setWalletForm({...walletForm, balance: e.target.value})} />
+            <SaoInput type="number"  placeholder="0" value={walletForm.balance} onChange={e => setWalletForm({...walletForm, balance: e.target.value})} />
           </div>
-          <button type="submit" className={styles.submitBtn}>
+          <SaoButton variant="primary" type="submit" >
             <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm nguồn tiền'}
-          </button>
+          </SaoButton>
         </form>
       );
     }
@@ -1049,12 +1054,12 @@ export default function FinancePage() {
         <form onSubmit={handleSaveBudget}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Tên hạn mức (Túi chi tiêu)</label>
-            <input type="text" className={styles.formInput} placeholder="VD: Ăn uống, Giải trí..." value={budgetForm.name} onChange={e => setBudgetForm({...budgetForm, name: e.target.value})} required />
+            <SaoInput type="text"  placeholder="VD: Ăn uống, Giải trí..." value={budgetForm.name} onChange={e => setBudgetForm({...budgetForm, name: e.target.value})} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Tháng áp dụng</label>
-              <input type="month" className={styles.formInput} value={budgetForm.month} onChange={e => setBudgetForm({...budgetForm, month: e.target.value})} required />
+              <SaoInput type="month"  value={budgetForm.month} onChange={e => setBudgetForm({...budgetForm, month: e.target.value})} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Icon / Danh mục</label>
@@ -1075,16 +1080,16 @@ export default function FinancePage() {
           </div>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Số tiền giới hạn (VND)</label>
-            <input type="number" className={styles.formInput} placeholder="VD: 5000000" value={budgetForm.limit} onChange={e => setBudgetForm({...budgetForm, limit: e.target.value})} required />
+            <SaoInput type="number"  placeholder="VD: 5000000" value={budgetForm.limit} onChange={e => setBudgetForm({...budgetForm, limit: e.target.value})} required />
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="submit" className={styles.submitBtn}>
+            <SaoButton variant="primary" type="submit" >
               <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thiết lập hạn mức'}
-            </button>
+            </SaoButton>
             {editingItem && (
-              <button type="button" onClick={() => handleDeleteBudget(editingItem.id)} className={styles.submitBtn} style={{ background: 'rgba(255, 68, 68, 0.1)', borderColor: '#ff4444', color: '#ff4444' }}>
+              <SaoButton variant="danger" type="button" onClick={() => handleDeleteBudget(editingItem.id)}>
                 <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
-              </button>
+              </SaoButton>
             )}
           </div>
         </form>
@@ -1108,7 +1113,7 @@ export default function FinancePage() {
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Số tiền (VND)</label>
-              <input type="number" className={styles.formInput} placeholder="VD: 500000" value={debtActionForm.amount} onChange={e => setDebtActionForm({...debtActionForm, amount: e.target.value})} required />
+              <SaoInput type="number"  placeholder="VD: 500000" value={debtActionForm.amount} onChange={e => setDebtActionForm({...debtActionForm, amount: e.target.value})} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Nguồn tiền</label>
@@ -1124,9 +1129,9 @@ export default function FinancePage() {
             <label className={styles.formLabel}>Ngày thực hiện</label>
             <SaoDatePicker value={debtActionForm.date} onChange={v => setDebtActionForm({...debtActionForm, date: v})} required />
           </div>
-          <button type="submit" className={styles.submitBtn}>
+          <SaoButton variant="primary" type="submit" >
             <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> Ghi nhận giao dịch
-          </button>
+          </SaoButton>
         </form>
       );
     }
@@ -1136,7 +1141,7 @@ export default function FinancePage() {
         <form onSubmit={handleSaveDebt}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Người vay / Chủ nợ</label>
-            <input type="text" className={styles.formInput} placeholder="Tên người đó..." value={debtForm.personName} onChange={e => setDebtForm({...debtForm, personName: e.target.value})} required />
+            <SaoInput type="text"  placeholder="Tên người đó..." value={debtForm.personName} onChange={e => setDebtForm({...debtForm, personName: e.target.value})} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
@@ -1168,7 +1173,7 @@ export default function FinancePage() {
           {!editingItem && (
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Số tiền (VND)</label>
-              <input type="number" className={styles.formInput} placeholder="VD: 1000000" value={debtForm.amount} onChange={e => setDebtForm({...debtForm, amount: e.target.value})} required />
+              <SaoInput type="number"  placeholder="VD: 1000000" value={debtForm.amount} onChange={e => setDebtForm({...debtForm, amount: e.target.value})} required />
             </div>
           )}
           <div className={styles.formRow}>
@@ -1189,13 +1194,13 @@ export default function FinancePage() {
             )}
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="submit" className={styles.submitBtn}>
+            <SaoButton variant="primary" type="submit" >
               <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm sổ nợ'}
-            </button>
+            </SaoButton>
             {editingItem && (
-              <button type="button" onClick={() => handleDeleteDebt(editingItem.id)} className={styles.submitBtn} style={{ background: 'rgba(255, 68, 68, 0.1)', borderColor: '#ff4444', color: '#ff4444' }}>
+              <SaoButton variant="danger" type="button" onClick={() => handleDeleteDebt(editingItem.id)}>
                 <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
-              </button>
+              </SaoButton>
             )}
           </div>
         </form>
@@ -1207,7 +1212,7 @@ export default function FinancePage() {
         <form onSubmit={handleSaveInventory}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Tên món đồ / Gia vị</label>
-            <input type="text" className={styles.formInput} placeholder="VD: Gạo ST25, Mì tôm..." value={inventoryForm.name} onChange={e => setInventoryForm({...inventoryForm, name: e.target.value})} required />
+            <SaoInput type="text"  placeholder="VD: Gạo ST25, Mì tôm..." value={inventoryForm.name} onChange={e => setInventoryForm({...inventoryForm, name: e.target.value})} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
@@ -1236,7 +1241,7 @@ export default function FinancePage() {
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Số lượng</label>
-              <input type="number" min="1" step="1" className={styles.formInput} placeholder="VD: 5" value={inventoryForm.quantity} onChange={e => setInventoryForm({...inventoryForm, quantity: e.target.value})} required />
+              <SaoInput type="number" min="1" step="1"  placeholder="VD: 5" value={inventoryForm.quantity} onChange={e => setInventoryForm({...inventoryForm, quantity: e.target.value})} required />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Đơn vị</label>
@@ -1278,7 +1283,7 @@ export default function FinancePage() {
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Tổng tiền mua / Ước tính giá</label>
-              <input type="number" className={styles.formInput} placeholder="VD: 200000" value={inventoryForm.totalValue} onChange={e => setInventoryForm({...inventoryForm, totalValue: e.target.value})} />
+              <SaoInput type="number"  placeholder="VD: 200000" value={inventoryForm.totalValue} onChange={e => setInventoryForm({...inventoryForm, totalValue: e.target.value})} />
               {inventoryForm.quantity && inventoryForm.totalValue && Number(inventoryForm.quantity) > 0 && (
                  <small style={{ color: '#a0c4ff', marginTop: 6, display: 'block' }}>
                    Tỉ lệ: ≈ {formatMoney(Math.round(Number(inventoryForm.totalValue) / Number(inventoryForm.quantity)))} đ / {inventoryForm.unit || 'đơn vị'}
@@ -1298,13 +1303,13 @@ export default function FinancePage() {
             )}
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="submit" className={styles.submitBtn}>
+            <SaoButton variant="primary" type="submit" >
               <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm vào kho'}
-            </button>
+            </SaoButton>
             {editingItem && (
-              <button type="button" onClick={() => handleDeleteInventory(editingItem.id)} className={styles.submitBtn} style={{ background: 'rgba(255, 68, 68, 0.1)', borderColor: '#ff4444', color: '#ff4444' }}>
+              <SaoButton variant="danger" type="button" onClick={() => handleDeleteInventory(editingItem.id)}>
                 <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
-              </button>
+              </SaoButton>
             )}
           </div>
         </form>

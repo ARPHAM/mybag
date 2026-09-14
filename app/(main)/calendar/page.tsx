@@ -9,6 +9,8 @@ import SaoDatePicker from '@/app/components/SaoDatePicker/SaoDatePicker';
 import { Plus, Calendar, Edit2, Trash2, PauseCircle } from 'lucide-react';
 import styles from './calendar.module.css';
 import { useSaoAlert } from '../../contexts/AlertContext';
+import SaoButton from '@/app/components/SaoButton/SaoButton';
+import SaoInput from '@/app/components/SaoInput/SaoInput';
 
 export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -185,12 +187,12 @@ export default function CalendarPage() {
           <Calendar className={styles.titleIcon} size={28} />
           <h1 className={styles.title}>Lịch trình</h1>
         </div>
-        <button 
+        <SaoButton 
           onClick={openCreateModal}
           className={styles.addButton}
         >
           <Plus size={18} /> Thêm sự kiện
-        </button>
+        </SaoButton>
       </div>
 
       <DateSelector selectedDate={selectedDate} onChange={setSelectedDate} />
@@ -245,7 +247,7 @@ export default function CalendarPage() {
         <form onSubmit={handleSaveEvent}>
           <div className={styles.formGroup}>
             <label>Tiêu đề</label>
-            <input 
+            <SaoInput 
               type="text" 
               required
               value={title}
@@ -369,39 +371,39 @@ export default function CalendarPage() {
           <div className={`${styles.modalFooter} ${editingEvent ? styles.spaceBetween : ''}`}>
             {editingEvent && (
               <div className="flex gap-2">
-                <button 
+                <SaoButton 
                   type="button"
                   onClick={() => handleDelete('series')}
                   className={`${styles.btn} ${styles.deleteBtnConfirm}`}
                 >
                   <Trash2 size={16} /> Xóa
-                </button>
+                </SaoButton>
                 {editingEvent.is_virtual && (
-                  <button 
+                  <SaoButton 
                     type="button"
                     onClick={() => handleDelete('exception')}
                     className={`${styles.btn} ${styles.pauseBtn}`}
                   >
                     <PauseCircle size={16} /> Bỏ qua hôm nay
-                  </button>
+                  </SaoButton>
                 )}
               </div>
             )}
             
             <div className="flex gap-3" style={!editingEvent ? {marginLeft: 'auto'} : {}}>
-              <button 
+              <SaoButton 
                 type="button"
                 onClick={() => setIsModalOpen(false)}
                 className={`${styles.btn} ${styles.cancelBtn}`}
               >
                 Hủy bỏ
-              </button>
-              <button 
+              </SaoButton>
+              <SaoButton 
                 type="submit"
                 className={`${styles.btn} ${styles.saveBtn}`}
               >
                 {editingEvent ? 'Cập nhật' : 'Tạo mới'}
-              </button>
+              </SaoButton>
             </div>
           </div>
         </form>

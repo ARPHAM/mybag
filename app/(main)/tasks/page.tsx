@@ -7,6 +7,8 @@ import SaoModal from '../../components/SaoModal/SaoModal';
 import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
 import SaoSelect from '../../components/SaoSelect/SaoSelect';
+import SaoInput from '../../components/SaoInput/SaoInput';
+import SaoButton from '../../components/SaoButton/SaoButton';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { getTasks, createTask, updateTask, deleteTask } from './api';
 
@@ -208,21 +210,22 @@ export default function TasksPage() {
 
               {/* Actions: Edit & Delete */}
               <div className={styles.taskActions}>
-                <button
-                  className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                <SaoButton
+                  variant="ghost"
+                  ghostType="danger"
                   onClick={(e) => confirmDelete(e, task._id)}
                   title="Xóa"
                 >
                   <Trash2 size={16} />
-                </button>
+                </SaoButton>
               </div>
             </div>
           ))
         )}
 
-        <button className={styles.addButton} onClick={openAddModal}>
+        <SaoButton variant="dashed" onClick={openAddModal}>
           <Plus size={20} /> Thêm nhiệm vụ mới
-        </button>
+        </SaoButton>
       </div>
 
       {/* MODAL: THÊM / SỬA */}
@@ -235,9 +238,8 @@ export default function TasksPage() {
         <form onSubmit={handleSave}>
           <div className={styles.formGroup}>
             <label>Tên nhiệm vụ</label>
-            <input
+            <SaoInput
               type="text"
-              className={styles.input}
               placeholder="Vd: Chạy bộ 3km..."
               value={formData.title}
               onChange={e => setFormData({...formData, title: e.target.value})}
@@ -248,8 +250,8 @@ export default function TasksPage() {
 
           <div className={styles.formGroup}>
             <label>Mô tả chi tiết</label>
-            <textarea
-              className={styles.textarea}
+            <SaoInput
+              isTextarea
               placeholder="Ghi chú thêm về nhiệm vụ này..."
               value={formData.description}
               onChange={e => setFormData({...formData, description: e.target.value})}
@@ -258,17 +260,17 @@ export default function TasksPage() {
 
           <div className={styles.formGroup}>
             <label>Độ khó (Rank)</label>
-            <select
-              className={styles.input}
-              value={formData.quest_rank}
-              onChange={e => setFormData({...formData, quest_rank: e.target.value})}
-            >
-              <option value="S">Rank S (Quan trọng bậc nhất - 1000 EXP)</option>
-              <option value="A">Rank A (Rất khó - 600 EXP)</option>
-              <option value="B">Rank B (Khó - 300 EXP)</option>
-              <option value="C">Rank C (Trung bình - 150 EXP)</option>
-              <option value="D">Rank D (Dễ/Nhanh - 50 EXP)</option>
-            </select>
+            <SaoSelect
+              options={[
+                { value: "S", label: "Rank S (Quan trọng bậc nhất - 1000 EXP)" },
+                { value: "A", label: "Rank A (Rất khó - 600 EXP)" },
+                { value: "B", label: "Rank B (Khó - 300 EXP)" },
+                { value: "C", label: "Rank C (Trung bình - 150 EXP)" },
+                { value: "D", label: "Rank D (Dễ/Nhanh - 50 EXP)" }
+              ]}
+              initialValue={formData.quest_rank}
+              onChange={val => setFormData({...formData, quest_rank: val})}
+            />
           </div>
 
           <div className="flex gap-4">
@@ -306,12 +308,12 @@ export default function TasksPage() {
           </div>
 
           <div className={styles.modalFooter}>
-            <button type="button" className={`${styles.btn} ${styles.cancelBtn}`} onClick={closeModal}>
-              Hủy bỏ
-            </button>
-            <button type="submit" className={`${styles.btn} ${styles.saveBtn}`}>
+            <SaoButton variant="default" onClick={closeModal} type="button">
+              Hủy
+            </SaoButton>
+            <SaoButton variant="primary" type="submit">
               {editingTask ? 'Cập nhật' : 'Tạo mới'}
-            </button>
+            </SaoButton>
           </div>
         </form>
       </SaoModal>
@@ -327,12 +329,12 @@ export default function TasksPage() {
           Bạn có chắc chắn muốn xóa nhiệm vụ này không? Hành động này không thể hoàn tác.
         </div>
         <div className={styles.modalFooter}>
-          <button type="button" className={`${styles.btn} ${styles.cancelBtn}`} onClick={() => setTaskToDelete(null)}>
+          <SaoButton variant="default" onClick={() => setTaskToDelete(null)} type="button">
             Hủy
-          </button>
-          <button type="button" className={`${styles.btn} ${styles.deleteBtnConfirm}`} onClick={handleDelete}>
+          </SaoButton>
+          <SaoButton variant="danger" onClick={handleDelete} type="button">
             <Trash2 size={16} /> Xóa
-          </button>
+          </SaoButton>
         </div>
       </SaoModal>
     </div>

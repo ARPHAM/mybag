@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { ChefHat, Flame, Clock, Plus, Edit3, Utensils, History, Sparkles, Save, CheckCircle2, ShoppingBag, AlertCircle, RefreshCw, Trash2, Beef, Droplet, Wheat, Candy } from 'lucide-react';
 import SaoModal from '../../components/SaoModal/SaoModal';
+import SaoInput from '../../components/SaoInput/SaoInput';
+import SaoButton from '../../components/SaoButton/SaoButton';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import SaoSelect from '../../components/SaoSelect/SaoSelect';
@@ -214,15 +216,15 @@ export default function MenuPage() {
         <form onSubmit={handleSaveRecipe}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Tên Công Thức</label>
-            <input type="text" className={styles.formInput} placeholder="VD: Sườn xào chua ngọt" value={formName} onChange={e => setFormName(e.target.value)} required />
+            <SaoInput type="text"  placeholder="VD: Sườn xào chua ngọt" value={formName} onChange={e => setFormName(e.target.value)} required />
           </div>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Nguyên liệu cơ bản (Cách nhau bằng dấu phẩy)</label>
-            <textarea className={styles.formInput} placeholder="VD: Sườn non, Hành tím, Tương cà..." rows={3} value={formIngredients} onChange={e => setFormIngredients(e.target.value)} required />
+            <SaoInput isTextarea  placeholder="VD: Sườn non, Hành tím, Tương cà..." rows={3} value={formIngredients} onChange={e => setFormIngredients(e.target.value)} required />
           </div>
-          <button type="submit" className={styles.submitBtn}>
+          <SaoButton variant="primary" type="submit" >
             <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> Lưu Công thức
-          </button>
+          </SaoButton>
         </form>
       );
     }
@@ -232,7 +234,7 @@ export default function MenuPage() {
         <form onSubmit={handleSaveMeal}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Tên món ăn</label>
-            <input type="text" className={styles.formInput} value={formName} onChange={e => setFormName(e.target.value)} required={modalType === 'meal'} readOnly={modalType === 'cook'} />
+            <SaoInput type="text"  value={formName} onChange={e => setFormName(e.target.value)} required={modalType === 'meal'} readOnly={modalType === 'cook'} />
           </div>
           
           <div className={styles.formGroup}>
@@ -289,10 +291,10 @@ export default function MenuPage() {
                         />
                       </div>
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <input 
+                        <SaoInput 
                           type="number" 
                           step="any"
-                          className={styles.formInput} 
+                           
                           value={ing.qty} 
                           onChange={(e) => {
                             const newArr = [...selectedIngredients];
@@ -303,36 +305,36 @@ export default function MenuPage() {
                         />
                         <span style={{ color: '#a0c4ff', fontSize: '0.9rem' }}>{invItem?.unit || '?'}</span>
                       </div>
-                      <button 
+                      <SaoButton 
                         type="button" 
                         onClick={() => setSelectedIngredients(selectedIngredients.filter((_, i) => i !== idx))}
                         style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}
                       >
                         <Trash2 size={18} />
-                      </button>
+                      </SaoButton>
                     </div>
                   );
                 })}
-                <button 
+                <SaoButton variant="primary" 
                   type="button"
-                  className={styles.submitBtn}
+                  
                   style={{ background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', border: '1px dashed #00f0ff', marginTop: '5px' }}
                   onClick={() => setSelectedIngredients([...selectedIngredients, { invId: inventory[0]?._id || '', qty: 1 }])}
                 >
                   <Plus size={16} style={{ display: 'inline', marginRight: 5 }} /> Thêm nguyên liệu từ Kho
-                </button>
+                </SaoButton>
               </div>
             </div>
           )}
 
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Ghi chú thêm (VD: cho AI biết thêm nguyên liệu ngoài kho)</label>
-            <textarea className={styles.formInput} placeholder="Mô tả bổ sung..." rows={2} value={formActualIngredients} onChange={e => setFormActualIngredients(e.target.value)} />
+            <SaoInput isTextarea  placeholder="Mô tả bổ sung..." rows={2} value={formActualIngredients} onChange={e => setFormActualIngredients(e.target.value)} />
           </div>
 
-          <button type="submit" className={styles.submitBtn}>
+          <SaoButton variant="primary" type="submit" >
             <CheckCircle2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {modalType === 'cook' ? 'Ghi nhận Nấu Món Này' : 'Lưu Bữa Ăn'} (Gửi AI)
-          </button>
+          </SaoButton>
         </form>
       );
     }
@@ -378,9 +380,9 @@ export default function MenuPage() {
                       <span key={i} className={styles.ingredientTag}>{ing}</span>
                     ))}
                   </div>
-                  <button className={styles.cookBtn} onClick={() => openCookModal(recipe)}>
+                  <SaoButton className={styles.cookBtn} onClick={() => openCookModal(recipe)}>
                     Nấu Món Này
-                  </button>
+                  </SaoButton>
                 </div>
               </div>
             ))}
@@ -428,12 +430,12 @@ export default function MenuPage() {
                       {meal.ai_status === 'failed' && (
                         <div style={{ fontSize: '0.8rem', color: '#ff4444', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <AlertCircle size={12} /> Lỗi tính AI
-                          <button 
+                          <SaoButton 
                             onClick={() => handleRetryAI(meal)}
                             style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', borderRadius: '4px', padding: '2px 6px', marginLeft: '6px', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px' }}
                           >
                             <RefreshCw size={10} /> Thử lại
-                          </button>
+                          </SaoButton>
                         </div>
                       )}
                     </div>
@@ -446,9 +448,9 @@ export default function MenuPage() {
       )}
 
       {/* Nút cộng vạn năng */}
-      <button className={styles.floatingActionBtn} onClick={openGlobalAddModal}>
+      <SaoButton variant="primary" style={{borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)"}}  onClick={openGlobalAddModal}>
         <Plus size={32} />
-      </button>
+      </SaoButton>
 
       <SaoModal
         isOpen={isModalOpen}

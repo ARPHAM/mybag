@@ -1,0 +1,56 @@
+.inputWrapper {
+  width: 100%;
+  position: relative;
+}
+
+.input, .textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  border-radius: 4px;
+  padding: 10px 15px;
+  color: #fff;
+  font-family: 'Tauri', sans-serif;
+  font-size: 1rem;
+  transition: all 0.2s ease-out;
+}
+
+.input:focus, .textarea:focus {
+  outline: none;
+  background: rgba(0, 0, 0, 0.6);
+  border-color: var(--sao-primary-hex);
+  box-shadow: 0 0 12px rgba(var(--sao-primary-rgb), 0.3);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Custom styling for specific input types */
+.input[type="color"] {
+  padding: 0 5px;
+  height: 40px;
+  cursor: pointer;
+}
+
+/* Webkit specific styles for number inputs */
+.input[type="number"]::-webkit-inner-spin-button,
+.input[type="number"]::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+.input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+/* Checkbox and Radio styling (if needed, though mostly handled by specific SAO components) */
+.input[type="radio"],
+.input[type="checkbox"] {
+  accent-color: var(--sao-primary-hex);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}

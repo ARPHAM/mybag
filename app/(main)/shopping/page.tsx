@@ -6,6 +6,9 @@ import styles from './shopping.module.css';
 import SaoModal from '../../components/SaoModal/SaoModal';
 import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import SaoTabs from '../../components/SaoTabs/SaoTabs';
+import SaoSelect from '../../components/SaoSelect/SaoSelect';
+import SaoInput from '../../components/SaoInput/SaoInput';
+import SaoButton from '../../components/SaoButton/SaoButton';
 import { getShoppingItems, createShoppingItem, updateShoppingItem, deleteShoppingItem } from './api';
 
 type CategoryType = 'all' | 'food' | 'household' | 'other';
@@ -179,19 +182,20 @@ export default function ShoppingPage() {
               </div>
             </div>
 
-            <button 
-              className={styles.deleteBtn}
-              onClick={(e) => confirmDelete(e, item._id)}
-              title="Xóa món"
-            >            
-              <Trash2 size={20} />
-            </button>
+              <SaoButton
+                variant="ghost"
+                ghostType="danger"
+                onClick={(e) => confirmDelete(e, item._id)}
+                title="Xóa"
+              >
+                <Trash2 size={16} />
+              </SaoButton>
           </div>
         )))}
         
-        <button className={styles.addButton} onClick={openAddModal}>
-          <Plus size={20} /> Thêm Mục Mới
-        </button>
+        <SaoButton variant="dashed" onClick={openAddModal}>
+          <Plus size={20} /> Thêm vào danh sách
+        </SaoButton>
       </div>
 
       {/* MODAL: THÊM MỚI */}
@@ -204,10 +208,9 @@ export default function ShoppingPage() {
         <form onSubmit={handleSave}>
           <div className={styles.formGroup}>
             <label>Tên mặt hàng</label>
-            <input 
-              type="text" 
-              className={styles.input}
-              placeholder="Vd: Thịt heo, sữa..." 
+            <SaoInput
+              type="text"
+              placeholder="Vd: Thịt heo, sữa..."
               value={formData.name}
               onChange={e => setFormData({...formData, name: e.target.value})}
               required
@@ -218,9 +221,8 @@ export default function ShoppingPage() {
           <div className={styles.flexRow}>
             <div className={styles.formGroup}>
               <label>Số lượng</label>
-              <input 
-                type="number" 
-                className={styles.input}
+              <SaoInput
+                type="number"
                 min="1"
                 value={formData.quantity}
                 onChange={e => setFormData({...formData, quantity: Number(e.target.value)})}
@@ -228,9 +230,8 @@ export default function ShoppingPage() {
             </div>
             <div className={styles.formGroup}>
               <label>Đơn vị</label>
-              <input 
-                type="text" 
-                className={styles.input}
+              <SaoInput
+                type="text"
                 placeholder="kg, lít, cái..."
                 value={formData.unit}
                 onChange={e => setFormData({...formData, unit: e.target.value})}
@@ -240,24 +241,24 @@ export default function ShoppingPage() {
 
           <div className={styles.formGroup}>
             <label>Danh mục</label>
-            <select 
-              className={styles.select}
-              value={formData.category}
-              onChange={e => setFormData({...formData, category: e.target.value as 'food' | 'household' | 'other'})}
-            >
-              <option value="food">Thực phẩm</option>
-              <option value="household">Đồ gia dụng</option>
-              <option value="other">Khác</option>
-            </select>
+            <SaoSelect
+              options={[
+                { value: 'food', label: 'Thực phẩm' },
+                { value: 'household', label: 'Đồ gia dụng' },
+                { value: 'other', label: 'Khác' }
+              ]}
+              initialValue={formData.category}
+              onChange={val => setFormData({...formData, category: val as 'food' | 'household' | 'other'})}
+            />
           </div>
 
           <div className={styles.modalFooter}>
-            <button type="button" className={`${styles.btn} ${styles.cancelBtn}`} onClick={() => setIsAddModalOpen(false)}>
+            <SaoButton variant="default" onClick={() => setIsAddModalOpen(false)} type="button">
               Hủy bỏ
-            </button>
-            <button type="submit" className={`${styles.btn} ${styles.saveBtn}`}>
+            </SaoButton>
+            <SaoButton variant="primary" type="submit">
               Thêm
-            </button>
+            </SaoButton>
           </div>
         </form>
       </SaoModal>
@@ -273,12 +274,12 @@ export default function ShoppingPage() {
           Bạn có chắc chắn muốn xóa mục này khỏi danh sách không?
         </div>
         <div className={styles.modalFooter}>
-          <button type="button" className={`${styles.btn} ${styles.cancelBtn}`} onClick={() => setItemToDelete(null)}>
+          <SaoButton variant="default" onClick={() => setItemToDelete(null)} type="button">
             Hủy
-          </button>
-          <button type="button" className={`${styles.btn} ${styles.deleteBtnConfirm}`} onClick={handleDelete}>
+          </SaoButton>
+          <SaoButton variant="danger" onClick={handleDelete} type="button">
             <Trash2 size={16} /> Xóa
-          </button>
+          </SaoButton>
         </div>
       </SaoModal>
 

@@ -17,6 +17,8 @@ import {
 } from 'recharts';
 import styles from './health.module.css';
 import SaoModal from '../../components/SaoModal/SaoModal';
+import SaoInput from '../../components/SaoInput/SaoInput';
+import SaoButton from '../../components/SaoButton/SaoButton';
 import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
 import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import { useSaoAlert } from '../../contexts/AlertContext';
@@ -178,9 +180,9 @@ export default function HealthPage() {
           <div className={styles.statFooter}>
             Đã cập nhật hôm nay
           </div>
-          <button className={styles.actionButton} onClick={openWeightModal}>
+          <SaoButton className={styles.actionButton} onClick={openWeightModal}>
             <Edit2 size={18} />
-          </button>
+          </SaoButton>
         </div>
 
         <div className={styles.statCard}>
@@ -193,9 +195,9 @@ export default function HealthPage() {
           <div className={styles.statFooter}>
             Ít biến động
           </div>
-          <button className={styles.actionButton} onClick={openWeightModal}>
+          <SaoButton className={styles.actionButton} onClick={openWeightModal}>
             <Edit2 size={18} />
-          </button>
+          </SaoButton>
         </div>
 
         <div className={styles.statCard}>
@@ -214,9 +216,9 @@ export default function HealthPage() {
       <div className={styles.chartSection}>
         <div className={styles.chartHeader}>
           <div className={styles.chartTitle}>Biến động cân nặng (30 ngày)</div>
-          <button className={styles.logButton} onClick={openWeightModal}>
+          <SaoButton className={styles.logButton} onClick={openWeightModal}>
             <Plus size={16} /> Cập nhật
-          </button>
+          </SaoButton>
         </div>
         <div className={styles.chartContainer}>
           <ResponsiveContainer width="100%" height="100%">
@@ -277,9 +279,9 @@ export default function HealthPage() {
           <div className={styles.chartTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sparkles size={20} color="#00f0ff" /> Phân tích Dinh dưỡng AI (7 ngày)
           </div>
-          <button className={styles.logButton} onClick={handleRequestAI} disabled={isAnalyzing}>
+          <SaoButton className={styles.logButton} onClick={handleRequestAI} disabled={isAnalyzing}>
             {isAnalyzing ? <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Đang phân tích...</> : <><Sparkles size={16} /> Phân tích ngay</>}
-          </button>
+          </SaoButton>
         </div>
         <div style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', marginTop: '10px' }}>
           {aiAnalysis ? (
@@ -317,10 +319,10 @@ export default function HealthPage() {
           </div>
           <div className={styles.formGroup}>
             <label>Cân nặng (kg)</label>
-            <input 
+            <SaoInput 
               type="number" 
               step="0.1"
-              className={styles.input}
+              
               placeholder="Vd: 65.5" 
               value={weightForm.weight}
               onChange={e => setWeightForm({...weightForm, weight: e.target.value})}
@@ -330,9 +332,9 @@ export default function HealthPage() {
           </div>
           <div className={styles.formGroup}>
             <label>Chiều cao hiện tại (cm)</label>
-            <input 
+            <SaoInput 
               type="number" 
-              className={styles.input}
+              
               value={heightForm}
               onChange={e => setHeightForm(e.target.value)}
               required
@@ -340,12 +342,12 @@ export default function HealthPage() {
           </div>
 
           <div className={styles.modalFooter}>
-            <button type="button" className={`${styles.btn} ${styles.cancelBtn}`} onClick={() => setIsWeightModalOpen(false)}>
+            <SaoButton type="button" className={`${styles.btn} ${styles.cancelBtn}`} onClick={() => setIsWeightModalOpen(false)}>
               Hủy bỏ
-            </button>
-            <button type="submit" className={`${styles.btn} ${styles.saveBtn}`}>
+            </SaoButton>
+            <SaoButton type="submit" className={`${styles.btn} ${styles.saveBtn}`}>
               Lưu chỉ số
-            </button>
+            </SaoButton>
           </div>
         </form>
       </SaoModal>

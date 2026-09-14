@@ -1,0 +1,92 @@
+.btn {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-family: 'Tauri', sans-serif;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease-out;
+  outline: none;
+}
+
+/* Biến thể: Primary (Chính) */
+.primary {
+  background: rgba(var(--sao-primary-rgb), 0.15);
+  border: 1px solid var(--sao-primary-hex);
+  color: var(--sao-primary-hex);
+}
+
+.primary:hover:not(:disabled) {
+  background: rgba(var(--sao-primary-rgb), 0.3);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.4);
+}
+
+/* Biến thể: Danger (Xóa/Cảnh báo) */
+.danger {
+  background: rgba(255, 68, 68, 0.15);
+  border: 1px solid #ff4444;
+  color: #ff4444;
+}
+
+.danger:hover:not(:disabled) {
+  background: rgba(255, 68, 68, 0.3);
+  box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+}
+
+/* Biến thể: Default/Cancel (Hủy bỏ/Phụ) */
+.default {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.default:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Biến thể: Dashed (Thêm mới rộng) */
+.dashed {
+  background: rgba(var(--sao-primary-rgb), 0.1);
+  border: 1px dashed rgba(var(--sao-primary-rgb), 0.5);
+  color: var(--sao-primary-hex);
+  padding: 15px;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  border-radius: 0;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+.dashed:hover:not(:disabled) {
+  background: rgba(var(--sao-primary-rgb), 0.2);
+  border-style: solid;
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.3);
+}
+
+/* Biến thể: Ghost (Chỉ có icon hoặc text, không nền không viền, dùng cho action nhỏ) */
+.ghost {
+  background: transparent;
+  border: none;
+  color: #a0c4ff;
+  padding: 8px;
+}
+
+.ghost:hover:not(:disabled) {
+  color: #fff;
+  filter: drop-shadow(0 0 5px #fff);
+}
+
+.ghost.dangerGhost:hover:not(:disabled) {
+  color: #ff4444;
+  filter: drop-shadow(0 0 5px #ff4444);
+}
+
+/* State: Disabled */
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(100%);
+}
