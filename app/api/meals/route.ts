@@ -3,8 +3,8 @@ import { cookies } from 'next/headers';
 import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import Inventory from '@/models/Inventory';
-import Recipe from '@/models/Recipe';
-import User from '@/models/User'; // Tránh lỗi MissingSchemaError cho User
+import '@/models/Recipe'; // Tránh lỗi MissingSchemaError
+import '@/models/User'; // Tránh lỗi MissingSchemaError cho User
 import { verifyToken } from '@/lib/auth';
 
 export async function GET(req: Request) {
