@@ -64,7 +64,7 @@ export async function GET(req: Request) {
     user.last_active_at = now;
     await user.save();
 
-    return NextResponse.json({ user }, {
+    return NextResponse.json({ user, overdueCount }, {
       headers: {
         'Cache-Control': 'no-store, max-age=0',
       }

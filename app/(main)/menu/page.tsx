@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChefHat, Flame, Clock, Plus, Edit3, Utensils, History, Sparkles, Save, CheckCircle2, ShoppingBag, AlertCircle, RefreshCw, Trash2, Beef, Droplet, Wheat, Candy } from 'lucide-react';
+import { ChefHat, Flame, Clock, Plus, Edit3, Utensils, History, Sparkles, Save, CheckCircle2, ShoppingBag, AlertCircle, RefreshCw, Trash2, Beef, Droplet, Wheat, Candy, AlertTriangle } from 'lucide-react';
 import SaoModal from '../../components/SaoModal/SaoModal';
 import SaoInput from '../../components/SaoInput/SaoInput';
 import SaoButton from '../../components/SaoButton/SaoButton';
@@ -10,7 +10,7 @@ import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import SaoSelect from '../../components/SaoSelect/SaoSelect';
 import SaoTabs from '../../components/SaoTabs/SaoTabs';
 import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
-import { getRecipes, getMeals, getInventory, calculateMacros, createRecipe, createMeal } from './api';
+import { getRecipes, getMeals, getInventory, calculateMacros, createRecipe, createMeal, getWallets, updateMeal, deleteMeal } from './api';
 import styles from './menu.module.css';
 
 type TabId = 'recipes' | 'history';
@@ -34,6 +34,7 @@ interface MealRecord {
   sugar?: number;
   ai_status: 'pending' | 'completed' | 'failed';
   cost?: number;
+  wallet_id?: string;
 }
 
 interface InventoryItem {
@@ -41,6 +42,12 @@ interface InventoryItem {
   name: string;
   quantity: number;
   unit: string;
+}
+
+interface Wallet {
+  _id: string;
+  name: string;
+  balance: number;
 }
 
 export default function MenuPage() {
@@ -53,32 +60,38 @@ export default function MenuPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [meals, setMeals] = useState<MealRecord[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form states
   const [formName, setFormName] = useState('');
   const [formIngredients, setFormIngredients] = useState(''); 
   const [formCookSource, setFormCookSource] = useState<'home' | 'eat_out'>('home');
-  const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
+  const [formDate, setFormDate] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
   const [formActualIngredients, setFormActualIngredients] = useState(''); 
   const [formCost, setFormCost] = useState('');
+  const [formWalletId, setFormWalletId] = useState('');
   const [selectedIngredients, setSelectedIngredients] = useState<{invId: string, qty: number}[]>([]);
+  const [editingMeal, setEditingMeal] = useState<MealRecord | null>(null);
+  const [mealToDelete, setMealToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (force = false) => {
     setLoading(true);
     try {
-      const [resR, resM, resI]: any = await Promise.all([
-        getRecipes(),
-        getMeals(),
-        getInventory()
+      const [resR, resM, resI, resW]: any = await Promise.all([
+        getRecipes(force),
+        getMeals(force),
+        getInventory(force),
+        getWallets(force)
       ]);
       if (resR) setRecipes(resR);
       if (resM) setMeals(resM);
       if (resI) setInventory(resI);
+      if (resW) setWallets(resW);
     } catch (e) {
       console.error(e);
     }
@@ -86,7 +99,7 @@ export default function MenuPage() {
   };
 
   const groupedMeals = meals.reduce((acc, meal) => {
-    const date = new Date(meal.consumed_at).toISOString().split('T')[0];
+    const date = new Date(new Date(meal.consumed_at).getTime() - new Date(meal.consumed_at).getTimezoneOffset() * 60000).toISOString().split('T')[0];
     if (!acc[date]) acc[date] = [];
     acc[date].push(meal);
     return acc;
@@ -98,7 +111,7 @@ export default function MenuPage() {
     setFormActualIngredients('');
     setModalType('cook');
     setFormCookSource('home');
-    setFormDate(new Date().toISOString().split('T')[0]);
+    setFormDate(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
     setFormCost('');
     
     // Auto-match ingredients from inventory
@@ -124,10 +137,45 @@ export default function MenuPage() {
       setFormName('');
       setFormActualIngredients('');
       setFormCookSource('home');
-      setFormDate(new Date().toISOString().split('T')[0]);
+      setFormDate(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
       setFormCost('');
+      setFormWalletId('');
       setSelectedIngredients([]);
+      setEditingMeal(null);
       setIsModalOpen(true);
+    }
+  };
+
+  const openEditMealModal = (meal: MealRecord) => {
+    setEditingMeal(meal);
+    setModalType('meal');
+    setFormName(meal.food_name);
+    setFormCookSource(meal.source);
+    setFormDate(meal.consumed_at ? new Date(new Date(meal.consumed_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+    setFormCost(meal.cost ? meal.cost.toString() : '');
+    setFormWalletId(meal.wallet_id || '');
+    setFormActualIngredients((meal as any).ingredients_text || '');
+    if (meal.source === 'home' && (meal as any).ingredients_used) {
+      setSelectedIngredients((meal as any).ingredients_used);
+    } else {
+      setSelectedIngredients([]);
+    }
+    setIsModalOpen(true);
+  };
+
+  const confirmDeleteMeal = (id: string) => {
+    setMealToDelete(id);
+  };
+
+  const handleDeleteMeal = async () => {
+    if (!mealToDelete) return;
+    try {
+      await deleteMeal(mealToDelete);
+      setMeals(meals.filter(m => m._id !== mealToDelete));
+      setMealToDelete(null);
+      fetchData(true);
+    } catch (e) {
+      showAlert("Lỗi xóa bữa ăn");
     }
   };
 
@@ -138,9 +186,9 @@ export default function MenuPage() {
         food_name: name,
         ingredients_context: ingredients
       });
-      fetchData(); // reload regardless to update status
+      fetchData(true); // reload regardless to update status
     } catch (e) {
-      fetchData();
+      fetchData(true);
     }
   };
 
@@ -152,7 +200,7 @@ export default function MenuPage() {
         ingredients: formIngredients.split(',').map(s => s.trim()).filter(Boolean)
       });
       setIsModalOpen(false);
-      fetchData();
+      fetchData(true);
     } catch (e) {
       showAlert("Lỗi lưu công thức");
     }
@@ -177,30 +225,42 @@ export default function MenuPage() {
     }
 
     try {
-      const data: any = await createMeal({
-        food_name: formName,
-        consumed_at: formDate,
-        source: formCookSource,
-        recipe_id: editingRecipe ? editingRecipe._id : undefined,
-        ingredients_used: selectedIngredients,
-        ingredients_text: ingredients_context,
-        cost: formCookSource === 'eat_out' ? Number(formCost) || 0 : undefined
-      });
+      let data: any;
+      if (editingMeal) {
+        data = await updateMeal(editingMeal._id, {
+          food_name: formName,
+          consumed_at: formDate,
+          source: formCookSource,
+          ingredients_used: selectedIngredients,
+          ingredients_text: ingredients_context,
+          cost: formCookSource === 'eat_out' ? Number(formCost) || 0 : undefined,
+          wallet_id: formCookSource === 'eat_out' ? formWalletId : undefined
+        });
+        setMeals(meals.map(m => m._id === editingMeal._id ? data.mealLog : m));
+      } else {
+        data = await createMeal({
+          food_name: formName,
+          consumed_at: formDate,
+          source: formCookSource,
+          recipe_id: editingRecipe ? editingRecipe._id : undefined,
+          ingredients_used: selectedIngredients,
+          ingredients_text: ingredients_context,
+          cost: formCookSource === 'eat_out' ? Number(formCost) || 0 : undefined,
+          wallet_id: formCookSource === 'eat_out' ? formWalletId : undefined
+        });
+        setMeals([data.mealLog, ...meals]);
+      }
       
       setIsModalOpen(false);
       
-      // Optimistic update
-      setMeals([data.mealLog, ...meals]);
-      
-      // Send AI request
+      // Send AI request (which will also call fetchData(true) to sync)
       calculateAI(data.mealLog._id, formName, ingredients_context);
       
-      // Fetch inventory to reflect deductions
-      if (formCookSource === 'home' && selectedIngredients.length > 0) {
-        getInventory().then((res: any) => setInventory(res));
-      }
-    } catch (e) {
-      showAlert("Lỗi lưu bữa ăn");
+      // Update local state temporarily, or just let fetchData(true) handle it.
+      // We also do fetchData(true) directly here to guarantee instant UI update
+      fetchData(true);
+    } catch (e: any) {
+      showAlert(e.response?.data?.error || "Lỗi lưu bữa ăn");
     }
   };
 
@@ -332,6 +392,23 @@ export default function MenuPage() {
             <SaoInput isTextarea  placeholder="Mô tả bổ sung..." rows={2} value={formActualIngredients} onChange={e => setFormActualIngredients(e.target.value)} />
           </div>
 
+          {formCookSource === 'eat_out' && (
+            <>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Số tiền (VND)</label>
+                <SaoInput type="number" placeholder="Nhập số tiền..." value={formCost} onChange={e => setFormCost(e.target.value)} required />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Chọn Ví trừ tiền</label>
+                <SaoSelect
+                  initialValue={formWalletId}
+                  options={wallets.map(w => ({ value: w._id, label: `${w.name} (${w.balance.toLocaleString('vi-VN')} đ)` }))}
+                  onChange={setFormWalletId}
+                />
+              </div>
+            </>
+          )}
+
           <SaoButton variant="primary" type="submit" >
             <CheckCircle2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {modalType === 'cook' ? 'Ghi nhận Nấu Món Này' : 'Lưu Bữa Ăn'} (Gửi AI)
           </SaoButton>
@@ -405,7 +482,17 @@ export default function MenuPage() {
                       {meal.source === 'eat_out' ? <ShoppingBag size={20} /> : <ChefHat size={20} />}
                     </div>
                     <div className={styles.mealInfo}>
-                      <div className={styles.mealName}>{meal.food_name}</div>
+                      <div className="flex justify-between items-start">
+                        <div className={styles.mealName}>{meal.food_name}</div>
+                        <div className="flex gap-2">
+                          <button onClick={() => openEditMealModal(meal)} style={{ background: 'none', border: 'none', color: '#00f0ff', cursor: 'pointer', padding: '4px' }}>
+                            <Edit3 size={16} />
+                          </button>
+                          <button onClick={() => confirmDeleteMeal(meal._id)} style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', padding: '4px' }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
                       <div className={styles.mealTimeType}>
                         <span>{meal.source === 'eat_out' ? 'Ăn ngoài' : 'Nấu tại nhà'}</span>
                         {meal.cost !== undefined && meal.cost > 0 && (
@@ -431,6 +518,7 @@ export default function MenuPage() {
                         <div style={{ fontSize: '0.8rem', color: '#ff4444', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <AlertCircle size={12} /> Lỗi tính AI
                           <SaoButton 
+                            type="button"
                             onClick={() => handleRetryAI(meal)}
                             style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', borderRadius: '4px', padding: '2px 6px', marginLeft: '6px', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px' }}
                           >
@@ -462,6 +550,26 @@ export default function MenuPage() {
         }
       >
         {renderModalContent()}
+      </SaoModal>
+
+      {/* MODAL: XÁC NHẬN XÓA */}
+      <SaoModal
+        isOpen={!!mealToDelete}
+        onClose={() => setMealToDelete(null)}
+        title="Xác nhận xóa"
+        icon={<AlertTriangle size={20} />}
+      >
+        <div style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '20px', lineHeight: '1.5' }}>
+          Bạn có chắc chắn muốn xóa bữa ăn này không? Hành động này sẽ hoàn trả nguyên liệu hoặc hoàn lại tiền ví tương ứng và không thể hoàn tác.
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <SaoButton variant="default" onClick={() => setMealToDelete(null)} type="button">
+            Hủy
+          </SaoButton>
+          <SaoButton variant="danger" onClick={handleDeleteMeal} type="button">
+            <Trash2 size={16} /> Xóa
+          </SaoButton>
+        </div>
       </SaoModal>
     </div>
   );

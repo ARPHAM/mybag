@@ -1,7 +1,7 @@
 import axiosClient from '@/lib/axiosClient';
 
-export const getTasks = () => {
-  return axiosClient.get('/api/tasks');
+export const getTasks = (force = false) => {
+  return axiosClient.get(`/api/tasks${force ? `?_t=${Date.now()}` : ''}`);
 };
 
 export const updateTask = (id: string, updates: any) => {

@@ -11,6 +11,7 @@ import styles from './calendar.module.css';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import SaoButton from '@/app/components/SaoButton/SaoButton';
 import SaoInput from '@/app/components/SaoInput/SaoInput';
+import { getEvents, createEvent, updateEvent, deleteEvent } from './api';
 
 export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -24,7 +25,7 @@ export default function CalendarPage() {
   // Form states
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDateStr, setStartDateStr] = useState(new Date().toISOString().split('T')[0]);
+  const [startDateStr, setStartDateStr] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
   const [startTimeStr, setStartTimeStr] = useState('09:00');
   const [endTimeStr, setEndTimeStr] = useState('10:00');
   const [isRecurring, setIsRecurring] = useState(false);
@@ -35,7 +36,7 @@ export default function CalendarPage() {
     fetchEvents();
   }, [selectedDate]);
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (force = false) => {
     setLoading(true);
     try {
       const start = new Date(selectedDate);
@@ -44,11 +45,8 @@ export default function CalendarPage() {
       const end = new Date(selectedDate);
       end.setHours(23, 59, 59, 999);
 
-      const res = await fetch(`/api/calendar?start=${start.toISOString()}&end=${end.toISOString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data);
-      }
+      const data: any = await getEvents(start.toISOString(), end.toISOString(), force);
+      setEvents(data);
     } catch (error) {
       console.error(error);
     } finally {
@@ -60,7 +58,7 @@ export default function CalendarPage() {
     setEditingEvent(null);
     setTitle('');
     setDescription('');
-    setStartDateStr(selectedDate.toISOString().split('T')[0]);
+    setStartDateStr(new Date(selectedDate.getTime() - selectedDate.getTimezoneOffset() * 60000).toISOString().split('T')[0]);
     setStartTimeStr('09:00');
     setEndTimeStr('10:00');
     setIsRecurring(false);
@@ -77,7 +75,7 @@ export default function CalendarPage() {
     const st = new Date(ev.start_time);
     const et = new Date(ev.end_time);
     
-    setStartDateStr(st.toISOString().split('T')[0]);
+    setStartDateStr(new Date(st.getTime() - st.getTimezoneOffset() * 60000).toISOString().split('T')[0]);
     setStartTimeStr(`${st.getHours().toString().padStart(2, '0')}:${st.getMinutes().toString().padStart(2, '0')}`);
     setEndTimeStr(`${et.getHours().toString().padStart(2, '0')}:${et.getMinutes().toString().padStart(2, '0')}`);
     
@@ -109,43 +107,26 @@ export default function CalendarPage() {
     };
 
     try {
-      let res;
       if (editingEvent) {
-        // If it's a virtual event (recurring instance), we create an exception
         if (editingEvent.is_virtual) {
-          res = await fetch(`/api/calendar/${editingEvent.parent_event_id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              updateType: 'exception',
-              exceptionDate: editingEvent.start_time,
-              ...payload
-            }),
+          await updateEvent(editingEvent.parent_event_id, {
+            updateType: 'exception',
+            exceptionDate: editingEvent.start_time,
+            ...payload
           });
         } else {
-          // Normal edit
-          res = await fetch(`/api/calendar/${editingEvent._id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              updateType: 'single',
-              ...payload
-            }),
+          await updateEvent(editingEvent._id, {
+            updateType: 'single',
+            ...payload
           });
         }
       } else {
-        res = await fetch('/api/calendar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        await createEvent(payload);
       }
 
-      if (res.ok) {
-        showAlert(editingEvent ? 'Đã cập nhật sự kiện!' : 'Đã tạo sự kiện mới!');
-        setIsModalOpen(false);
-        fetchEvents();
-      }
+      showAlert(editingEvent ? 'Đã cập nhật sự kiện!' : 'Đã tạo sự kiện mới!');
+      setIsModalOpen(false);
+      fetchEvents(true);
     } catch (error) {
       console.error(error);
     }
@@ -156,17 +137,13 @@ export default function CalendarPage() {
     
     try {
       const id = editingEvent.parent_event_id || editingEvent._id;
-      const dateParam = type === 'exception' ? `&date=${editingEvent.start_time}` : '';
+      const dateParam = type === 'exception' ? editingEvent.start_time : undefined;
       
-      const res = await fetch(`/api/calendar/${id}?type=${type}${dateParam}`, {
-        method: 'DELETE',
-      });
+      await deleteEvent(id, type, dateParam);
 
-      if (res.ok) {
-        showAlert(type === 'exception' ? 'Đã tạm nghỉ sự kiện này!' : 'Đã xóa sự kiện!');
-        setIsModalOpen(false);
-        fetchEvents();
-      }
+      showAlert(type === 'exception' ? 'Đã tạm nghỉ sự kiện này!' : 'Đã xóa sự kiện!');
+      setIsModalOpen(false);
+      fetchEvents(true);
     } catch (error) {
       console.error(error);
     }
@@ -225,7 +202,7 @@ export default function CalendarPage() {
                     style={{ borderLeftColor: actualColor || 'var(--sao-primary-hex)' }}
                   >
                     <div className="font-bold text-sm text-zinc-200">{ev.title} {ev.is_virtual ? '(Lặp)' : ''}</div>
-                    {ev.description && <div className="text-xs text-zinc-400 mt-1 truncate">{ev.description}</div>}
+                    {ev.description && <div className="text-xs text-zinc-400 mt-1 whitespace-pre-wrap line-clamp-3 leading-relaxed">{ev.description}</div>}
                     <div className="text-xs text-[var(--sao-primary-hex)] mt-2 opacity-80">
                       {new Date(ev.start_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} - {new Date(ev.end_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}
                     </div>

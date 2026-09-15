@@ -86,11 +86,11 @@ export default function FinancePage() {
 
   // Form states
   const [walletForm, setWalletForm] = useState({ name: '', type: 'bank', color: '#00f0ff', balance: '' });
-  const [txForm, setTxForm] = useState({ type: 'expense', amount: '', date: new Date().toISOString().split('T')[0], description: '', wallet_id: '', to_wallet_id: '', category: 'food' });
-  const [budgetForm, setBudgetForm] = useState({ name: '', month: new Date().toISOString().slice(0, 7), category: 'food', limit: '' });
+  const [txForm, setTxForm] = useState({ type: 'expense', amount: '', date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], description: '', wallet_id: '', to_wallet_id: '', category: 'food' });
+  const [budgetForm, setBudgetForm] = useState({ name: '', month: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7), category: 'food', limit: '' });
   const [debtForm, setDebtForm] = useState({ personName: '', type: 'lent', status: 'unpaid', amount: '', dueDate: '', wallet_id: '' });
-  const [debtActionForm, setDebtActionForm] = useState({ amount: '', wallet_id: '', date: new Date().toISOString().split('T')[0] });
-  const [inventoryForm, setInventoryForm] = useState({ name: '', category: 'food', purchaseDate: new Date().toISOString().split('T')[0], expiryDate: '', quantity: '', unit: '', isGift: false, totalValue: '', wallet_id: '' });
+  const [debtActionForm, setDebtActionForm] = useState({ amount: '', wallet_id: '', date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] });
+  const [inventoryForm, setInventoryForm] = useState({ name: '', category: 'food', purchaseDate: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], expiryDate: '', quantity: '', unit: '', isGift: false, totalValue: '', wallet_id: '' });
 
   const { showAlert, showConfirm } = useSaoAlert();
 
@@ -98,14 +98,14 @@ export default function FinancePage() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (force = false) => {
     setIsLoading(true);
     try {
       const [wData, tData, bData, dData]: any = await Promise.all([
-        getWallets(),
-        getTransactions(),
-        getBudgets(),
-        getDebts()
+        getWallets(force),
+        getTransactions(force),
+        getBudgets(force),
+        getDebts(force)
       ]);
       
       if (wData) {
@@ -157,7 +157,7 @@ export default function FinancePage() {
         })));
       }
       
-      const iData: any = await getInventory();
+      const iData: any = await getInventory(force);
       if (iData) {
         setInventory(iData.map((i: any) => ({
           id: i._id,
@@ -185,7 +185,7 @@ export default function FinancePage() {
     showConfirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được tính toán hoàn trả tương ứng.', async () => {
       try {
         await deleteTransaction(id);
-        fetchData();
+        fetchData(true);
         if (isModalOpen) setIsModalOpen(false);
       } catch (err: any) {
         console.error(err);
@@ -226,7 +226,7 @@ export default function FinancePage() {
       await updateInventory(id, { justUpdateQty: true, quantity: newQty });
     } catch (err) {
       console.error('Lỗi khi cập nhật số lượng', err);
-      fetchData(); // Rollback on error
+      fetchData(true); // Rollback on error
     }
   };
 
@@ -245,14 +245,14 @@ export default function FinancePage() {
       setTxForm(item ? { 
         type: item.type, amount: item.amount.toString(), wallet_id: '', to_wallet_id: '', date: item.date, description: item.description, category: item.category || 'food'
       } : { 
-        type: 'expense', amount: '', wallet_id: '', to_wallet_id: '', date: new Date().toISOString().split('T')[0], description: '', category: 'food'
+        type: 'expense', amount: '', wallet_id: '', to_wallet_id: '', date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], description: '', category: 'food'
       });
     }
     if (type === 'budgets') {
       setBudgetForm(item ? {
         name: item.name, month: item.month, category: item.category, limit: item.limit.toString()
       } : {
-        name: '', month: new Date().toISOString().slice(0, 7), category: 'food', limit: ''
+        name: '', month: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7), category: 'food', limit: ''
       });
     }
     if (type === 'debts') {
@@ -264,11 +264,11 @@ export default function FinancePage() {
     }
     if (type === 'inventory') {
       setInventoryForm(item ? {
-        name: item.name, category: item.category, purchaseDate: item.purchaseDate || new Date().toISOString().split('T')[0], expiryDate: item.expiryDate || '',
+        name: item.name, category: item.category, purchaseDate: item.purchaseDate || new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], expiryDate: item.expiryDate || '',
         quantity: item.quantity?.toString(), unit: item.unit, isGift: item.isGift,
         totalValue: item.totalValue?.toString() || '', wallet_id: item.wallet_id || ''
       } : {
-        name: '', category: 'food', purchaseDate: new Date().toISOString().split('T')[0], expiryDate: '', quantity: '', unit: '', isGift: false, totalValue: '', wallet_id: ''
+        name: '', category: 'food', purchaseDate: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], expiryDate: '', quantity: '', unit: '', isGift: false, totalValue: '', wallet_id: ''
       });
     }
     setIsModalOpen(true);
@@ -278,13 +278,13 @@ export default function FinancePage() {
     setModalType('debt_action');
     setEditingItem(debt);
     setDebtActionType(action);
-    setDebtActionForm({ amount: '', wallet_id: '', date: new Date().toISOString().split('T')[0] });
+    setDebtActionForm({ amount: '', wallet_id: '', date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] });
     setIsModalOpen(true);
   };
 
   // Tính toán Overview từ dữ liệu thật
   const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7);
   const monthlyIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(currentMonth)).reduce((sum, t) => sum + t.amount, 0);
   const monthlyExpense = transactions.filter(t => t.type === 'expense' && t.date.startsWith(currentMonth)).reduce((sum, t) => sum + t.amount, 0);
 
@@ -755,7 +755,7 @@ export default function FinancePage() {
         } else {
           await createBudget(reqData);
         }
-        fetchData();
+        fetchData(true);
         setIsModalOpen(false);
       } catch (err: any) {
         console.error(err);
@@ -779,7 +779,7 @@ export default function FinancePage() {
         } else {
           await createDebt(reqData);
         }
-        fetchData();
+        fetchData(true);
         setIsModalOpen(false);
       } catch (err: any) {
         console.error(err);
@@ -796,7 +796,7 @@ export default function FinancePage() {
           actionAmount: parseFloat(debtActionForm.amount) || 0,
           wallet_id: debtActionForm.wallet_id
         });
-        fetchData();
+        fetchData(true);
         setIsModalOpen(false);
       } catch (err: any) {
         console.error(err);
@@ -823,7 +823,7 @@ export default function FinancePage() {
         } else {
           await createInventory(reqData);
         }
-        fetchData();
+        fetchData(true);
         setIsModalOpen(false);
       } catch (err: any) {
         console.error(err);
@@ -835,7 +835,7 @@ export default function FinancePage() {
       showConfirm('Bạn có chắc muốn xóa hạn mức này?', async () => {
         try {
           await deleteBudget(id);
-          fetchData();
+          fetchData(true);
           if (isModalOpen) setIsModalOpen(false);
         } catch (e: any) {
           showAlert(e.message || 'Lỗi xóa hạn mức');
@@ -847,7 +847,7 @@ export default function FinancePage() {
       showConfirm('Bạn có chắc muốn xóa sổ nợ này? Lưu ý: Xóa sổ nợ sẽ không hoàn lại các giao dịch đã ghi nhận trong ví.', async () => {
         try {
           await deleteDebt(id);
-          fetchData();
+          fetchData(true);
           if (isModalOpen) setIsModalOpen(false);
         } catch (e: any) {
           showAlert(e.message || 'Lỗi xóa sổ nợ');
@@ -859,7 +859,7 @@ export default function FinancePage() {
       showConfirm('Bạn có chắc muốn xóa mặt hàng này khỏi kho? Số tiền mua hàng sẽ được hoàn lại vào ví nếu có.', async () => {
         try {
           await deleteInventory(id);
-          fetchData();
+          fetchData(true);
           if (isModalOpen) setIsModalOpen(false);
         } catch (e: any) {
           showAlert(e.message || 'Lỗi xóa hàng tồn');
@@ -881,7 +881,7 @@ export default function FinancePage() {
         } else {
           await createWallet(reqData);
         }
-        fetchData();
+        fetchData(true);
         setIsModalOpen(false);
       } catch (err: any) {
         console.error(err);
@@ -906,7 +906,7 @@ export default function FinancePage() {
         } else {
           await createTransaction(reqData);
         }
-        fetchData();
+        fetchData(true);
         setIsModalOpen(false);
       } catch (err: any) {
         console.error(err);

@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const url = new URL(req.url);
-    const month = url.searchParams.get('month') || new Date().toISOString().slice(0, 7);
+    const month = url.searchParams.get('month') || new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7);
 
     // Fetch budgets for this month
     const budgets = await Budget.find({ user_id: decoded.userId, month }).lean();

@@ -41,9 +41,21 @@ export default function DashboardLayout({
       setUser((prevUser: any) => {
         if (!prevUser) return prevUser;
         const newHp = Math.max(0, prevUser.current_hp - (50 / 3600));
+        
+        let newMp = prevUser.current_mp;
+        const overdue = prevUser.overdueCount || 0;
+        if (overdue > 0) {
+          // Drain 20 MP per hour for each overdue task
+          newMp = Math.max(0, prevUser.current_mp - ((20 * overdue) / 3600));
+        } else {
+          // Regen 30 MP per hour
+          newMp = Math.min(prevUser.max_mp || 500, prevUser.current_mp + (30 / 3600));
+        }
+
         return {
           ...prevUser,
-          current_hp: newHp
+          current_hp: newHp,
+          current_mp: newMp
         };
       });
 
@@ -55,16 +67,16 @@ export default function DashboardLayout({
     fetchUser();
 
     // Listen for custom event from other pages
-    const handleUserUpdate = () => fetchUser();
+    const handleUserUpdate = () => fetchUser(true);
     window.addEventListener('sao-user-updated', handleUserUpdate);
     return () => window.removeEventListener('sao-user-updated', handleUserUpdate);
   }, []);
 
-  const fetchUser = async () => {
+  const fetchUser = async (force = false) => {
     try {
-      const data: any = await getUserProfile();
+      const data: any = await getUserProfile(force);
       if (data.user) {
-        setUser(data.user);
+        setUser({ ...data.user, overdueCount: data.overdueCount || 0 });
       }
     } catch (err) {
       console.error(err);

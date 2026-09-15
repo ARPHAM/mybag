@@ -32,7 +32,7 @@ export async function GET(req: Request) {
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
       aggregated[dateStr] = {
         date: dateStr,
         calo: 0,
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
     }
 
     meals.forEach(meal => {
-      const dateStr = new Date(meal.consumed_at).toISOString().split('T')[0];
+      const dateStr = new Date(new Date(meal.consumed_at).getTime() - new Date(meal.consumed_at).getTimezoneOffset() * 60000).toISOString().split('T')[0];
       if (aggregated[dateStr]) {
         aggregated[dateStr].calo += meal.calo || 0;
         aggregated[dateStr].protein += meal.protein || 0;

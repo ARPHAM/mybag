@@ -31,7 +31,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
     }
 
-    const { status } = await req.json();
+    const body = await req.json();
+    const { status, title, description, quest_rank, due_date } = body;
     const resolvedParams = await params;
     const taskId = resolvedParams.id;
 
@@ -115,8 +116,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         });
       }
     } else {
-      // Đổi sang status khác (PENDING -> IN_PROGRESS) hoặc ko ảnh hưởng EXP
-      task.status = status;
+      // Đổi sang status khác (PENDING -> IN_PROGRESS) hoặc cập nhật thông tin task
+      if (status) task.status = status;
+      if (title) task.title = title;
+      if (description !== undefined) task.description = description;
+      if (quest_rank) task.quest_rank = quest_rank;
+      
+      if (due_date) {
+        task.due_date = new Date(due_date);
+        
+        // Nếu thay đổi hạn và task đang OVERDUE, kiểm tra xem ngày mới đã qua chưa
+        // Nếu ngày mới lớn hơn hiện tại thì reset lại về PENDING
+        if (task.status === 'OVERDUE' && task.due_date > new Date()) {
+          task.status = 'PENDING';
+        }
+      }
+      
       await task.save();
     }
 

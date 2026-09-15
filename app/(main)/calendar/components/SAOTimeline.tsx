@@ -145,7 +145,7 @@ export default function SAOTimeline({ events, onEventClick }: SAOTimelineProps) 
                   {ev.title}
                 </div>
                 {ev.description && (
-                  <div className="text-xs opacity-80 truncate mt-1">
+                  <div className="text-xs opacity-80 whitespace-pre-wrap line-clamp-2 mt-1 leading-tight">
                     {ev.description}
                   </div>
                 )}

@@ -31,9 +31,9 @@ export default function ShoppingPage() {
     fetchItems();
   }, []);
 
-  const fetchItems = async () => {
+  const fetchItems = async (force = false) => {
     try {
-      const data: any = await getShoppingItems();
+      const data: any = await getShoppingItems(force);
       setItems(data);
     } catch (err) {
       console.error(err);
@@ -59,7 +59,7 @@ export default function ShoppingPage() {
   const toggleCheck = async (item: GroceryItem) => {
     try {
       await updateShoppingItem(item._id, { checked: !item.checked });
-      fetchItems();
+      fetchItems(true);
     } catch (err) {
       console.error(err);
     }
@@ -74,7 +74,7 @@ export default function ShoppingPage() {
     if (itemToDelete) {
       try {
         await deleteShoppingItem(itemToDelete);
-        fetchItems();
+        fetchItems(true);
       } catch (err) {
         console.error(err);
       }

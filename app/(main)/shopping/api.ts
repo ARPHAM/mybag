@@ -1,7 +1,7 @@
 import axiosClient from '@/lib/axiosClient';
 
-export const getShoppingItems = () => {
-  return axiosClient.get('/api/shopping');
+export const getShoppingItems = (force = false) => {
+  return axiosClient.get(`/api/shopping${force ? `?_t=${Date.now()}` : ''}`);
 };
 
 export const createShoppingItem = (itemData: any) => {

@@ -41,16 +41,16 @@ export default function HealthPage() {
     fetchHealthData();
   }, []);
 
-  const fetchHealthData = async () => {
+  const fetchHealthData = async (force = false) => {
     try {
-      const data: any = await getHealthData();
+      const data: any = await getHealthData(force);
       if (data) {
         setHeight(data.height || 170);
         setHeightForm(data.height?.toString() || '170');
         if (data.history) setWeightHistory(data.history);
       }
 
-      const macrosData: any = await getHealthMacros();
+      const macrosData: any = await getHealthMacros(force);
       if (macrosData) setMacros(macrosData);
       
       const aiData: any = await getAiAnalysis();
@@ -67,19 +67,44 @@ export default function HealthPage() {
   const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
 
   const openWeightModal = () => {
-    setWeightForm({ weight: '', date: new Date().toISOString().split('T')[0] });
+    setWeightForm({ weight: '', date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] });
     setHeightForm(height.toString());
     setIsWeightModalOpen(true);
   };
 
   // Form states
-  const [weightForm, setWeightForm] = useState({ weight: '', date: new Date().toISOString().split('T')[0] });
+  const [weightForm, setWeightForm] = useState({ weight: '', date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] });
   const [heightForm, setHeightForm] = useState(height.toString());
 
   const { showAlert } = useSaoAlert();
 
   const currentWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight : 0;
   
+  const getLastUpdateText = () => {
+    if (weightHistory.length === 0) return 'Chưa có dữ liệu';
+    const lastDateStr = weightHistory[weightHistory.length - 1].date;
+    if (!lastDateStr) return 'Đã cập nhật gần đây';
+    
+    // Normalize both dates to midnight local time for fair comparison
+    const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+    today.setUTCHours(0,0,0,0);
+    
+    const target = new Date(lastDateStr);
+    target.setUTCHours(0,0,0,0);
+    
+    const diffTime = today.getTime() - target.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Đã cập nhật hôm nay';
+    if (diffDays === 1) return 'Đã cập nhật hôm qua';
+    if (diffDays < 0) return 'Đã cập nhật ở tương lai (!)';
+    if (diffDays <= 30) return `Đã cập nhật ${diffDays} ngày trước`;
+    
+    const months = Math.floor(diffDays / 30);
+    return `Đã cập nhật ${months} tháng trước`;
+  };
+  
+  const lastUpdateText = getLastUpdateText();
   const bmi = useMemo(() => {
     if (height === 0 || currentWeight === 0) return 0;
     const heightInMeters = height / 100;
@@ -178,7 +203,7 @@ export default function HealthPage() {
             {currentWeight} <span className={styles.statUnit}>kg</span>
           </div>
           <div className={styles.statFooter}>
-            Đã cập nhật hôm nay
+            {lastUpdateText}
           </div>
           <SaoButton className={styles.actionButton} onClick={openWeightModal}>
             <Edit2 size={18} />
@@ -193,7 +218,7 @@ export default function HealthPage() {
             {height} <span className={styles.statUnit}>cm</span>
           </div>
           <div className={styles.statFooter}>
-            Ít biến động
+            {lastUpdateText}
           </div>
           <SaoButton className={styles.actionButton} onClick={openWeightModal}>
             <Edit2 size={18} />

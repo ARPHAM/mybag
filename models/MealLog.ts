@@ -16,6 +16,9 @@ export interface IMealLog extends mongoose.Document {
   recipe_id?: mongoose.Types.ObjectId;
   source: 'home' | 'eat_out';
   ingredients_text?: string;
+  transaction_id?: mongoose.Types.ObjectId;
+  wallet_id?: mongoose.Types.ObjectId;
+  ingredients_used?: { invId: string, qty: number }[];
 }
 
 const MealLogSchema = new mongoose.Schema<IMealLog>({
@@ -46,7 +49,13 @@ const MealLogSchema = new mongoose.Schema<IMealLog>({
     required: true,
     default: 'home'
   },
-  ingredients_text: { type: String }
+  ingredients_text: { type: String },
+  transaction_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' },
+  wallet_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Wallet' },
+  ingredients_used: [{
+    invId: { type: String },
+    qty: { type: Number }
+  }]
 });
 
 export default mongoose.models.MealLog || mongoose.model<IMealLog>('MealLog', MealLogSchema);

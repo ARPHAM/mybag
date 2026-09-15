@@ -24,15 +24,16 @@ interface Task {
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { showAlert } = useSaoAlert();
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (force = false) => {
     try {
-      const data: any = await getTasks();
+      const data: any = await getTasks(force);
       setTasks(data);
     } catch (err) {
       console.error(err);
@@ -71,7 +72,7 @@ export default function TasksPage() {
           showAlert(`⚠️ LEVEL DOWN! Exp bị trừ nên bạn bị rớt xuống Level ${data.penalty.newLevel}`);
         }
         window.dispatchEvent(new CustomEvent('sao-user-updated'));
-        fetchTasks();
+        fetchTasks(true);
     } catch (err) {
       console.error(err);
       // Revert Optimistic UI Update on failure
@@ -90,7 +91,7 @@ export default function TasksPage() {
     if (taskToDelete) {
       try {
         await deleteTask(taskToDelete);
-        fetchTasks();
+        fetchTasks(true);
       } catch (err) {
         console.error(err);
       }
@@ -104,7 +105,7 @@ export default function TasksPage() {
       title: '', 
       description: '', 
       quest_rank: 'C', 
-      due_date_date: new Date().toISOString().split('T')[0],
+      due_date_date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
       due_date_time: '23:59'
     });
     setIsModalOpen(true);
@@ -134,13 +135,32 @@ export default function TasksPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalDueDate = `${formData.due_date_date}T${formData.due_date_time}`;
+    if (isSubmitting) return;
+    
+    const [hourStr, minuteStr] = formData.due_date_time.split(':');
+    if (!hourStr || !minuteStr) {
+      alert("Vui lòng điền đầy đủ giờ và phút.");
+      return;
+    }
+
+    // Parse using local timezone correctly
+    const [year, month, day] = formData.due_date_date.split('-').map(Number);
+    const hour = Number(hourStr);
+    const minute = Number(minuteStr);
+    const dateObj = new Date(year, month - 1, day, hour, minute);
+    const finalDueDate = dateObj.toISOString();
+    
     if (!formData.title.trim() || !formData.due_date_date) return;
 
+    setIsSubmitting(true);
     try {
       if (editingTask) {
-        // For simplicity, we just use PUT to update the entire task or just assume creation for now.
-        // If we want full edit, we'd need another API route update. Let's just reload.
+        await updateTask(editingTask._id, {
+          title: formData.title,
+          description: formData.description,
+          quest_rank: formData.quest_rank,
+          due_date: finalDueDate
+        });
       } else {
         await createTask({ 
           title: formData.title, 
@@ -149,12 +169,14 @@ export default function TasksPage() {
           due_date: finalDueDate 
         });
       }
-      fetchTasks();
+      closeModal();
+      fetchTasks(true);
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
+      closeModal();
     }
-
-    closeModal();
   };
 
   const completedCount = tasks.filter(t => t.status === 'COMPLETED').length;
@@ -210,6 +232,13 @@ export default function TasksPage() {
 
               {/* Actions: Edit & Delete */}
               <div className={styles.taskActions}>
+                <SaoButton
+                  variant="ghost"
+                  onClick={(e) => openEditModal(e, task)}
+                  title="Sửa"
+                >
+                  <Edit2 size={16} />
+                </SaoButton>
                 <SaoButton
                   variant="ghost"
                   ghostType="danger"
@@ -285,12 +314,12 @@ export default function TasksPage() {
 
             <div className={styles.formGroup} style={{flex: 1}}>
               <label>Giờ hạn chót</label>
-              <div className="flex items-center gap-2 bg-black/30 border border-zinc-700/50 p-1 rounded font-mono text-sm">
+              <div className="flex items-center gap-2 font-mono text-sm">
                 <div className="flex-1">
                   <SaoSelect 
                     options={Array.from({length: 24}, (_, i) => ({ value: i.toString().padStart(2, '0'), label: i.toString().padStart(2, '0') }))}
-                    initialValue={formData.due_date_time.split(':')[0] || '23'}
-                    onChange={(val) => setFormData({...formData, due_date_time: `${val}:${formData.due_date_time.split(':')[1] || '59'}`})}
+                    initialValue={formData.due_date_time.split(':')[0]}
+                    onChange={(val) => setFormData({...formData, due_date_time: `${val}:${formData.due_date_time.split(':')[1]}`})}
                     allowCustom
                   />
                 </div>
@@ -298,8 +327,8 @@ export default function TasksPage() {
                 <div className="flex-1">
                   <SaoSelect 
                     options={Array.from({length: 12}, (_, i) => ({ value: (i*5).toString().padStart(2, '0'), label: (i*5).toString().padStart(2, '0') }))}
-                    initialValue={formData.due_date_time.split(':')[1] || '59'}
-                    onChange={(val) => setFormData({...formData, due_date_time: `${formData.due_date_time.split(':')[0] || '23'}:${val}`})}
+                    initialValue={formData.due_date_time.split(':')[1]}
+                    onChange={(val) => setFormData({...formData, due_date_time: `${formData.due_date_time.split(':')[0]}:${val}`})}
                     allowCustom
                   />
                 </div>
@@ -308,11 +337,11 @@ export default function TasksPage() {
           </div>
 
           <div className={styles.modalFooter}>
-            <SaoButton variant="default" onClick={closeModal} type="button">
+            <SaoButton variant="default" onClick={closeModal} type="button" disabled={isSubmitting}>
               Hủy
             </SaoButton>
-            <SaoButton variant="primary" type="submit">
-              {editingTask ? 'Cập nhật' : 'Tạo mới'}
+            <SaoButton variant="primary" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Đang xử lý...' : (editingTask ? 'Cập nhật' : 'Tạo mới')}
             </SaoButton>
           </div>
         </form>

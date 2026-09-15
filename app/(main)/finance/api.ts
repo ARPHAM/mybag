@@ -1,10 +1,10 @@
 import axiosClient from '@/lib/axiosClient';
 
-export const getWallets = () => axiosClient.get('/api/finance/wallets');
-export const getTransactions = () => axiosClient.get('/api/finance/transactions');
-export const getBudgets = () => axiosClient.get('/api/finance/budgets');
-export const getDebts = () => axiosClient.get('/api/finance/debts');
-export const getInventory = () => axiosClient.get('/api/finance/inventory');
+export const getWallets = (force = false) => axiosClient.get(`/api/finance/wallets${force ? `?_t=${Date.now()}` : ''}`);
+export const getTransactions = (force = false) => axiosClient.get(`/api/finance/transactions${force ? `?_t=${Date.now()}` : ''}`);
+export const getBudgets = (force = false) => axiosClient.get(`/api/finance/budgets${force ? `?_t=${Date.now()}` : ''}`);
+export const getDebts = (force = false) => axiosClient.get(`/api/finance/debts${force ? `?_t=${Date.now()}` : ''}`);
+export const getInventory = (force = false) => axiosClient.get(`/api/finance/inventory${force ? `?_t=${Date.now()}` : ''}`);
 
 // CREATE
 export const createWallet = (data: any) => axiosClient.post('/api/finance/wallets', data);
