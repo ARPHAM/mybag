@@ -16,6 +16,14 @@ export async function GET(req: Request) {
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
+    // Tự động dọn dẹp kho: xóa các món ăn có số lượng = 0 và đã không cập nhật từ 7 ngày trước
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    await Inventory.deleteMany({
+      user_id: decoded.userId,
+      quantity: { $lte: 0 },
+      updatedAt: { $lt: oneWeekAgo }
+    });
+
     const items = await Inventory.find({ user_id: decoded.userId }).sort({ createdAt: -1 });
     return NextResponse.json(items, {
       headers: {

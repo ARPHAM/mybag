@@ -15,9 +15,10 @@ interface SaoSelectProps {
   onChange?: (val: string) => void;
   placeholder?: string;
   allowCustom?: boolean;
+  disabled?: boolean;
 }
 
-export default function SaoSelect({ options, initialValue, onChange, placeholder = 'Select...', allowCustom = false }: SaoSelectProps) {
+export default function SaoSelect({ options, initialValue, onChange, placeholder = 'Select...', allowCustom = false, disabled = false }: SaoSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState<string | undefined>(initialValue);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,10 +53,10 @@ export default function SaoSelect({ options, initialValue, onChange, placeholder
   const selectedLabel = options.find(o => o.value === selectedValue)?.label || (allowCustom ? selectedValue || '' : placeholder);
 
   return (
-    <div className={styles.selectContainer} ref={containerRef}>
+    <div className={styles.selectContainer} ref={containerRef} style={{ opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? 'none' : 'auto' }}>
       <div 
         className={`${styles.selectTrigger} ${isOpen ? styles.isOpen : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         {allowCustom ? (
           <input 
