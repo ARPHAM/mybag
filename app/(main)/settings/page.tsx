@@ -58,8 +58,9 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className={styles.section}>
-        <div className={styles.sectionTitle}>
+      <div className={styles.scrollArea}>
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>
           <Palette size={20} />
           <span>Chủ đề màu sắc (Global Theme)</span>
         </div>
@@ -106,6 +107,7 @@ export default function SettingsPage() {
         >
           <LogOut size={18} /> Đăng xuất khỏi hệ thống
         </button>
+        </div>
       </div>
     </div>
   );

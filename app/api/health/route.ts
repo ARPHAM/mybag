@@ -31,7 +31,8 @@ export async function GET(req: Request) {
 
     // Map dữ liệu format để biểu đồ Recharts dễ đọc
     const history = logs.map(log => ({
-      date: new Date(log.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+      dateLabel: new Date(log.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+      date: new Date(log.date).toISOString(), // Giữ nguyên ISO string để frontend tính toán date math
       weight: log.weight,
     }));
 

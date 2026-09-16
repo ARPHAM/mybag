@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     const accessToken = await signAccessToken({ userId: newUser._id.toString(), username: newUser.username });
     const refreshToken = await signRefreshToken({ userId: newUser._id.toString() });
 
-    newUser.refresh_token = refreshToken;
+    newUser.refresh_tokens = [refreshToken];
     await newUser.save();
 
     const response = NextResponse.json({ message: 'Tạo nhân vật thành công', user: { username: newUser.username } }, { status: 201 });

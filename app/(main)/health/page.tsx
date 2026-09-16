@@ -24,10 +24,7 @@ import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { getHealthData, getHealthMacros, getAiAnalysis, saveHealthData, requestAiAnalysis } from './api';
 
-interface WeightEntry {
-  date: string;
-  weight: number;
-}
+import { WeightEntry } from '@/lib/types';
 
 export default function HealthPage() {
   const [height, setHeight] = useState<number>(170); // cm
@@ -194,7 +191,8 @@ export default function HealthPage() {
         </div>
       </div>
 
-      <div className={styles.gridStats}>
+      <div className={styles.scrollArea}>
+        <div className={styles.gridStats}>
         <div className={styles.statCard}>
           <div className={styles.statHeader}>
             <Scale size={18} /> Cân nặng hiện tại
@@ -249,7 +247,7 @@ export default function HealthPage() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={weightHistory} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--sao-primary-rgb), 0.2)" vertical={false} />
-              <XAxis dataKey="date" stroke="#a0c4ff" tick={{ fill: '#a0c4ff' }} />
+              <XAxis dataKey="dateLabel" stroke="#a0c4ff" tick={{ fill: '#a0c4ff' }} />
               <YAxis domain={['dataMin - 2', 'dataMax + 2']} stroke="#a0c4ff" tick={{ fill: '#a0c4ff' }} />
               <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(var(--sao-primary-rgb), 0.4)', strokeWidth: 2 }} />
               <Line 
@@ -324,6 +322,8 @@ export default function HealthPage() {
             </div>
           )}
         </div>
+      </div>
+
       </div>
 
       {/* MODAL: WEIGHT & HEIGHT */}

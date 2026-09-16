@@ -12,14 +12,8 @@ import SaoButton from '../../components/SaoButton/SaoButton';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { getTasks, createTask, updateTask, deleteTask } from './api';
 
-interface Task {
-  _id: string;
-  title: string;
-  description?: string;
-  quest_rank: string;
-  status: string;
-  due_date: string;
-}
+import { Task } from '@/lib/types';
+import { TASK_RANK_OPTIONS } from '@/lib/constants';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -290,13 +284,7 @@ export default function TasksPage() {
           <div className={styles.formGroup}>
             <label>Độ khó (Rank)</label>
             <SaoSelect
-              options={[
-                { value: "S", label: "Rank S (Quan trọng bậc nhất - 1000 EXP)" },
-                { value: "A", label: "Rank A (Rất khó - 600 EXP)" },
-                { value: "B", label: "Rank B (Khó - 300 EXP)" },
-                { value: "C", label: "Rank C (Trung bình - 150 EXP)" },
-                { value: "D", label: "Rank D (Dễ/Nhanh - 50 EXP)" }
-              ]}
+              options={TASK_RANK_OPTIONS}
               initialValue={formData.quest_rank}
               onChange={val => setFormData({...formData, quest_rank: val})}
             />

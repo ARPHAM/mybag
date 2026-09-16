@@ -20,6 +20,7 @@
   backdrop-filter: blur(15px);
   border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
   border-radius: 8px;
+  flex-shrink: 0;
   clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
   padding: 15px 25px;
 }
@@ -80,18 +81,6 @@
   gap: 12px;
   padding-right: 10px;
   padding-bottom: 20px;
-}
-
-.taskList::-webkit-scrollbar {
-  width: 6px;
-}
-.taskList::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-}
-.taskList::-webkit-scrollbar-thumb {
-  background: rgba(var(--sao-primary-rgb), 0.4);
-  border-radius: 3px;
 }
 
 .taskCard {
@@ -350,4 +339,82 @@
 .actionBtn.deleteBtn:hover {
   color: #ff4444;
   filter: drop-shadow(0 0 5px #ff4444);
+}
+
+/* =========================================
+   MOBILE RESPONSIVE (MAX-WIDTH: 768px)
+========================================= */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 15px;
+    clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+  }
+
+  .title {
+    font-size: 1.2rem;
+  }
+
+  .progressSection {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .progressBarWrapper {
+    flex: 1;
+    margin-left: 10px;
+  }
+
+  .taskList {
+    padding-right: 5px;
+  }
+
+  .taskCard {
+    padding: 12px 15px;
+    gap: 12px;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  }
+
+  .checkbox {
+    width: 32px;
+    height: 32px;
+  }
+
+  .taskName {
+    font-size: 1.05rem;
+  }
+
+  .taskDesc {
+    font-size: 0.85rem;
+  }
+
+  /* Hiển thị luôn nút sửa/xóa vì Mobile không có hover */
+  .taskActions {
+    opacity: 1;
+    transform: none;
+  }
+
+  .actionBtn {
+    padding: 8px; /* Tăng vùng bấm (Touch target) */
+  }
+
+  .addButton {
+    padding: 12px;
+    font-size: 1rem;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  }
+
+  /* Responsive cho Modal bên trong */
+  .modalFooter {
+    flex-direction: column-reverse; /* Đưa nút Save lên trên, Cancel xuống dưới */
+    gap: 10px;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+  }
 }

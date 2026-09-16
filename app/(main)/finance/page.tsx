@@ -13,70 +13,25 @@ import { useSaoAlert } from '../../contexts/AlertContext';
 import { getWallets, getTransactions, getBudgets, getDebts, getInventory, createWallet, createTransaction, createBudget, createDebt, createInventory, updateWallet, updateTransaction, updateBudget, updateDebt, updateInventory, deleteWallet, deleteTransaction, deleteBudget, deleteDebt, deleteInventory } from './api';
 import styles from './finance.module.css';
 
-type TabId = 'overview' | 'wallets' | 'budgets' | 'history' | 'debts' | 'inventory';
-
-interface WalletSource {
-  id: string;
-  name: string;
-  balance: number;
-  type: 'bank' | 'ewallet' | 'cash';
-  color: string;
-}
-
-interface BudgetPocket {
-  id: string;
-  name: string;
-  spent: number;
-  limit: number;
-  category: string;
-}
-
-interface Transaction {
-  id: string;
-  type: 'income' | 'expense' | 'transfer';
-  amount: number;
-  date: string;
-  description: string;
-  walletName: string;
-}
-
-interface DebtRecord {
-  id: string;
-  date: string;
-  amount: number;
-  type: 'borrow_more' | 'pay_back';
-  walletName: string;
-}
-
-interface DebtItem {
-  id: string;
-  personName: string;
-  totalAmount: number;
-  remainingAmount: number;
-  type: 'lent' | 'borrowed';
-  status: 'unpaid' | 'partial' | 'paid';
-  dueDate: string;
-  history: DebtRecord[];
-  completedDate?: string;
-}
-
-interface InventoryItem {
-  id: string;
-  name: string;
-  quantity: number;
-  originalQuantity: number;
-  unit: string;
-  purchaseDate?: string;
-  expiryDate?: string;
-  category: 'food' | 'spices' | 'utilities';
-  totalValue: number;
-  isGift?: boolean;
-  wallet_id?: string;
-  walletName?: string;
-}
+import { 
+  FinanceTabId, 
+  WalletSource, 
+  BudgetPocket, 
+  Transaction, 
+  DebtRecord, 
+  DebtItem, 
+  InventoryItem 
+} from '@/lib/types';
+import { 
+  FINANCE_CATEGORY_OPTIONS, 
+  WALLET_TYPE_OPTIONS, 
+  INVENTORY_CATEGORY_OPTIONS, 
+  INVENTORY_UNIT_OPTIONS,
+  FINANCE_TABS
+} from '@/lib/constants';
 
 export default function FinancePage() {
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [activeTab, setActiveTab] = useState<FinanceTabId>('overview');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [debtFilter, setDebtFilter] = useState<'all' | 'lent' | 'borrowed'>('all');
 
@@ -194,33 +149,18 @@ export default function FinancePage() {
     });
   };
 
-  const tabs: { id: TabId; label: string; icon: any }[] = [
-    { id: 'overview', label: 'Tổng quan', icon: Activity },
-    { id: 'wallets', label: 'Nguồn tiền', icon: Wallet },
-    { id: 'budgets', label: 'Hạn mức', icon: CreditCard },
-    { id: 'history', label: 'Lịch sử', icon: Clock },
-    { id: 'debts', label: 'Sổ nợ', icon: Users },
-    { id: 'inventory', label: 'Dự trữ', icon: Package },
-  ];
-
   const [budgets, setBudgets] = useState<BudgetPocket[]>([]);
   const [debts, setDebts] = useState<DebtItem[]>([]);
 
-  const [inventory, setInventory] = useState<InventoryItem[]>([
-    { id: 'i1', name: 'Gạo ST25', quantity: 5, originalQuantity: 10, unit: 'kg', category: 'food', totalValue: 350000, walletName: 'MB Bank' },
-    { id: 'i2', name: 'Mì tôm Hảo Hảo', quantity: 2, originalQuantity: 3, unit: 'gói', category: 'food', expiryDate: 'Sắp hết hạn (Còn 5 ngày)', totalValue: 10000, walletName: 'Tiền mặt' },
-    { id: 'i5', name: 'Hành ngò (Mua lẻ)', quantity: 1, originalQuantity: 1, unit: 'phần', category: 'spices', totalValue: 5000, walletName: 'Tiền mặt' },
-    { id: 'i4', name: 'Nước rửa bát', quantity: 1, originalQuantity: 1, unit: 'chai', category: 'utilities', totalValue: 25000, walletName: 'MB Bank' },
-    { id: 'i3', name: 'Dầu ăn Tường An', quantity: 0, originalQuantity: 1, unit: 'chai', category: 'spices', totalValue: 55000, walletName: 'Momo' },
-  ]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
 
   const updateInventoryQty = async (id: string, delta: number) => {
-    const item = inventory.find(i => i.id === id);
+    const item = inventory.find(i => i._id === id);
     if (!item) return;
     const newQty = Math.max(1, item.quantity + delta);
     
     // Optimistic update
-    setInventory(inventory.map(i => i.id === id ? { ...i, quantity: newQty } : i));
+    setInventory(inventory.map(i => i._id === id ? { ...i, quantity: newQty } : i));
 
     try {
       await updateInventory(id, { justUpdateQty: true, quantity: newQty });
@@ -231,11 +171,11 @@ export default function FinancePage() {
   };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<TabId | 'transaction' | 'debt_action'>('transaction');
+  const [modalType, setModalType] = useState<FinanceTabId | 'transaction' | 'debt_action'>('transaction');
   const [editingItem, setEditingItem] = useState<any>(null);
   const [debtActionType, setDebtActionType] = useState<'borrow_more' | 'pay_back' | null>(null);
 
-  const openModal = (type: TabId | 'transaction', item: any = null) => {
+  const openModal = (type: FinanceTabId | 'transaction', item: any = null) => {
     setModalType(type);
     setEditingItem(item);
     if (type === 'wallets') {
@@ -655,7 +595,7 @@ export default function FinancePage() {
             else if (item.quantity <= 2) stockClass = styles.stockLow;
 
             return (
-              <div key={item.id} className={`${styles.inventoryCard} ${stockClass}`}>
+              <div key={item._id} className={`${styles.inventoryCard} ${stockClass}`}>
                 <SaoButton variant="ghost" className={styles.editBtn} onClick={(e) => { e.stopPropagation(); openModal('inventory', item); }}>
                   <Edit3 size={16} />
                 </SaoButton>
@@ -696,7 +636,7 @@ export default function FinancePage() {
                 <SaoButton
                   variant="ghost"
                   className={styles.qtyBtn}
-                  onClick={() => updateInventoryQty(item.id, -1)}
+                  onClick={() => updateInventoryQty(item._id, -1)}
                   disabled={item.quantity <= 1}
                   style={{ opacity: item.quantity <= 1 ? 0.5 : 1, cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer', padding: 0 }}
                 >
@@ -709,7 +649,7 @@ export default function FinancePage() {
                 <SaoButton
                   variant="ghost"
                   className={styles.qtyBtn}
-                  onClick={() => updateInventoryQty(item.id, 1)}
+                  onClick={() => updateInventoryQty(item._id, 1)}
                   style={{ padding: 0 }}
                 >
                   <Plus size={16} />
@@ -943,15 +883,7 @@ export default function FinancePage() {
                 <label className={styles.formLabel}>Danh mục</label>
                 <SaoSelect
                   initialValue={txForm.category}
-                  options={[
-                    { value: 'food', label: 'Ăn uống' },
-                    { value: 'housing', label: 'Nhà cửa & Sinh hoạt' },
-                    { value: 'transport', label: 'Đi lại' },
-                    { value: 'entertainment', label: 'Giải trí' },
-                    { value: 'shopping', label: 'Mua sắm' },
-                    { value: 'health', label: 'Sức khoẻ' },
-                    { value: 'other', label: 'Khác' }
-                  ]}
+                  options={FINANCE_CATEGORY_OPTIONS}
                   onChange={v => setTxForm({...txForm, category: v})}
                 />
               </div>
@@ -1025,11 +957,7 @@ export default function FinancePage() {
               <label className={styles.formLabel}>Loại</label>
               <SaoSelect
                 initialValue={walletForm.type}
-                options={[
-                  { value: 'bank', label: 'Ngân hàng' },
-                  { value: 'ewallet', label: 'Ví điện tử' },
-                  { value: 'cash', label: 'Tiền mặt' }
-                ]}
+                options={WALLET_TYPE_OPTIONS}
                 onChange={v => setWalletForm({...walletForm, type: v})}
               />
             </div>
@@ -1065,15 +993,7 @@ export default function FinancePage() {
               <label className={styles.formLabel}>Icon / Danh mục</label>
               <SaoSelect
                 initialValue={budgetForm.category}
-                options={[
-                  { value: 'food', label: 'Ăn uống' },
-                  { value: 'housing', label: 'Nhà cửa & Sinh hoạt' },
-                  { value: 'transport', label: 'Đi lại' },
-                  { value: 'entertainment', label: 'Giải trí' },
-                  { value: 'shopping', label: 'Mua sắm' },
-                  { value: 'health', label: 'Sức khoẻ' },
-                  { value: 'other', label: 'Khác' }
-                ]}
+                options={FINANCE_CATEGORY_OPTIONS}
                 onChange={v => setBudgetForm({...budgetForm, category: v})}
               />
             </div>
@@ -1229,11 +1149,7 @@ export default function FinancePage() {
               <label className={styles.formLabel}>Phân loại</label>
               <SaoSelect
                 initialValue={inventoryForm.category}
-                options={[
-                  { value: 'food', label: 'Thực phẩm' },
-                  { value: 'spices', label: 'Gia vị' },
-                  { value: 'utilities', label: 'Đồ dùng' }
-                ]}
+                options={INVENTORY_CATEGORY_OPTIONS}
                 onChange={v => setInventoryForm({...inventoryForm, category: v})}
               />
             </div>
@@ -1249,18 +1165,7 @@ export default function FinancePage() {
                 initialValue={inventoryForm.unit}
                 placeholder="VD: kg, gói, chai..."
                 allowCustom={true}
-                options={[
-                  { value: 'kg', label: 'kg' },
-                  { value: 'gram', label: 'gram' },
-                  { value: 'gói', label: 'gói' },
-                  { value: 'chai', label: 'chai' },
-                  { value: 'lon', label: 'lon' },
-                  { value: 'thùng', label: 'thùng' },
-                  { value: 'phần', label: 'phần' },
-                  { value: 'mớ', label: 'mớ' },
-                  { value: 'quả', label: 'quả' },
-                  { value: 'củ', label: 'củ' }
-                ]}
+                options={INVENTORY_UNIT_OPTIONS}
                 onChange={v => setInventoryForm({...inventoryForm, unit: v})}
               />
             </div>
@@ -1343,9 +1248,9 @@ export default function FinancePage() {
       </div>
 
       <SaoTabs
-        tabs={tabs.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={18} /> }))}
+        tabs={FINANCE_TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={18} /> }))}
         activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as TabId)}
+        onChange={(id) => setActiveTab(id as FinanceTabId)}
       />
 
       <div className={styles.tabContent}>

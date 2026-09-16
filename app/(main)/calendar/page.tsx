@@ -158,7 +158,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="p-4 h-full flex flex-col font-mono">
+    <div className="p-4 h-full flex flex-col font-mono overflow-hidden">
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
           <Calendar className={styles.titleIcon} size={28} />

@@ -14,7 +14,7 @@ export interface IUser extends mongoose.Document {
   last_active_at: Date;
   last_hp_mp_update: Date;
   ai_daily_buff?: string;
-  refresh_token?: string;
+  refresh_tokens?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,7 +33,7 @@ const UserSchema = new mongoose.Schema<IUser>({
   last_active_at: { type: Date, required: true, default: Date.now },
   last_hp_mp_update: { type: Date, required: true, default: Date.now },
   ai_daily_buff: { type: String },
-  refresh_token: { type: String },
+  refresh_tokens: { type: [String], default: [] },
 }, { timestamps: true });
 
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

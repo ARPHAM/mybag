@@ -21,6 +21,7 @@
   backdrop-filter: blur(15px);
   border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
   border-radius: 8px;
+  flex-shrink: 0;
   clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
   padding: 15px 25px;
 }
@@ -51,18 +52,6 @@
   overflow-y: auto;
   padding-right: 10px;
   padding-bottom: 20px;
-}
-
-.tabContent::-webkit-scrollbar {
-  width: 6px;
-}
-.tabContent::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-}
-.tabContent::-webkit-scrollbar-thumb {
-  background: rgba(var(--sao-primary-rgb), 0.4);
-  border-radius: 3px;
 }
 
 /* OVERVIEW TAB STYLES */
@@ -1028,4 +1017,71 @@
   opacity: 0.3;
   cursor: not-allowed;
   filter: grayscale(1);
+}
+
+/* =========================================
+   MOBILE RESPONSIVE (MAX-WIDTH: 768px)
+========================================= */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 15px;
+    clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+  }
+
+  .title {
+    font-size: 1.2rem;
+  }
+
+  .overviewGrid, .transactionsGrid, .budgetsGrid, .debtsGrid, .loansGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .totalBalanceCard {
+    grid-column: span 1;
+    padding: 20px;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  }
+
+  .balanceValue {
+    font-size: 2rem;
+  }
+
+  .summaryCards {
+    flex-direction: column;
+  }
+
+  .summaryCard {
+    padding: 15px;
+  }
+  
+  .filterSection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .transactionItem, .budgetCard, .debtCard {
+    padding: 15px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .flexRow {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modalFooter {
+    flex-direction: column-reverse;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+  }
 }

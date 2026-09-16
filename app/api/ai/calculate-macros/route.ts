@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { mealId, food_name, ingredients_context } = body;
+    const { mealId, food_name, ingredients_context, image_data } = body;
 
     if (!mealId || !food_name) {
       return NextResponse.json({ error: 'Thiếu mealId hoặc food_name' }, { status: 400 });
@@ -48,6 +48,7 @@ export async function POST(req: Request) {
     const prompt = `Bạn là một chuyên gia dinh dưỡng.
 Hãy ước tính lượng Calories, Protein (g), Fat (g), Carbs (g), Sugar (g) cho bữa ăn sau.
 Nếu có danh sách nguyên liệu và định lượng thực tế, hãy ưu tiên tính dựa trên định lượng đó. Nếu không, hãy ước lượng dựa trên một khẩu phần ăn tiêu chuẩn bình thường.
+Nếu có hình ảnh cung cấp kèm theo, hãy dùng hình ảnh để đánh giá khẩu phần, kích cỡ và thành phần để tính toán lượng calo chính xác nhất có thể.
 ${promptContext}
 
 Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ trả về JSON, không có text nào khác):
@@ -61,7 +62,21 @@ Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ
 
     let result;
     try {
-      const response = await model.generateContent(prompt);
+      const parts: any[] = [{ text: prompt }];
+      
+      if (image_data) {
+        // image_data has format: "data:image/jpeg;base64,/9j/4AAQSk..."
+        const mimeType = image_data.split(';')[0].split(':')[1];
+        const base64Data = image_data.split(',')[1];
+        parts.push({
+          inlineData: {
+            data: base64Data,
+            mimeType
+          }
+        });
+      }
+
+      const response = await model.generateContent(parts);
       let text = response.response.text();
       // Loại bỏ markdown nếu có
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();

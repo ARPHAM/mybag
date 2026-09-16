@@ -13,14 +13,8 @@ import { getShoppingItems, createShoppingItem, updateShoppingItem, deleteShoppin
 
 type CategoryType = 'all' | 'food' | 'household' | 'other';
 
-interface GroceryItem {
-  _id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  category: 'food' | 'household' | 'other';
-  checked: boolean;
-}
+import { GroceryItem } from '@/lib/types';
+import { GROCERY_CATEGORY_OPTIONS } from '@/lib/constants';
 
 export default function ShoppingPage() {
   const [items, setItems] = useState<GroceryItem[]>([]);
@@ -242,11 +236,7 @@ export default function ShoppingPage() {
           <div className={styles.formGroup}>
             <label>Danh mục</label>
             <SaoSelect
-              options={[
-                { value: 'food', label: 'Thực phẩm' },
-                { value: 'household', label: 'Đồ gia dụng' },
-                { value: 'other', label: 'Khác' }
-              ]}
+              options={GROCERY_CATEGORY_OPTIONS}
               initialValue={formData.category}
               onChange={val => setFormData({...formData, category: val as 'food' | 'household' | 'other'})}
             />

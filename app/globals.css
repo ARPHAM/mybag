@@ -24,3 +24,21 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Global SAO Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+  border-radius: 4px;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.8);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.8);
+}

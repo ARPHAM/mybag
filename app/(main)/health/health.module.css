@@ -2,22 +2,19 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  flex-direction: column;
   gap: 20px;
-  overflow-y: auto;
+  overflow: hidden;
   animation: fadeIn 0.5s ease-out;
-  padding-right: 10px;
 }
 
-.healthContainer::-webkit-scrollbar {
-  width: 6px;
-}
-.healthContainer::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-}
-.healthContainer::-webkit-scrollbar-thumb {
-  background: rgba(var(--sao-primary-rgb), 0.4);
-  border-radius: 3px;
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 @keyframes fadeIn {
@@ -33,6 +30,7 @@
   backdrop-filter: blur(15px);
   border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
   border-radius: 8px;
+  flex-shrink: 0;
   clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
   padding: 15px 25px;
 }
@@ -282,3 +280,58 @@
 .markdownContent ul { margin-left: 1.5rem; margin-bottom: 1rem; list-style-type: disc; }
 .markdownContent li { margin-bottom: 0.25rem; }
 .markdownContent strong { color: #fff; font-weight: 600; }
+
+/* =========================================
+   MOBILE RESPONSIVE (MAX-WIDTH: 768px)
+========================================= */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 15px;
+    clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+  }
+
+  .title {
+    font-size: 1.2rem;
+  }
+
+  .gridStats {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .statCard {
+    padding: 15px;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  }
+
+  .chartSection {
+    padding: 15px;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  }
+
+  .chartHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .chartTitle {
+    font-size: 1.1rem;
+  }
+
+  .actionButton, .logButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modalFooter {
+    flex-direction: column-reverse;
+  }
+
+  .formGroup {
+    margin-bottom: 15px;
+  }
+}

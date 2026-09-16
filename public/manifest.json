@@ -1,0 +1,16 @@
+{
+  "name": "MyBag SAO System",
+  "short_name": "MyBag",
+  "description": "Sword Art Online inspired life management system",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a192d",
+  "theme_color": "#00f0ff",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

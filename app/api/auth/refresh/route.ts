@@ -10,6 +10,7 @@ export async function POST(req: Request) {
     const refreshToken = cookieStore.get('refresh_token')?.value;
 
     if (!refreshToken) {
+      console.log('Refresh Token Failed: No refresh token in cookies');
       const response = NextResponse.json({ error: 'Không tìm thấy refresh token' }, { status: 401 });
       response.cookies.delete('auth_token');
       response.cookies.delete('refresh_token');
@@ -18,6 +19,7 @@ export async function POST(req: Request) {
 
     const payload = await verifyToken(refreshToken);
     if (!payload || !payload.userId) {
+      console.log('Refresh Token Failed: Invalid payload or expired', payload);
       const response = NextResponse.json({ error: 'Refresh token không hợp lệ hoặc đã hết hạn' }, { status: 401 });
       response.cookies.delete('auth_token');
       response.cookies.delete('refresh_token');
@@ -27,8 +29,17 @@ export async function POST(req: Request) {
     await dbConnect();
     const user = await User.findById(payload.userId);
 
-    if (!user || user.refresh_token !== refreshToken) {
-      const response = NextResponse.json({ error: 'Refresh token không khớp hoặc tài khoản không tồn tại' }, { status: 401 });
+    if (!user) {
+      console.log('Refresh Token Failed: User not found in DB', payload.userId);
+      const response = NextResponse.json({ error: 'Tài khoản không tồn tại' }, { status: 401 });
+      response.cookies.delete('auth_token');
+      response.cookies.delete('refresh_token');
+      return response;
+    }
+
+    if (!user.refresh_tokens || !user.refresh_tokens.includes(refreshToken)) {
+      console.log('Refresh Token Failed: Token mismatch in DB');
+      const response = NextResponse.json({ error: 'Refresh token không khớp' }, { status: 401 });
       response.cookies.delete('auth_token');
       response.cookies.delete('refresh_token');
       return response;

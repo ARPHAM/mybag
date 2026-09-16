@@ -137,7 +137,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         amount: cost,
         date: consumed_at ? new Date(consumed_at) : new Date(),
         description: `[Ăn ngoài] ${food_name}`,
-        category: 'Thực phẩm',
+        category: 'food',
         wallet_id: wallet._id,
         walletName: wallet.name
       });

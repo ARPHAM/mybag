@@ -13,36 +13,7 @@ import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
 import { getRecipes, getMeals, getInventory, calculateMacros, createRecipe, createMeal, getWallets, updateMeal, deleteMeal } from './api';
 import styles from './menu.module.css';
 
-type TabId = 'recipes' | 'history';
-
-interface Recipe {
-  _id: string;
-  name: string;
-  ingredients: string[];
-}
-
-interface MealRecord {
-  _id: string;
-  consumed_at: string;
-  meal_tier: 'HEAVY' | 'LIGHT' | 'DRINK';
-  source: 'home' | 'eat_out';
-  food_name: string;
-  calo?: number;
-  protein?: number;
-  fat?: number;
-  carbs?: number;
-  sugar?: number;
-  ai_status: 'pending' | 'completed' | 'failed';
-  cost?: number;
-  wallet_id?: string;
-}
-
-interface InventoryItem {
-  _id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-}
+import { MenuTabId, Recipe, MealRecord, InventoryItem } from '@/lib/types';
 
 interface Wallet {
   _id: string;
@@ -52,7 +23,7 @@ interface Wallet {
 
 export default function MenuPage() {
   const { showAlert, showConfirm } = useSaoAlert();
-  const [activeTab, setActiveTab] = useState<TabId>('recipes');
+  const [activeTab, setActiveTab] = useState<MenuTabId>('recipes');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'cook' | 'recipe' | 'meal'>('cook');
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
@@ -74,6 +45,16 @@ export default function MenuPage() {
   const [selectedIngredients, setSelectedIngredients] = useState<{invId: string, qty: number}[]>([]);
   const [editingMeal, setEditingMeal] = useState<MealRecord | null>(null);
   const [mealToDelete, setMealToDelete] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
 
   useEffect(() => {
     fetchData();
@@ -113,6 +94,7 @@ export default function MenuPage() {
     setFormCookSource('home');
     setFormDate(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
     setFormCost('');
+    setImageFile(null);
     
     // Auto-match ingredients from inventory
     const matched: {invId: string, qty: number}[] = [];
@@ -142,6 +124,7 @@ export default function MenuPage() {
       setFormWalletId('');
       setSelectedIngredients([]);
       setEditingMeal(null);
+      setImageFile(null);
       setIsModalOpen(true);
     }
   };
@@ -160,6 +143,7 @@ export default function MenuPage() {
     } else {
       setSelectedIngredients([]);
     }
+    setImageFile(null);
     setIsModalOpen(true);
   };
 
@@ -179,12 +163,13 @@ export default function MenuPage() {
     }
   };
 
-  const calculateAI = async (mealId: string, name: string, ingredients: string) => {
+  const calculateAI = async (mealId: string, name: string, ingredients: string, imageBase64?: string) => {
     try {
       await calculateMacros({
         mealId,
         food_name: name,
-        ingredients_context: ingredients
+        ingredients_context: ingredients,
+        image_data: imageBase64
       });
       fetchData(true); // reload regardless to update status
     } catch (e) {
@@ -253,8 +238,13 @@ export default function MenuPage() {
       
       setIsModalOpen(false);
       
+      let imageBase64;
+      if (formCookSource === 'eat_out' && imageFile) {
+        imageBase64 = await fileToBase64(imageFile);
+      }
+      
       // Send AI request (which will also call fetchData(true) to sync)
-      calculateAI(data.mealLog._id, formName, ingredients_context);
+      calculateAI(data.mealLog._id, formName, ingredients_context, imageBase64);
       
       // Update local state temporarily, or just let fetchData(true) handle it.
       // We also do fetchData(true) directly here to guarantee instant UI update
@@ -395,6 +385,13 @@ export default function MenuPage() {
           {formCookSource === 'eat_out' && (
             <>
               <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Hình ảnh bữa ăn (Tùy chọn, giúp AI phân tích tốt hơn)</label>
+                <SaoInput type="file" accept="image/*" onChange={(e: any) => {
+                  const file = e.target.files?.[0];
+                  if (file) setImageFile(file);
+                }} />
+              </div>
+              <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Số tiền (VND)</label>
                 <SaoInput type="number" placeholder="Nhập số tiền..." value={formCost} onChange={e => setFormCost(e.target.value)} required />
               </div>
@@ -432,12 +429,13 @@ export default function MenuPage() {
           { id: 'history', label: 'Lịch Sử', icon: <History size={18} /> },
         ]}
         activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as TabId)}
+        onChange={(id) => setActiveTab(id as MenuTabId)}
       />
 
-      {loading ? (
-        <SaoLoading fullPage />
-      ) : activeTab === 'recipes' ? (
+      <div className={styles.scrollArea}>
+        {loading ? (
+          <SaoLoading fullPage />
+        ) : activeTab === 'recipes' ? (
         <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
           <div className={styles.recipesGrid}>
             {recipes.length === 0 && (
@@ -533,7 +531,8 @@ export default function MenuPage() {
             </div>
           ))}
         </div>
-      )}
+        )}
+      </div>
 
       {/* Nút cộng vạn năng */}
       <SaoButton variant="primary" style={{borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)"}}  onClick={openGlobalAddModal}>

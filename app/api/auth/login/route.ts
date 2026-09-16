@@ -29,8 +29,12 @@ export async function POST(req: Request) {
     const accessToken = await signAccessToken({ userId: user._id.toString(), username: user.username });
     const refreshToken = await signRefreshToken({ userId: user._id.toString() });
 
-    // Save refresh token to user
-    user.refresh_token = refreshToken;
+    // Save refresh token to user (keep up to 5 concurrent sessions)
+    user.refresh_tokens = user.refresh_tokens || [];
+    user.refresh_tokens.push(refreshToken);
+    if (user.refresh_tokens.length > 5) {
+      user.refresh_tokens = user.refresh_tokens.slice(-5);
+    }
     await user.save();
 
     const response = NextResponse.json({ message: 'Link Start!', user: { username: user.username } }, { status: 200 });
