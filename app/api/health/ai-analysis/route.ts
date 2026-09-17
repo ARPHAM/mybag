@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const latest = await HealthAnalysis.findOne({ user_id: decoded.userId }).sort({ analyzed_at: -1 });
-    return NextResponse.json(latest || null, { 
+    return NextResponse.json(latest || null, {
       status: 200,
       headers: {
         'Cache-Control': 'private, max-age=60, stale-while-revalidate=120', // Cache 1 phút
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     // Prepare text for AI
     let historyText = `Lịch sử ăn uống 7 ngày qua (từ ${start_date.toLocaleDateString('vi-VN')} đến nay):\n`;
     let totalCalo = 0;
-    
+
     meals.forEach(meal => {
       const date = new Date(meal.consumed_at).toLocaleDateString('vi-VN');
       historyText += `- ${date}: ${meal.food_name} (${meal.source === 'home' ? 'Nấu tại nhà' : 'Ăn ngoài'}). `;
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
     const prompt = `Bạn là một chuyên gia dinh dưỡng và sức khỏe cá nhân nghiêm khắc nhưng tận tâm.
 Dưới đây là lịch sử ăn uống chi tiết trong 7 ngày gần nhất của người dùng:
