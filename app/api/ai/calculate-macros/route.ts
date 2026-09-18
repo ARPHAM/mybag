@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import { verifyToken } from '@/lib/auth';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateContentWithFallback } from '@/lib/ai';
 
 export async function POST(req: Request) {
   try {
@@ -32,14 +32,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Không tìm thấy MealLog' }, { status: 404 });
     }
 
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Missing AI API Key' }, { status: 500 });
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
-
     let promptContext = `Tên món ăn: ${food_name}`;
     if (ingredients_context) {
       promptContext += `\nNguyên liệu sử dụng thực tế: ${ingredients_context}`;
@@ -62,30 +54,13 @@ Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ
 
     let result;
     try {
-      const parts: any[] = [{ text: prompt }];
-      
-      if (image_data) {
-        // image_data has format: "data:image/jpeg;base64,/9j/4AAQSk..."
-        const mimeType = image_data.split(';')[0].split(':')[1];
-        const base64Data = image_data.split(',')[1];
-        parts.push({
-          inlineData: {
-            data: base64Data,
-            mimeType
-          }
-        });
-      }
-
-      const response = await model.generateContent(parts);
-      let text = response.response.text();
-      // Loại bỏ markdown nếu có
-      text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const text = await generateContentWithFallback(prompt, image_data, true);
       result = JSON.parse(text);
     } catch (aiError) {
       console.error("AI Generation Error:", aiError);
       meal.ai_status = 'failed';
       await meal.save();
-      return NextResponse.json({ error: 'AI Error', status: 'failed', mealLog: meal }, { status: 500 });
+      return NextResponse.json({ error: 'AI Error, all models failed', status: 'failed', mealLog: meal }, { status: 500 });
     }
 
     meal.calo = result.calo || 0;
