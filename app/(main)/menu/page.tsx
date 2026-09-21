@@ -71,7 +71,7 @@ export default function MenuPage() {
       ]);
       if (resR) setRecipes(resR);
       if (resM) setMeals(resM);
-      if (resI) setInventory(resI);
+      if (resI) setInventory(resI.map((i: any) => ({ ...i, id: i._id })));
       if (resW) setWallets(resW);
     } catch (e) {
       console.error(e);
@@ -100,7 +100,7 @@ export default function MenuPage() {
     const matched: {invId: string, qty: number}[] = [];
     recipe.ingredients.forEach(ingName => {
       const match = inventory.find(i => i.name.toLowerCase().includes(ingName.toLowerCase()) || ingName.toLowerCase().includes(i.name.toLowerCase()));
-      if (match) matched.push({ invId: match._id, qty: 1 });
+      if (match) matched.push({ invId: match.id, qty: 1 });
     });
     setSelectedIngredients(matched);
     
@@ -197,7 +197,7 @@ export default function MenuPage() {
     let ingredients_context = formActualIngredients;
     if (formCookSource === 'home' && selectedIngredients.length > 0) {
       const textParts = selectedIngredients.map(ing => {
-        const item = inventory.find(i => i._id === ing.invId);
+        const item = inventory.find(i => i.id === ing.invId);
         return item ? `${ing.qty}${item.unit} ${item.name}` : '';
       }).filter(Boolean);
       const autoContext = textParts.join(', ');
@@ -326,13 +326,13 @@ export default function MenuPage() {
               <label className={styles.formLabel}>Lấy từ Dự trữ Kho (Sẽ bị trừ khi lưu)</label>
               <div className={styles.ingredientCheckList}>
                 {selectedIngredients.map((ing, idx) => {
-                  const invItem = inventory.find(i => i._id === ing.invId);
+                  const invItem = inventory.find(i => i.id === ing.invId);
                   return (
                     <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
                       <div style={{ flex: 2 }}>
                         <SaoSelect
                           initialValue={ing.invId}
-                          options={inventory.map(i => ({ value: i._id, label: `${i.name} (Còn: ${i.quantity} ${i.unit})` }))}
+                          options={inventory.map(i => ({ value: i.id, label: `${i.name} (Còn: ${i.quantity} ${i.unit})` }))}
                           onChange={(val) => {
                             const newArr = [...selectedIngredients];
                             newArr[idx].invId = val;
@@ -369,7 +369,7 @@ export default function MenuPage() {
                   type="button"
                   
                   style={{ background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', border: '1px dashed #00f0ff', marginTop: '5px' }}
-                  onClick={() => setSelectedIngredients([...selectedIngredients, { invId: inventory[0]?._id || '', qty: 1 }])}
+                  onClick={() => setSelectedIngredients([...selectedIngredients, { invId: inventory[0]?.id || '', qty: 1 }])}
                 >
                   <Plus size={16} style={{ display: 'inline', marginRight: 5 }} /> Thêm nguyên liệu từ Kho
                 </SaoButton>
