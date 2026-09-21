@@ -1,5 +1,5 @@
 export interface InventoryItem {
-  _id: string; // Changed from id to _id across the app to standardize
+  id: string;
   name: string;
   quantity: number;
   unit: string;

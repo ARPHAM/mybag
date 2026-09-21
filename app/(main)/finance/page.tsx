@@ -128,7 +128,7 @@ export default function FinancePage() {
       const iData: any = await getInventory(force);
       if (iData) {
         setInventory(iData.map((i: any) => ({
-          _id: i._id,
+          id: i._id,
           name: i.name,
           category: i.category,
           quantity: i.quantity,
@@ -163,12 +163,11 @@ export default function FinancePage() {
   };
 
   const updateInventoryQty = async (id: string, delta: number) => {
-    const item = inventory.find(i => i._id === id);
+    const item = inventory.find(i => i.id === id);
     if (!item) return;
-    const newQty = Math.max(1, item.quantity + delta);
 
-    // Optimistic update
-    setInventory(inventory.map(i => i._id === id ? { ...i, quantity: newQty } : i));
+    const newQty = Math.max(0, item.quantity + delta);
+    setInventory(inventory.map(i => i.id === id ? { ...i, quantity: newQty } : i));
 
     try {
       await updateInventory(id, { justUpdateQty: true, quantity: newQty });
@@ -691,7 +690,7 @@ export default function FinancePage() {
             else if (item.quantity <= 2) stockClass = styles.stockLow;
 
             return (
-              <div key={item._id} className={`${styles.inventoryCard} ${stockClass}`}>
+              <div key={item.id} className={`${styles.inventoryCard} ${stockClass}`}>
                 <SaoButton variant="ghost" className={styles.editBtn} onClick={(e) => { e.stopPropagation(); openModal('inventory', item); }}>
                   <Edit3 size={16} />
                 </SaoButton>
@@ -732,7 +731,7 @@ export default function FinancePage() {
                   <SaoButton
                     variant="ghost"
                     className={styles.qtyBtn}
-                    onClick={() => updateInventoryQty(item._id, -1)}
+                    onClick={() => updateInventoryQty(item.id, -1)}
                     disabled={item.quantity <= 1}
                     style={{ opacity: item.quantity <= 1 ? 0.5 : 1, cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer', padding: 0 }}
                   >
@@ -745,7 +744,7 @@ export default function FinancePage() {
                   <SaoButton
                     variant="ghost"
                     className={styles.qtyBtn}
-                    onClick={() => updateInventoryQty(item._id, 1)}
+                    onClick={() => updateInventoryQty(item.id, 1)}
                     style={{ padding: 0 }}
                   >
                     <Plus size={16} />
