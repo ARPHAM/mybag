@@ -6,7 +6,7 @@ import MealLog from '@/models/MealLog';
 import User from '@/models/User';
 import WeightLog from '@/models/WeightLog';
 import { verifyToken } from '@/lib/auth';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateContentWithFallback } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,14 +83,6 @@ export async function POST(req: Request) {
       bodyStatsStr = `Thông tin thể trạng: Cao ${user.height}cm, Nặng ${latestWeight.weight}kg, BMI = ${bmi}.`;
     }
 
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Missing AI API Key' }, { status: 500 });
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
-
     const prompt = `Bạn là một chuyên gia dinh dưỡng và sức khỏe cá nhân nghiêm khắc nhưng tận tâm.
 Dưới đây là lịch sử ăn uống chi tiết trong 7 ngày gần nhất của người dùng:
 
@@ -107,9 +99,7 @@ Yêu cầu nội dung phản hồi:
 
 Trả về phản hồi bằng định dạng Markdown, sử dụng tiếng Việt thân thiện, rõ ràng, chia đoạn dễ đọc. Đừng dùng tiêu đề quá lớn.`;
 
-    const response = await model.generateContent(prompt);
-    let text = response.response.text();
-    text = text.trim();
+    const text = await generateContentWithFallback(prompt);
 
     const newAnalysis = await HealthAnalysis.create({
       user_id: decoded.userId,

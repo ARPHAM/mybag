@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateContentWithFallback } from '@/lib/ai';
 
 export async function POST(req: Request) {
   try {
@@ -23,14 +23,6 @@ export async function POST(req: Request) {
     if (!image_data) {
       return NextResponse.json({ error: 'Missing image_data' }, { status: 400 });
     }
-
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Missing AI API Key' }, { status: 500 });
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
     const prompt = `Bạn là một trợ lý tài chính và quản lý kho thông minh.
 Hãy bóc tách hóa đơn mua sắm trong hình ảnh. Trả về kết quả là một mảng các món đồ đã mua.
@@ -60,22 +52,7 @@ Trả về DUY NHẤT một mảng JSON các object theo đúng cấu trúc sau 
 
     let result;
     try {
-      const parts: any[] = [{ text: prompt }];
-      
-      // image_data có định dạng: "data:image/jpeg;base64,/9j/4AAQSk..."
-      const mimeType = image_data.split(';')[0].split(':')[1];
-      const base64Data = image_data.split(',')[1];
-      parts.push({
-        inlineData: {
-          data: base64Data,
-          mimeType
-        }
-      });
-
-      const response = await model.generateContent(parts);
-      let text = response.response.text();
-      // Loại bỏ markdown nếu có
-      text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const text = await generateContentWithFallback(prompt, image_data, true);
       result = JSON.parse(text);
     } catch (aiError) {
       console.error("AI Generation Error:", aiError);
