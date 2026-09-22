@@ -10,11 +10,7 @@ import {
   CheckSquare,
   Utensils,
   ShoppingCart,
-  StickyNote,
-  BarChart,
   Settings,
-  Plus,
-  Shield,
   Sun,
   Clock,
   Brain,
@@ -37,18 +33,16 @@ export default function DashboardLayout({
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-      
+
       setUser((prevUser: any) => {
         if (!prevUser) return prevUser;
         const newHp = Math.max(0, prevUser.current_hp - (50 / 3600));
-        
+
         let newMp = prevUser.current_mp;
         const overdue = prevUser.overdueCount || 0;
         if (overdue > 0) {
-          // Drain 20 MP per hour for each overdue task
           newMp = Math.max(0, prevUser.current_mp - ((20 * overdue) / 3600));
         } else {
-          // Regen 30 MP per hour
           newMp = Math.min(prevUser.max_mp || 500, prevUser.current_mp + (30 / 3600));
         }
 
@@ -65,8 +59,6 @@ export default function DashboardLayout({
 
   useEffect(() => {
     fetchUser();
-
-    // Listen for custom event from other pages
     const handleUserUpdate = () => fetchUser(true);
     window.addEventListener('sao-user-updated', handleUserUpdate);
     return () => window.removeEventListener('sao-user-updated', handleUserUpdate);
@@ -100,7 +92,6 @@ export default function DashboardLayout({
     const saved = localStorage.getItem('sao-theme');
     if (saved) setThemeColor(saved);
 
-    // Custom Event listener for when settings page changes the theme
     const handleThemeChange = (e: any) => {
       if (e.detail) setThemeColor(e.detail);
     };
@@ -121,7 +112,6 @@ export default function DashboardLayout({
     }
   };
 
-  // Apply theme variables globally so that portals (like modals) can inherit them
   useEffect(() => {
     const vars = getThemeVars();
     for (const [key, value] of Object.entries(vars)) {
@@ -140,13 +130,11 @@ export default function DashboardLayout({
 
   return (
     <div className={styles.dashboardContainer}>
-      {/* GLOBAL HEADER (TOP) */}
       <div className={styles.topHeader}>
         <div className={styles.topHeaderLine}></div>
 
         <div className={styles.headerLeftContainer}>
-          
-          {/* Nửa trái nghiêng 3D - Khớp với sidebar */}
+
           <div className={styles.headerLeftTilted}>
             <div className={styles.avatarHex}></div>
             <div className={styles.userDetails}>
@@ -155,10 +143,9 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          {/* Nửa phải phẳng 2D */}
           <div className={styles.headerLeftFlat}>
             <div className={styles.statusBars}>
-              <div className={styles.barRow} title="Năng lượng (HP) - Tụt nhanh nếu nhịn đói, hồi phục khi ăn bữa chính">
+              <div className={styles.barRow} title="Năng lượng (HP)">
                 <div className={`${styles.barLabel} ${styles.hp}`}>
                   <Utensils size={16} /> HP
                 </div>
@@ -167,7 +154,7 @@ export default function DashboardLayout({
                 </div>
                 <div className={styles.barValues}>{user ? `${Math.floor(user.current_hp)} / ${user.max_hp}` : '0 / 0'}</div>
               </div>
-              <div className={styles.barRow} title="Tinh thần (MP) - Cạn kiệt nếu có task trễ hạn (Stress/Quá tải)">
+              <div className={styles.barRow} title="Tinh thần (MP)">
                 <div className={`${styles.barLabel} ${styles.mp}`}>
                   <Brain size={16} /> MP
                 </div>
@@ -239,9 +226,7 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        {/* MAIN CONTENT */}
         <div className={styles.mainContent}>
-          {/* PAGE CONTENT */}
           <AlertProvider>
             {children}
             <SaoAlert />

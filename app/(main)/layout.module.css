@@ -1,9 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Tauri&display=swap');
 
-/* Main Container */
 .dashboardContainer {
   min-height: 100vh;
-  /* Dark sci-fi anime background */
   background: url('/image.png') center/cover fixed;
   display: flex;
   flex-direction: column;
@@ -13,7 +11,6 @@
   font-family: 'Tauri', sans-serif;
   user-select: none;
   
-  /* Đưa perspective lên Root Container để đồng nhất không gian 3D cho toàn bộ màn hình */
   perspective: 1200px;
   transform-style: preserve-3d;
   overflow: hidden;
@@ -26,7 +23,6 @@
   position: absolute;
   inset: 0;
   background: rgba(0, 15, 30, 0.6);
-  /* Darker overlay for contrast */
 }
 
 .dashboardLayout {
@@ -54,23 +50,19 @@
   }
 }
 
-/* --- SIDEBAR (ULTRA GAME UI STYLE) --- */
 .sidebarContainer {
   width: 240px;
   display: flex;
   flex-direction: column;
   position: relative;
 
-  /* 3D tilt effect */
   transform: rotateY(15deg) translateZ(0);
   transform-style: preserve-3d;
   transform-origin: right center;
   padding-top: 4px;
   padding-left: 4px;
-  /* Khoảng trống cho viền trái */
 }
 
-/* Thanh ray sáng bên trái ngoài cùng */
 .sidebarLeftRail {
   position: absolute;
   left: 0;
@@ -81,7 +73,6 @@
   box-shadow: 0 0 10px var(--sao-primary-hex), 0 0 20px var(--sao-primary-hex);
 }
 
-/* Cắt góc vát ở đỉnh của thanh ray */
 .sidebarTopAccent {
   position: absolute;
   top: 0;
@@ -110,7 +101,6 @@
   padding: 0 15px;
 }
 
-/* Đường line phân cách giữa các thẻ (trừ active) */
 .menuItem:not(:last-child)::after {
   content: '';
   position: absolute;

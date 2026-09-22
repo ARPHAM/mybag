@@ -66,8 +66,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       const exceptionEvent = await CalendarEvent.create({
         user_id: decoded.userId,
         title: "Cancelled Exception",
-        start_time: new Date(), // doesn't matter much for cancelled
-        end_time: new Date(),
+        start_time: new Date(exceptionDate),
+        end_time: new Date(exceptionDate),
         is_recurring: false,
         parent_event_id: id,
         exception_date: new Date(exceptionDate),
