@@ -79,6 +79,7 @@ export default function SaoImageUpload({ onUploadSuccess, label = "Tải ảnh l
       />
       
       <SaoButton
+        type="button"
         variant="default"
         onClick={() => fileInputRef.current?.click()}
         disabled={isUploading}
