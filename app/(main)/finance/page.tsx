@@ -276,11 +276,15 @@ export default function FinancePage() {
     if (type === 'wallets') {
       setWalletForm(item ? { name: item.name, type: item.type, color: item.color, balance: item.balance.toString() } : { name: '', type: 'bank', color: '#00f0ff', balance: '' });
     }
-    if (type === 'transaction') {
+    if (type === 'transaction' || type === 'history') {
+      let formattedDate = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      if (item && item.date) {
+        formattedDate = new Date(new Date(item.date).getTime() - new Date(item.date).getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      }
       setTxForm(item ? {
-        type: item.type, amount: item.amount.toString(), wallet_id: '', to_wallet_id: '', date: item.date, description: item.description, category: item.category || 'food'
+        type: item.type, amount: item.amount.toString(), wallet_id: item.wallet_id || '', to_wallet_id: item.to_wallet_id || '', date: formattedDate, description: item.description, category: item.category || 'food'
       } : {
-        type: 'expense', amount: '', wallet_id: '', to_wallet_id: '', date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], description: '', category: 'food'
+        type: 'expense', amount: '', wallet_id: '', to_wallet_id: '', date: formattedDate, description: '', category: 'food'
       });
     }
     if (type === 'budgets') {
