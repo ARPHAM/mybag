@@ -64,7 +64,7 @@ Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ
   "fat": number,
   "carbs": number,
   "sugar": number,
-  "description": string // Mô tả nguyên liệu, thành phần món ăn khoảng 2-3 câu ngắn gọn.
+  "description": string // Mô tả chi tiết nguyên liệu, thành phần món ăn và bắt buộc ƯỚC TÍNH ĐỊNH LƯỢNG cụ thể (vd: 200g cơm, 100g thịt, 1 bát canh...) dựa vào hình ảnh hoặc dữ liệu, khoảng 2-3 câu ngắn gọn.
 }`;
 
     let result;

@@ -73,6 +73,7 @@ export default function SaoImageUpload({ onUploadSuccess, label = "Tải ảnh l
       <input
         type="file"
         accept="image/*"
+        capture="environment"
         onChange={handleFileSelect}
         style={{ display: "none" }}
         ref={fileInputRef}

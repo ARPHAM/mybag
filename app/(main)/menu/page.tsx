@@ -507,6 +507,12 @@ export default function MenuPage() {
                           <span title="Sugar" style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}><Candy size={12} /> {meal.sugar}g</span>
                         </div>
                       )}
+                      {meal.ai_status === 'completed' && meal.ai_description && (
+                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', marginTop: '4px', fontStyle: 'italic' }}>
+                          <Sparkles size={12} style={{ display: 'inline', marginRight: '4px', color: '#00f0ff' }} />
+                          {meal.ai_description}
+                        </div>
+                      )}
                       {meal.ai_status === 'pending' && (
                         <div style={{ fontSize: '0.8rem', color: '#ffaa00', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <Sparkles size={12} /> AI đang tính toán...

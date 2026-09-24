@@ -67,6 +67,9 @@ export async function POST(req: Request) {
       if (meal.ingredients_text) {
         historyText += `Nguyên liệu: ${meal.ingredients_text}. `;
       }
+      if (meal.ai_description) {
+        historyText += `Mô tả từ AI: ${meal.ai_description}. `;
+      }
       historyText += `Marco: ${meal.calo} Kcal, ${meal.protein}g đạm, ${meal.fat}g béo, ${meal.carbs}g tinh bột, ${meal.sugar}g đường.\n`;
       totalCalo += meal.calo || 0;
     });

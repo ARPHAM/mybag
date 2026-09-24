@@ -18,6 +18,8 @@ export interface MealRecord {
   carbs?: number;
   sugar?: number;
   ai_status: 'pending' | 'completed' | 'failed';
+  ai_description?: string;
+  image_url?: string;
   cost?: number;
   wallet_id?: string;
 }

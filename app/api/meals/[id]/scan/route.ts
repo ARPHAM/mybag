@@ -57,7 +57,7 @@ Hãy phân tích hình ảnh này và trả về kết quả định dạng JSON
   "fat": number, // tính bằng gram
   "carbs": number, // tính bằng gram
   "sugar": number, // tính bằng gram
-  "description": string // Mô tả chi tiết các thành phần món ăn bạn nhìn thấy, khoảng 2-3 câu ngắn gọn.
+  "description": string // Mô tả chi tiết nguyên liệu, thành phần món ăn và bắt buộc ƯỚC TÍNH ĐỊNH LƯỢNG cụ thể (vd: 200g cơm, 100g thịt, 1 bát canh...) dựa vào hình ảnh, khoảng 2-3 câu ngắn gọn.
 }
 Chỉ trả về JSON, không thêm bất kỳ văn bản nào khác. Ước lượng ở mức tương đối chính xác nhất.`;
 
