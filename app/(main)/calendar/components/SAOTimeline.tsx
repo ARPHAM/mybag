@@ -102,9 +102,9 @@ export default function SAOTimeline({ events, onEventClick }: SAOTimelineProps) 
   };
 
   return (
-    <div className="relative mt-4 bg-zinc-900/90 border border-zinc-700 rounded-sm font-mono text-zinc-300 shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden">
+    <div className="relative mt-4 lg:mt-0 bg-zinc-900/90 border border-zinc-700 rounded-sm font-mono text-zinc-300 shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col h-full">
       {/* Grid container with vertical scroll */}
-      <div className="h-[600px] overflow-y-auto relative custom-scrollbar">
+      <div className="flex-1 overflow-y-auto relative custom-scrollbar min-h-0">
         {/* Render hour lines */}
         {hours.map((hour) => (
           <div key={hour} className="flex border-b border-zinc-800/50 h-[60px] relative group">

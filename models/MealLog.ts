@@ -13,6 +13,8 @@ export interface IMealLog extends mongoose.Document {
   sugar?: number;
   cost?: number;
   ai_status: 'pending' | 'completed' | 'failed';
+  image_url?: string;
+  ai_description?: string;
   recipe_id?: mongoose.Types.ObjectId;
   source: 'home' | 'eat_out';
   ingredients_text?: string;
@@ -30,7 +32,7 @@ const MealLogSchema = new mongoose.Schema<IMealLog>({
     required: true 
   },
   hp_restored: { type: Number, required: true },
-  consumed_at: { type: Date, required: true, default: Date.now },
+  consumed_at: { type: Date, required: true, default: Date.now, expires: 2592000 }, // Auto delete after 30 days
   calo: { type: Number },
   protein: { type: Number },
   fat: { type: Number },
@@ -42,6 +44,8 @@ const MealLogSchema = new mongoose.Schema<IMealLog>({
     enum: ['pending', 'completed', 'failed'], 
     default: 'pending' 
   },
+  image_url: { type: String },
+  ai_description: { type: String },
   recipe_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' },
   source: { 
     type: String, 

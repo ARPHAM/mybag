@@ -73,3 +73,89 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }
 }
+
+export async function PUT(req: Request) {
+  try {
+    await dbConnect();
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth_token')?.value;
+
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const decoded = await verifyToken(token);
+    if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
+
+    const user = await User.findById(decoded.userId);
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const body = await req.json();
+    
+    if (body.username) user.username = body.username;
+    
+    if (body.avatar_url && body.avatar_url !== user.avatar_url) {
+      const { S3Client, CopyObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+      const s3 = new S3Client({
+        region: process.env.AWS_REGION!,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+        },
+      });
+      const bucketName = process.env.AWS_S3_BUCKET_NAME;
+
+      let finalAvatarUrl = body.avatar_url;
+
+      // 1. Nếu ảnh mới nằm trong thư mục temp/, copy sang avatars/
+      if (body.avatar_url.includes(`${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/temp/`)) {
+        try {
+          const tempKey = body.avatar_url.split('.amazonaws.com/')[1];
+          const newKey = tempKey.replace('temp/', 'avatars/');
+          
+          await s3.send(new CopyObjectCommand({
+            Bucket: bucketName,
+            CopySource: `${bucketName}/${tempKey}`,
+            Key: newKey,
+          }));
+
+          finalAvatarUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${newKey}`;
+        } catch (e) {
+          console.error("Lỗi khi copy ảnh từ temp sang avatars:", e);
+        }
+      }
+
+      // 2. Xóa ảnh cũ trên S3 (nếu có)
+      if (user.avatar_url && user.avatar_url.includes('.amazonaws.com/')) {
+        try {
+          const oldKey = user.avatar_url.split('.amazonaws.com/')[1];
+          await s3.send(new DeleteObjectCommand({
+            Bucket: bucketName,
+            Key: oldKey,
+          }));
+        } catch (e) {
+          console.error("Lỗi khi xóa ảnh cũ trên S3:", e);
+        }
+      }
+
+      user.avatar_url = finalAvatarUrl;
+    }
+    
+    if (body.password && body.new_password) {
+      const bcrypt = require('bcryptjs');
+      const isMatch = await bcrypt.compare(body.password, user.password_hash);
+      if (!isMatch) {
+        return NextResponse.json({ error: 'Mật khẩu cũ không chính xác' }, { status: 400 });
+      }
+      user.password_hash = await bcrypt.hash(body.new_password, 10);
+    }
+
+    await user.save();
+    
+    const userResponse = user.toObject();
+    delete userResponse.password_hash;
+    delete userResponse.refresh_tokens;
+
+    return NextResponse.json({ user: userResponse, message: 'Cập nhật thành công' });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: 'Server Error' }, { status: 500 });
+  }
+}

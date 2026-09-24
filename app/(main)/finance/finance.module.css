@@ -1024,15 +1024,23 @@
 ========================================= */
 @media (max-width: 768px) {
   .header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-    padding: 15px;
-    clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 10px 15px;
+    margin-bottom: 12px;
+    clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
+  }
+
+  .titleIcon {
+    width: 20px !important;
+    height: 20px !important;
   }
 
   .title {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
   }
 
   .overviewGrid, .transactionsGrid, .budgetsGrid, .debtsGrid, .loansGrid {
@@ -1042,12 +1050,12 @@
 
   .totalBalanceCard {
     grid-column: span 1;
-    padding: 20px;
+    padding: 15px;
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   }
 
-  .balanceValue {
-    font-size: 2rem;
+  .balanceAmount {
+    font-size: 1.8rem;
   }
 
   .summaryCards {
@@ -1055,7 +1063,15 @@
   }
 
   .summaryCard {
-    padding: 15px;
+    padding: 12px 15px;
+  }
+
+  .summaryHeader {
+    font-size: 0.8rem;
+  }
+
+  .summaryAmount {
+    font-size: 1.3rem;
   }
   
   .filterSection {

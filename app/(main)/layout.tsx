@@ -29,6 +29,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [user, setUser] = useState<any>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -72,11 +73,14 @@ export default function DashboardLayout({
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsInitializing(false);
     }
   };
 
+
   const menuItems = [
-    { id: 'profile', path: '/profile', icon: Home, label: 'Trang chủ' },
+    { id: 'profile', path: '/profile', icon: Home, label: 'Hồ sơ' },
     { id: 'finance', path: '/finance', icon: Wallet, label: 'Tài chính' },
     { id: 'health', path: '/health', icon: Activity, label: 'Sức khoẻ' },
     { id: 'tasks', path: '/tasks', icon: CheckSquare, label: 'Nhiệm vụ' },
@@ -128,6 +132,19 @@ export default function DashboardLayout({
     return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   };
 
+  if (isInitializing) {
+    return (
+      <div className={styles.saoLoaderContainer}>
+        <div className={styles.saoLoaderSpinner}>
+          <div className={styles.saoLoaderRing}></div>
+          <div className={styles.saoLoaderRing2}></div>
+        </div>
+        <div className={styles.saoLoaderText}>AUTHENTICATING...</div>
+        <div className={styles.saoLoaderSubText}>LINK START</div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.dashboardContainer}>
       <div className={styles.topHeader}>
@@ -136,7 +153,7 @@ export default function DashboardLayout({
         <div className={styles.headerLeftContainer}>
 
           <div className={styles.headerLeftTilted}>
-            <div className={styles.avatarHex}></div>
+            <div className={styles.avatarHex} style={user?.avatar_url ? { backgroundImage: `url(${user.avatar_url})` } : {}}></div>
             <div className={styles.userDetails}>
               <div className={styles.userName}>{user ? user.username : 'GUEST'}</div>
               <div className={styles.userLevel}>Level {user ? user.level : 1}</div>

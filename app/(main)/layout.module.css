@@ -46,7 +46,7 @@
 
   100% {
     opacity: 1;
-    filter: blur(0);
+    filter: none;
   }
 }
 
@@ -460,48 +460,50 @@
 }
 
 .avatarHex {
-  width: 70px;
-  height: 70px;
+  width: 65px;
+  height: 65px;
   background: url('https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=200&auto=format&fit=crop') center/cover;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  border-radius: 50%;
   border: 2px solid var(--sao-primary-hex);
-  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.6);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.6), inset 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
   position: relative;
+  flex-shrink: 0;
 }
 
 .userDetails {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  gap: 4px;
 }
 
 .userName {
-  font-size: 1.8rem;
-  font-weight: bold;
-  letter-spacing: 2px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 1px;
   color: #fff;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.userName::before {
-  content: '✝';
-  color: var(--sao-primary-hex);
-  font-size: 1.5rem;
+  gap: 8px;
 }
 
 .userLevel {
-  color: var(--sao-primary-hex);
-  font-size: 1rem;
+  color: #fff;
+  background: rgba(var(--sao-primary-rgb), 0.3);
+  border: 1px solid var(--sao-primary-hex);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
   font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: fit-content;
+  box-shadow: 0 0 8px rgba(var(--sao-primary-rgb), 0.3);
 }
 
 .userQuote {
-  font-size: 0.85rem;
-  color: #8ab4f8;
-  font-style: italic;
-  margin-top: 5px;
+  display: none;
 }
 
 /* HP / MP Bars */
@@ -602,6 +604,8 @@
   /* 1. Tắt 3D Container & setup layout dọc */
   .dashboardContainer {
     perspective: none;
+    transform-style: flat;
+    transform: none;
     padding-top: 0;
     min-height: 100dvh;
     justify-content: flex-start;
@@ -609,46 +613,61 @@
   
   .dashboardLayout {
     flex-direction: column;
+    transform-style: flat;
+    transform: none;
     height: calc(100dvh - 120px);
     padding: 0 10px 80px 10px; /* Chừa 80px cho Bottom Nav */
     gap: 10px;
   }
 
-  /* 2. Top Header - Gọn gàng hơn */
+  /* 2. Top Header - Gọn gàng hơn & Giữ chất SAO */
   .topHeader {
     flex-direction: column;
     align-items: stretch;
     padding: 10px;
     margin: 0;
-    gap: 10px;
+    gap: 5px;
   }
 
   .topHeaderLine {
     display: none;
   }
 
-  /* Nửa trái Tilted -> Bỏ tilt, dàn ngang */
+  /* Gộp thành 1 thanh HUD duy nhất có vát chéo */
   .headerLeftContainer {
     width: 100%;
     height: auto;
     flex-direction: row;
     margin: 0;
+    background: rgba(10, 25, 45, 0.85);
+    border: 2px solid var(--sao-primary-hex);
+    box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
+    /* Vát góc dưới bên phải giống SAO */
+    clip-path: polygon(
+      0 0, 
+      100% 0, 
+      100% calc(100% - 15px), 
+      calc(100% - 15px) 100%, 
+      0 100%
+    );
   }
 
   .headerLeftTilted {
     transform: none;
-    width: 40%;
+    width: auto;
     clip-path: none;
-    padding: 5px 10px;
-    border: 2px solid var(--sao-primary-hex);
+    padding: 8px 10px;
+    border: none;
+    border-right: 1px solid rgba(var(--sao-primary-rgb), 0.3);
     justify-content: center;
-    border-radius: 8px 0 0 8px;
+    background: transparent;
+    box-shadow: none;
   }
   
   .avatarHex {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
+    width: 45px;
+    height: 45px;
+    min-width: 45px;
   }
   
   .userName {
@@ -660,14 +679,13 @@
     font-size: 0.8rem;
   }
 
-  /* Nửa phải Flat -> Căn chỉnh lại thanh HP/MP */
   .headerLeftFlat {
-    width: 60%;
+    flex: 1;
+    width: auto;
     clip-path: none;
-    padding: 5px 10px;
-    border: 2px solid var(--sao-primary-hex);
-    border-left: none;
-    border-radius: 0 8px 8px 0;
+    padding: 8px 10px;
+    border: none;
+    background: transparent;
   }
 
   .headerLeftFlat::after {
@@ -677,7 +695,7 @@
   .statusBars {
     margin-left: 0;
     width: 100%;
-    gap: 5px;
+    gap: 6px;
   }
 
   .barRow {
@@ -697,8 +715,8 @@
   .barWrapper {
     width: 100%;
     height: 8px;
-    clip-path: none;
-    border-radius: 4px;
+    clip-path: polygon(0 0, 98% 0, 100% 100%, 2% 100%);
+    border-radius: 2px;
   }
   
   .barValues {
@@ -706,18 +724,54 @@
     font-size: 0.65rem;
   }
 
-  /* Ẩn bớt phần hiển thị ngày giờ bên phải (HeaderRight) trên Mobile */
+  /* Đưa ngày giờ hiển thị lại góc nhỏ phía dưới Top Header */
   .headerRight {
-    display: none; 
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    background: transparent;
+    border: none;
+    clip-path: none;
+    padding: 0 10px;
+    margin-top: 0;
+    box-shadow: none;
   }
 
-  /* 3. Chuyển Sidebar thành Bottom Nav */
+  .hrDecorTop, .hrDecorBottom, .hrDecorLeft {
+    display: none;
+  }
+
+  .dateTime {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .weatherRow {
+    gap: 5px;
+  }
+
+  .weatherRow svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .time {
+    font-size: 0.9rem;
+  }
+
+  .date {
+    font-size: 0.8rem;
+  }
+
+  /* 3. Chuyển Sidebar thành Bottom Nav (Tối ưu cho 8 tabs) */
   .sidebarContainer {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 70px;
+    height: 65px;
     transform: none;
     padding: 0;
     z-index: 100;
@@ -725,6 +779,7 @@
     background: rgba(4, 15, 30, 0.95);
     border-top: 2px solid var(--sao-primary-hex);
     backdrop-filter: blur(10px);
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.6);
   }
 
   .sidebarLeftRail, .sidebarTopAccent, .sidebarBottomAccent {
@@ -735,16 +790,32 @@
     flex-direction: row;
     width: 100%;
     border-right: none;
-    justify-content: space-around;
+    justify-content: flex-start;
     align-items: center;
     background: transparent;
+    padding: 0 5px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .sidebarMenu::-webkit-scrollbar {
+    display: none;
   }
 
   .menuItem {
     padding: 0;
-    flex: 1;
+    flex: 0 0 auto;
+    width: 65px;
     display: flex;
     justify-content: center;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .menuItem.active {
+    flex: 0 0 auto;
+    width: 85px; 
   }
 
   .menuItem:not(:last-child)::after {
@@ -753,23 +824,61 @@
 
   .menuItemInner {
     flex-direction: column;
-    padding: 8px 5px;
+    padding: 5px;
     gap: 4px;
     justify-content: center;
+    align-items: center;
     width: 100%;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 
+  .menuIcon {
+    transition: all 0.3s ease;
+  }
+
+  /* Ẩn text mặc định để đỡ chật, chỉ hiện khi active */
   .menuText {
-    font-size: 0.6rem;
+    font-size: 0.65rem;
+    white-space: nowrap; /* Bắt buộc nằm trên 1 dòng */
+    max-height: 0;
+    opacity: 0;
+    overflow: visible; /* Chống cắt chữ ngang/dọc */
+    transition: all 0.3s ease;
   }
 
   .activeDecorators {
     display: none;
   }
   
+  /* Hiệu ứng Active nổi bật */
+  .menuItem.active .menuItemInner {
+    transform: translateY(-5px); /* Nổi lên ÍT HƠN, để không lọt ra ngoài viền trên */
+  }
+
+  .menuItem.active .menuText {
+    max-height: 20px;
+    opacity: 1;
+    color: #fff;
+    text-shadow: 0 0 5px var(--sao-primary-hex);
+    margin-top: 2px;
+  }
+
+  .menuItem.active .menuIcon {
+    color: var(--sao-primary-hex);
+    filter: drop-shadow(0 0 8px var(--sao-primary-hex));
+  }
+
   .menuItem.active::before {
-    background: linear-gradient(0deg, rgba(var(--sao-primary-rgb), 0.4) 0%, transparent 100%);
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0; /* Trải đều ra thay vì 10% */
+    right: 0;
+    height: 100%;
+    background: radial-gradient(circle at bottom, rgba(var(--sao-primary-rgb), 0.5) 0%, transparent 70%);
     border-bottom: 3px solid var(--sao-primary-hex);
+    z-index: 0;
+    border-radius: 0;
   }
 
   /* 4. Main Content Area */
@@ -777,4 +886,81 @@
     overflow-y: auto;
     padding-bottom: 20px;
   }
+}
+
+/* SAO Loader */
+.saoLoaderContainer {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, #001220 0%, #000 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  font-family: 'Tauri', sans-serif;
+  color: var(--sao-primary-hex);
+}
+
+.saoLoaderSpinner {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.saoLoaderRing {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top-color: var(--sao-primary-hex);
+  border-bottom-color: var(--sao-primary-hex);
+  border-radius: 50%;
+  animation: spin 2s linear infinite;
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.3);
+}
+
+.saoLoaderRing2 {
+  position: absolute;
+  width: 70%;
+  height: 70%;
+  border: 3px solid transparent;
+  border-left-color: #fff;
+  border-right-color: #fff;
+  border-radius: 50%;
+  animation: spinReverse 1.5s linear infinite;
+}
+
+.saoLoaderText {
+  font-size: 1.5rem;
+  letter-spacing: 5px;
+  animation: pulse 1.5s ease-in-out infinite;
+  text-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.8);
+}
+
+.saoLoaderSubText {
+  font-size: 0.8rem;
+  letter-spacing: 10px;
+  margin-top: 10px;
+  opacity: 0.7;
+  color: #fff;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spinReverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }

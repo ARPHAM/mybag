@@ -357,7 +357,7 @@ export default function FinancePage() {
       </div>
 
       {/* Nút to bự góc dưới */}
-      <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Ghi chép giao dịch">
+      <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, position: "absolute", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Ghi chép giao dịch">
         <Plus size={32} />
       </SaoButton>
     </div>
@@ -399,7 +399,7 @@ export default function FinancePage() {
       </div>
 
       {/* Nút to bự góc dưới - Dùng chung cho mọi tab để thống nhất UX */}
-      <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Thêm nguồn tiền mới" onClick={() => openModal('wallets')}>
+      <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, position: "absolute", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Thêm nguồn tiền mới" onClick={() => openModal('wallets')}>
         <Plus size={32} />
       </SaoButton>
     </div>
@@ -461,7 +461,7 @@ export default function FinancePage() {
         })}
       </div>
 
-      <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Thiết lập hạn mức mới" onClick={() => openModal('budgets')}>
+      <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, position: "absolute", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Thiết lập hạn mức mới" onClick={() => openModal('budgets')}>
         <Plus size={32} />
       </SaoButton>
     </div>
@@ -546,7 +546,7 @@ export default function FinancePage() {
           )}
         </div>
 
-        <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Ghi chép giao dịch" onClick={() => openModal('transaction')}>
+        <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, position: "absolute", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Ghi chép giao dịch" onClick={() => openModal('transaction')}>
           <Plus size={32} />
         </SaoButton>
       </div>
@@ -666,7 +666,7 @@ export default function FinancePage() {
           )}
         </div>
 
-        <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Thêm khoản nợ mới" onClick={() => openModal('debts')}>
+        <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, position: "absolute", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Thêm khoản nợ mới" onClick={() => openModal('debts')}>
           <Plus size={32} />
         </SaoButton>
       </div>
@@ -755,7 +755,7 @@ export default function FinancePage() {
           })}
         </div>
 
-        <div style={{ position: "fixed", bottom: 30, right: 30, zIndex: 100, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ position: "absolute", bottom: 30, right: 30, zIndex: 100, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <label className={styles.scanFabLabel} title="Quét hóa đơn bằng AI">
             <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleScanBill} />
             <div className={styles.scanFab}>

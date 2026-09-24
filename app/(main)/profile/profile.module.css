@@ -1,71 +1,161 @@
-/* --- DASHBOARD GRID --- */
-.dashboardGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 15px;
+.profileContainer {
   flex: 1;
-  overflow: hidden;
-}
-
-/* Generic Widget Card */
-.widgetCard {
-  background: rgba(10, 25, 45, 0.6);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 200, 255, 0.2);
-  border-radius: 8px;
-  padding: 15px;
   display: flex;
   flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+  animation: fadeIn 0.5s ease-out;
   position: relative;
-  transition: all 0.3s;
 }
 
-.widgetCard:hover {
-  border-color: rgba(0, 200, 255, 0.5);
-  box-shadow: 0 0 15px rgba(0, 200, 255, 0.15);
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.widgetHeader {
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(10, 25, 45, 0.7);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  border-radius: 8px;
+  flex-shrink: 0;
+  clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
+  padding: 15px 25px;
+}
+
+.titleWrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  border-bottom: 1px solid rgba(0, 200, 255, 0.2);
-  padding-bottom: 8px;
+  gap: 12px;
 }
 
-.widgetIcon {
-  color: #00f0ff;
+.titleIcon {
+  color: var(--sao-primary-hex);
+  filter: drop-shadow(0 0 8px rgba(var(--sao-primary-rgb), 0.6));
 }
 
-.widgetTitle {
+.title {
+  font-size: 1.5rem;
   font-weight: bold;
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  margin: 0;
+}
+
+.scrollContent {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 10px;
+  padding-bottom: 20px;
+}
+
+.loadingState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  color: var(--sao-primary-hex);
+}
+
+.profileForm {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.formSection {
+  background: linear-gradient(135deg, rgba(var(--sao-primary-rgb), 0.1), rgba(0, 100, 255, 0.05));
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: inset 0 0 20px rgba(var(--sao-primary-rgb), 0.05);
+  backdrop-filter: blur(5px);
+  clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+}
+
+.sectionHeader {
+  font-family: 'Tauri', sans-serif;
   font-size: 1.1rem;
   color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
   letter-spacing: 1px;
 }
 
-.widgetSubtitle {
-  font-size: 0.75rem;
-  color: #8ab4f8;
-  margin-left: auto;
-}
-
-.widgetContent {
-  flex: 1;
-  overflow-y: auto;
-}
-
-/* Empty State */
-.emptyState {
+.avatarRow {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.avatarPreview {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: rgba(0,0,0,0.5);
+  border: 2px solid var(--sao-primary-hex);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.4);
+  background-size: cover;
+  background-position: center;
+  display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  color: #557;
+  flex-shrink: 0;
+  color: var(--sao-primary-hex);
+}
+
+.uploadControls {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  text-align: center;
+}
+
+.uploadControls p {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin: 0;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.formGroup label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.9rem;
+  color: #ccc;
+  font-weight: 500;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+  .profileContainer {
+    padding: 15px;
+    padding-bottom: 100px;
+  }
+  
+  .avatarRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
 }

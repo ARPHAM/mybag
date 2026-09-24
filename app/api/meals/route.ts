@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { food_name, consumed_at, recipe_id, source, ingredients_used, cost, ingredients_text, wallet_id } = body;
+    const { food_name, consumed_at, recipe_id, source, ingredients_used, cost, ingredients_text, wallet_id, image_url } = body;
 
     if (!food_name) {
       return NextResponse.json({ error: 'Thiếu tên món ăn' }, { status: 400 });
@@ -117,6 +117,7 @@ export async function POST(req: Request) {
       recipe_id: recipe_id || null,
       source: source || 'home',
       ingredients_text: ingredients_text || undefined,
+      image_url: image_url || undefined,
       cost: source === 'home' ? calculatedCost : (cost || 0),
       ingredients_used: source === 'home' ? ingredients_used : undefined,
       transaction_id: transaction_id,

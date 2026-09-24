@@ -10,6 +10,7 @@ import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import SaoSelect from '../../components/SaoSelect/SaoSelect';
 import SaoTabs from '../../components/SaoTabs/SaoTabs';
 import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
+import SaoImageUpload from '../../components/SaoImageUpload/SaoImageUpload';
 import { getRecipes, getMeals, getInventory, calculateMacros, createRecipe, createMeal, getWallets, updateMeal, deleteMeal } from './api';
 import styles from './menu.module.css';
 
@@ -45,7 +46,7 @@ export default function MenuPage() {
   const [selectedIngredients, setSelectedIngredients] = useState<{invId: string, qty: number}[]>([]);
   const [editingMeal, setEditingMeal] = useState<MealRecord | null>(null);
   const [mealToDelete, setMealToDelete] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [formImageUrl, setFormImageUrl] = useState<string>('');
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -94,7 +95,7 @@ export default function MenuPage() {
     setFormCookSource('home');
     setFormDate(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
     setFormCost('');
-    setImageFile(null);
+    setFormImageUrl('');
     
     // Auto-match ingredients from inventory
     const matched: {invId: string, qty: number}[] = [];
@@ -124,7 +125,7 @@ export default function MenuPage() {
       setFormWalletId('');
       setSelectedIngredients([]);
       setEditingMeal(null);
-      setImageFile(null);
+      setFormImageUrl('');
       setIsModalOpen(true);
     }
   };
@@ -143,7 +144,7 @@ export default function MenuPage() {
     } else {
       setSelectedIngredients([]);
     }
-    setImageFile(null);
+    setFormImageUrl('');
     setIsModalOpen(true);
   };
 
@@ -231,20 +232,17 @@ export default function MenuPage() {
           ingredients_used: selectedIngredients,
           ingredients_text: ingredients_context,
           cost: formCookSource === 'eat_out' ? Number(formCost) || 0 : undefined,
-          wallet_id: formCookSource === 'eat_out' ? formWalletId : undefined
+          wallet_id: formCookSource === 'eat_out' ? formWalletId : undefined,
+          image_url: formImageUrl || undefined
         });
         setMeals([data.mealLog, ...meals]);
       }
       
       setIsModalOpen(false);
       
-      let imageBase64;
-      if (formCookSource === 'eat_out' && imageFile) {
-        imageBase64 = await fileToBase64(imageFile);
-      }
-      
       // Send AI request (which will also call fetchData(true) to sync)
-      calculateAI(data.mealLog._id, formName, ingredients_context, imageBase64);
+      // We don't need to pass base64 anymore, backend will fetch the S3 image using meal.image_url
+      calculateAI(data.mealLog._id, formName, ingredients_context);
       
       // Update local state temporarily, or just let fetchData(true) handle it.
       // We also do fetchData(true) directly here to guarantee instant UI update
@@ -386,10 +384,12 @@ export default function MenuPage() {
             <>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Hình ảnh bữa ăn (Tùy chọn, giúp AI phân tích tốt hơn)</label>
-                <SaoInput type="file" accept="image/*" onChange={(e: any) => {
-                  const file = e.target.files?.[0];
-                  if (file) setImageFile(file);
-                }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {formImageUrl && (
+                    <div style={{ width: '40px', height: '40px', borderRadius: '4px', backgroundImage: `url(${formImageUrl})`, backgroundSize: 'cover' }}></div>
+                  )}
+                  <SaoImageUpload onUploadSuccess={(url: string) => setFormImageUrl(url)} label={formImageUrl ? "Đổi ảnh" : "Tải ảnh lên"} />
+                </div>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Số tiền (VND)</label>
@@ -535,7 +535,20 @@ export default function MenuPage() {
       </div>
 
       {/* Nút cộng vạn năng */}
-      <SaoButton variant="primary" style={{borderRadius: "50%", width: 50, height: 50, position: "fixed", bottom: 30, right: 30, zIndex: 100, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)"}}  onClick={openGlobalAddModal}>
+      <SaoButton 
+        variant="primary" 
+        style={{
+          borderRadius: "50%", 
+          width: 50, 
+          height: 50, 
+          position: "absolute", 
+          bottom: 30, 
+          right: 30, 
+          zIndex: 100, 
+          boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)"
+        }}  
+        onClick={openGlobalAddModal}
+      >
         <Plus size={32} />
       </SaoButton>
 

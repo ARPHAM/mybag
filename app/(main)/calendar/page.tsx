@@ -158,7 +158,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="p-4 h-full flex flex-col font-mono overflow-hidden">
+    <div className="p-2 lg:p-4 flex flex-col font-mono h-full overflow-hidden">
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
           <Calendar className={styles.titleIcon} size={28} />
@@ -174,8 +174,8 @@ export default function CalendarPage() {
 
       <DateSelector selectedDate={selectedDate} onChange={setSelectedDate} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 mt-4 min-h-0">
-        <div className="lg:col-span-2 relative flex flex-col">
+      <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 lg:gap-6 flex-1 mt-4 min-h-0">
+        <div className="flex-1 lg:col-span-2 relative flex flex-col min-h-0">
           {loading && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm font-mono" style={{ color: 'var(--sao-primary-hex)' }}>
               Scanning data...
@@ -184,7 +184,7 @@ export default function CalendarPage() {
           <SAOTimeline events={events} onEventClick={openEditModal} />
         </div>
 
-        <div className="lg:col-span-1 flex flex-col bg-zinc-900/80 border border-zinc-700 p-4 rounded-sm shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden font-mono">
+        <div className="h-[200px] shrink-0 lg:h-auto lg:shrink lg:col-span-1 flex flex-col bg-zinc-900/80 border border-zinc-700 p-4 rounded-sm shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden font-mono min-h-0">
           <h2 className="text-lg font-bold border-b pb-2 mb-4" style={{ color: 'var(--sao-primary-hex)', borderColor: 'rgba(var(--sao-primary-rgb), 0.3)', textShadow: '0 0 5px rgba(var(--sao-primary-rgb), 0.8)' }}>
             QUEST LOG
           </h2>

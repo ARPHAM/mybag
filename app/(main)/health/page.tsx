@@ -195,7 +195,7 @@ export default function HealthPage() {
         <div className={styles.gridStats}>
         <div className={styles.statCard}>
           <div className={styles.statHeader}>
-            <Scale size={18} /> Cân nặng hiện tại
+            <Scale size={18} /> Cân nặng
           </div>
           <div className={styles.statValue}>
             {currentWeight} <span className={styles.statUnit}>kg</span>
@@ -245,7 +245,7 @@ export default function HealthPage() {
         </div>
         <div className={styles.chartContainer}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={weightHistory} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+            <LineChart data={weightHistory} margin={{ top: 5, right: 20, bottom: 25, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--sao-primary-rgb), 0.2)" vertical={false} />
               <XAxis dataKey="dateLabel" stroke="#a0c4ff" tick={{ fill: '#a0c4ff' }} />
               <YAxis domain={['dataMin - 2', 'dataMax + 2']} stroke="#a0c4ff" tick={{ fill: '#a0c4ff' }} />
@@ -270,7 +270,7 @@ export default function HealthPage() {
         <div className={styles.chartContainer} style={{ height: '350px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ flex: 1, minHeight: '150px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={macros} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <LineChart data={macros} margin={{ top: 5, right: 20, bottom: 25, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--sao-primary-rgb), 0.2)" vertical={false} />
                 <XAxis dataKey="date" stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 12 }} />
                 <YAxis stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 12 }} />

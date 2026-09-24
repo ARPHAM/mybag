@@ -4,6 +4,7 @@ export interface IUser extends mongoose.Document {
   username: string;
   email: string;
   password_hash: string;
+  avatar_url?: string;
   level: number;
   current_exp: number;
   max_hp: number;
@@ -23,6 +24,7 @@ const UserSchema = new mongoose.Schema<IUser>({
   username: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password_hash: { type: String, required: true },
+  avatar_url: { type: String, required: false },
   level: { type: Number, required: true, default: 1 },
   current_exp: { type: Number, required: true, default: 0 },
   max_hp: { type: Number, required: true, default: 1200 },

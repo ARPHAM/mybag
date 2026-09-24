@@ -286,25 +286,70 @@
 ========================================= */
 @media (max-width: 768px) {
   .header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-    padding: 15px;
-    clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
+  }
+  
+  .titleIcon {
+    width: 20px !important;
+    height: 20px !important;
   }
 
   .title {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
   }
 
   .gridStats {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
 
   .statCard {
-    padding: 15px;
-    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    padding: 12px 25px 12px 12px;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  }
+  
+  .statCard:nth-child(3) {
+    grid-column: span 2;
+    padding-right: 12px; /* BMI card doesn't have an edit button, so normal padding */
+  }
+
+  .statHeader {
+    font-size: 0.65rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .statHeader svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .statValue {
+    font-size: 1.4rem;
+  }
+
+  .statUnit {
+    font-size: 0.7rem;
+  }
+
+  .statFooter {
+    font-size: 0.7rem;
+  }
+
+  .actionButton {
+    top: 10px;
+    right: 10px;
+  }
+
+  .actionButton svg {
+    width: 14px !important;
+    height: 14px !important;
   }
 
   .chartSection {
@@ -313,18 +358,30 @@
   }
 
   .chartHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap; /* Allow wrapping if still too tight */
   }
 
   .chartTitle {
-    font-size: 1.1rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
   }
 
-  .actionButton, .logButton {
-    width: 100%;
-    justify-content: center;
+  .logButton {
+    width: auto;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .logButton svg {
+    width: 12px !important;
+    height: 12px !important;
   }
 
   .modalFooter {

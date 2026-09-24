@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { mealId, food_name, ingredients_context, image_data } = body;
+    let { mealId, food_name, ingredients_context, image_data } = body;
 
     if (!mealId || !food_name) {
       return NextResponse.json({ error: 'Thiếu mealId hoặc food_name' }, { status: 400 });
@@ -37,6 +37,20 @@ export async function POST(req: Request) {
       promptContext += `\nNguyên liệu sử dụng thực tế: ${ingredients_context}`;
     }
 
+    if (!image_data && meal.image_url) {
+      try {
+        const imageRes = await fetch(meal.image_url);
+        if (imageRes.ok) {
+          const arrayBuffer = await imageRes.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const mimeType = imageRes.headers.get('content-type') || 'image/jpeg';
+          image_data = `data:${mimeType};base64,${buffer.toString('base64')}`;
+        }
+      } catch (err) {
+        console.error("Error fetching S3 image for AI:", err);
+      }
+    }
+
     const prompt = `Bạn là một chuyên gia dinh dưỡng.
 Hãy ước tính lượng Calories, Protein (g), Fat (g), Carbs (g), Sugar (g) cho bữa ăn sau.
 Nếu có danh sách nguyên liệu và định lượng thực tế, hãy ưu tiên tính dựa trên định lượng đó. Nếu không, hãy ước lượng dựa trên một khẩu phần ăn tiêu chuẩn bình thường.
@@ -49,7 +63,8 @@ Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ
   "protein": number,
   "fat": number,
   "carbs": number,
-  "sugar": number
+  "sugar": number,
+  "description": string // Mô tả nguyên liệu, thành phần món ăn khoảng 2-3 câu ngắn gọn.
 }`;
 
     let result;
@@ -68,6 +83,31 @@ Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ
     meal.fat = result.fat || 0;
     meal.carbs = result.carbs || 0;
     meal.sugar = result.sugar || 0;
+    meal.ai_description = result.description || '';
+
+    // Delete image from S3 if present
+    if (meal.image_url && meal.image_url.includes('.amazonaws.com/')) {
+      try {
+        const { S3Client, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+        const bucketName = process.env.AWS_S3_BUCKET_NAME;
+        const s3 = new S3Client({
+          region: process.env.AWS_REGION!,
+          credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+          },
+        });
+        const oldKey = meal.image_url.split('.amazonaws.com/')[1];
+        await s3.send(new DeleteObjectCommand({
+          Bucket: bucketName,
+          Key: oldKey,
+        }));
+      } catch (err) {
+        console.error("Error deleting image from S3:", err);
+      }
+    }
+    meal.image_url = undefined;
+
     
     // Tính HP thực tế dựa trên Calo (Tỉ lệ mới: 1 Calo = 1 HP)
     // Giúp người dùng dù ăn kiêng (VD 1200 Calo/ngày) vẫn đủ sống sót bù trừ lượng máu tụt 1200 HP/ngày

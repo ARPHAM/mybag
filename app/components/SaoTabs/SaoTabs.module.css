@@ -42,3 +42,22 @@
   align-items: center;
   justify-content: center;
 }
+
+@media (max-width: 768px) {
+  .tabsContainer {
+    gap: 6px;
+    margin-bottom: 15px;
+    padding-bottom: 6px;
+  }
+  
+  .tabBtn {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    gap: 5px;
+  }
+
+  .tabBtn svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
