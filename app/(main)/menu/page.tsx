@@ -97,10 +97,11 @@ export default function MenuPage() {
     setFormCost('');
     setFormImageUrl('');
     
-    // Auto-match ingredients from inventory
+    // Auto-match ingredients from inventory (only those with quantity > 0)
+    const availableInventory = inventory.filter(i => i.quantity > 0);
     const matched: {invId: string, qty: number}[] = [];
     recipe.ingredients.forEach(ingName => {
-      const match = inventory.find(i => i.name.toLowerCase().includes(ingName.toLowerCase()) || ingName.toLowerCase().includes(i.name.toLowerCase()));
+      const match = availableInventory.find(i => i.name.toLowerCase().includes(ingName.toLowerCase()) || ingName.toLowerCase().includes(i.name.toLowerCase()));
       if (match) matched.push({ invId: match.id, qty: 1 });
     });
     setSelectedIngredients(matched);
@@ -330,7 +331,7 @@ export default function MenuPage() {
                       <div style={{ flex: 2 }}>
                         <SaoSelect
                           initialValue={ing.invId}
-                          options={inventory.map(i => ({ value: i.id, label: `${i.name} (Còn: ${i.quantity} ${i.unit})` }))}
+                          options={inventory.filter(i => i.quantity > 0).map(i => ({ value: i.id, label: `${i.name} (Còn: ${i.quantity} ${i.unit})` }))}
                           onChange={(val) => {
                             const newArr = [...selectedIngredients];
                             newArr[idx].invId = val;
@@ -367,7 +368,14 @@ export default function MenuPage() {
                   type="button"
                   
                   style={{ background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', border: '1px dashed #00f0ff', marginTop: '5px' }}
-                  onClick={() => setSelectedIngredients([...selectedIngredients, { invId: inventory[0]?.id || '', qty: 1 }])}
+                  onClick={() => {
+                    const availableItems = inventory.filter(i => i.quantity > 0);
+                    if (availableItems.length > 0) {
+                      setSelectedIngredients([...selectedIngredients, { invId: availableItems[0].id, qty: 1 }]);
+                    } else {
+                      showAlert("Kho của bạn không có nguyên liệu nào còn hàng!");
+                    }
+                  }}
                 >
                   <Plus size={16} style={{ display: 'inline', marginRight: 5 }} /> Thêm nguyên liệu từ Kho
                 </SaoButton>

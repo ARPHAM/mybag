@@ -148,16 +148,31 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     
     if (!item) return NextResponse.json({ error: 'Không tìm thấy đồ dự trữ' }, { status: 404 });
 
-    // Hoàn tiền nếu xóa món đồ (như user yêu cầu: "có hoàn tiền nếu không phải ăn, xóa đi lịch sử chi tiêu cũng sửa theo")
-    if (item.transaction_id) {
+    // Hoàn tiền nếu xóa món đồ:
+    // Nếu quantity <= 0 hoặc totalValue <= 0, có nghĩa là đã dùng hết -> Không hoàn tiền, giữ nguyên lịch sử giao dịch.
+    // Nếu chưa dùng hết, hoàn lại số tiền tương ứng với lượng giá trị còn lại (totalValue).
+    const currentTotalValue = item.totalValue || 0;
+    if (item.transaction_id && item.quantity > 0 && currentTotalValue > 0) {
       const tx = await Transaction.findById(item.transaction_id);
       if (tx && item.wallet_id) {
         const wallet = await Wallet.findById(item.wallet_id);
-        if (wallet) {
-          wallet.balance += tx.amount; // Hoàn tiền
-          await wallet.save();
+        
+        // Nếu số lượng vẫn y nguyên lúc mua (chưa ăn), hoặc totalValue == tx.amount
+        if (currentTotalValue === tx.amount || item.quantity === item.originalQuantity) {
+          if (wallet) {
+            wallet.balance += tx.amount; // Hoàn tiền toàn bộ
+            await wallet.save();
+          }
+          await Transaction.findByIdAndDelete(item.transaction_id); // Xóa chi tiêu
+        } else {
+          // Nếu đã ăn một phần
+          if (wallet) {
+            wallet.balance += currentTotalValue; // Chỉ hoàn tiền phần chưa ăn
+            await wallet.save();
+          }
+          tx.amount -= currentTotalValue; // Giảm giá trị chi tiêu đi phần hoàn lại
+          await tx.save();
         }
-        await Transaction.findByIdAndDelete(item.transaction_id);
       }
     }
 
