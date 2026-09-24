@@ -92,7 +92,10 @@ export default function FinancePage() {
           amount: t.amount,
           date: t.date.split('T')[0],
           description: t.description,
-          walletName: t.walletName
+          walletName: t.walletName,
+          wallet_id: t.wallet_id,
+          to_wallet_id: t.to_wallet_id,
+          category: t.category
         })));
       }
       if (bData) {
