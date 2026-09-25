@@ -10,9 +10,10 @@ interface SaoDatePickerProps {
   onChange?: (date: string) => void;
   required?: boolean;
   name?: string;
+  placeholder?: string;
 }
 
-export default function SaoDatePicker({ value, defaultValue, onChange, required, name }: SaoDatePickerProps) {
+export default function SaoDatePicker({ value, defaultValue, onChange, required, name, placeholder = "DD/MM/YYYY" }: SaoDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -129,7 +130,7 @@ export default function SaoDatePicker({ value, defaultValue, onChange, required,
           className={styles.dateInput} 
           value={formatDateDisplay(actualValue)} 
           readOnly 
-          placeholder="DD/MM/YYYY"
+          placeholder={placeholder}
           required={required}
         />
         <CalendarIcon size={18} className={styles.calendarIcon} />

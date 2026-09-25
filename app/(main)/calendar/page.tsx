@@ -31,6 +31,7 @@ export default function CalendarPage() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState('WEEKLY');
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]);
+  const [recurrenceEndDateStr, setRecurrenceEndDateStr] = useState<string>('');
 
   useEffect(() => {
     fetchEvents();
@@ -64,6 +65,7 @@ export default function CalendarPage() {
     setIsRecurring(false);
     setRecurrenceType('WEEKLY');
     setRecurrenceDays([]);
+    setRecurrenceEndDateStr('');
     setIsModalOpen(true);
   };
 
@@ -82,6 +84,7 @@ export default function CalendarPage() {
     setIsRecurring(ev.is_recurring || false);
     setRecurrenceType(ev.recurrence_type || 'WEEKLY');
     setRecurrenceDays(ev.recurrence_days || []);
+    setRecurrenceEndDateStr(ev.recurrence_end ? new Date(new Date(ev.recurrence_end).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] : '');
     setIsModalOpen(true);
   };
 
@@ -95,6 +98,13 @@ export default function CalendarPage() {
     const [endH, endM] = endTimeStr.split(':');
     end.setHours(parseInt(endH), parseInt(endM), 0, 0);
 
+    let recEndIso: string | undefined = undefined;
+    if (isRecurring && recurrenceEndDateStr) {
+      const recEndDate = new Date(recurrenceEndDateStr);
+      recEndDate.setHours(23, 59, 59, 999);
+      recEndIso = recEndDate.toISOString();
+    }
+
     const payload = {
       title,
       description,
@@ -103,7 +113,8 @@ export default function CalendarPage() {
       color_code: '#f97316',
       is_recurring: isRecurring,
       recurrence_type: recurrenceType,
-      recurrence_days: recurrenceDays
+      recurrence_days: recurrenceDays,
+      recurrence_end: recEndIso
     };
 
     try {
@@ -329,7 +340,7 @@ export default function CalendarPage() {
                 </div>
 
                 {recurrenceType === 'WEEKLY' && (
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2 mt-3 mb-3">
                     {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((label, i) => (
                       <div 
                         key={i}
@@ -341,6 +352,15 @@ export default function CalendarPage() {
                     ))}
                   </div>
                 )}
+                
+                <div className={styles.formGroup} style={{ marginTop: '12px' }}>
+                  <label className={styles.formLabel}>Lặp đến ngày (Tùy chọn)</label>
+                  <SaoDatePicker 
+                    value={recurrenceEndDateStr} 
+                    onChange={setRecurrenceEndDateStr} 
+                    placeholder="Không giới hạn"
+                  />
+                </div>
               </div>
             )}
           </div>
