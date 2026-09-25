@@ -160,6 +160,7 @@ export default function MenuPage() {
       setMeals(meals.filter(m => m._id !== mealToDelete));
       setMealToDelete(null);
       fetchData(true);
+      window.dispatchEvent(new Event('sao-user-updated'));
     } catch (e) {
       showAlert("Lỗi xóa bữa ăn");
     }
@@ -174,6 +175,7 @@ export default function MenuPage() {
         image_data: imageBase64
       });
       fetchData(true); // reload regardless to update status
+      window.dispatchEvent(new Event('sao-user-updated'));
     } catch (e) {
       fetchData(true);
     }
@@ -248,6 +250,7 @@ export default function MenuPage() {
       // Update local state temporarily, or just let fetchData(true) handle it.
       // We also do fetchData(true) directly here to guarantee instant UI update
       fetchData(true);
+      window.dispatchEvent(new Event('sao-user-updated'));
     } catch (e: any) {
       showAlert(e.response?.data?.error || "Lỗi lưu bữa ăn");
     }

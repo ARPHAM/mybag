@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { UploadCloud, Check, AlertTriangle, Loader2 } from "lucide-react";
+import { UploadCloud, Check, AlertTriangle, Loader2, Camera, Image as ImageIcon } from "lucide-react";
 import SaoButton from "../SaoButton/SaoButton";
 
 interface SaoImageUploadProps {
@@ -13,6 +13,7 @@ export default function SaoImageUpload({ onUploadSuccess, label = "Tải ảnh l
   const [isUploading, setIsUploading] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,6 +66,9 @@ export default function SaoImageUpload({ onUploadSuccess, label = "Tải ảnh l
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = "";
+      }
     }
   };
 
@@ -77,30 +81,66 @@ export default function SaoImageUpload({ onUploadSuccess, label = "Tải ảnh l
         style={{ display: "none" }}
         ref={fileInputRef}
       />
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+        style={{ display: "none" }}
+        ref={cameraInputRef}
+      />
       
-      <SaoButton
-        type="button"
-        variant="default"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={isUploading}
-        style={{
-          background: status === 'error' ? 'rgba(255, 68, 68, 0.2)' : status === 'success' ? 'rgba(0, 255, 170, 0.2)' : undefined,
-          borderColor: status === 'error' ? '#ff4444' : status === 'success' ? '#00ffaa' : undefined,
-          color: status === 'error' ? '#ff4444' : status === 'success' ? '#00ffaa' : undefined,
-        }}
-      >
-        {isUploading ? (
-          <Loader2 className="animate-spin" size={20} />
-        ) : status === 'success' ? (
-          <Check size={20} />
-        ) : status === 'error' ? (
-          <AlertTriangle size={20} />
-        ) : (
-          <UploadCloud size={20} />
-        )}
-        
-        {isUploading ? "Đang xử lý..." : status === 'success' ? "Thành công!" : status === 'error' ? "Thất bại" : label}
-      </SaoButton>
+      <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+        <SaoButton
+          type="button"
+          variant="default"
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={isUploading}
+          style={{
+            flex: 1,
+            padding: '0 10px',
+            background: status === 'error' ? 'rgba(255, 68, 68, 0.2)' : status === 'success' ? 'rgba(0, 255, 170, 0.2)' : undefined,
+            borderColor: status === 'error' ? '#ff4444' : status === 'success' ? '#00ffaa' : undefined,
+            color: status === 'error' ? '#ff4444' : status === 'success' ? '#00ffaa' : undefined,
+          }}
+        >
+          {isUploading ? (
+            <Loader2 className="animate-spin" size={20} />
+          ) : status === 'success' ? (
+            <Check size={20} />
+          ) : status === 'error' ? (
+            <AlertTriangle size={20} />
+          ) : (
+            <Camera size={20} />
+          )}
+          <span style={{ fontSize: '14px', whiteSpace: 'nowrap' }}>Chụp ảnh</span>
+        </SaoButton>
+
+        <SaoButton
+          type="button"
+          variant="default"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          style={{
+            flex: 1,
+            padding: '0 10px',
+            background: status === 'error' ? 'rgba(255, 68, 68, 0.2)' : status === 'success' ? 'rgba(0, 255, 170, 0.2)' : undefined,
+            borderColor: status === 'error' ? '#ff4444' : status === 'success' ? '#00ffaa' : undefined,
+            color: status === 'error' ? '#ff4444' : status === 'success' ? '#00ffaa' : undefined,
+          }}
+        >
+          {isUploading ? (
+            <Loader2 className="animate-spin" size={20} />
+          ) : status === 'success' ? (
+            <Check size={20} />
+          ) : status === 'error' ? (
+            <AlertTriangle size={20} />
+          ) : (
+            <ImageIcon size={20} />
+          )}
+          <span style={{ fontSize: '14px', whiteSpace: 'nowrap' }}>Thư viện</span>
+        </SaoButton>
+      </div>
     </div>
   );
 }
