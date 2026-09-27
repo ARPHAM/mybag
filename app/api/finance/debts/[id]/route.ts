@@ -17,7 +17,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const body = await req.json();
-    const { action, actionAmount, wallet_id, personName, dueDate } = body;
+    const { action, actionAmount, wallet_id, personName, dueDate, date } = body;
     const { id } = await params;
 
     const debt = await Debt.findOne({ _id: id, user_id: decoded.userId });
@@ -38,6 +38,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
       let transactionType: 'income' | 'expense';
       let description = '';
+      const actionDate = date ? new Date(date) : new Date();
 
       if (action === 'pay_back') {
         if (debt.type === 'lent') {
@@ -55,7 +56,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         debt.remainingAmount -= actionAmount;
         if (debt.remainingAmount === 0) {
           debt.status = 'paid';
-          debt.completedDate = new Date();
+          debt.completedDate = actionDate;
         } else {
           debt.status = 'partial';
         }
@@ -84,7 +85,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         user_id: decoded.userId,
         type: transactionType,
         amount: actionAmount,
-        date: new Date(),
+        date: actionDate,
         description,
         category: 'other',
         wallet_id,
@@ -92,7 +93,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       });
 
       debt.history.push({
-        date: new Date(),
+        date: actionDate,
         amount: actionAmount,
         type: action,
         walletName: wallet.name

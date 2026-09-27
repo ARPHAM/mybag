@@ -860,7 +860,8 @@ export default function FinancePage() {
         await updateDebt(editingItem.id, {
           action: debtActionType,
           actionAmount: parseFloat(debtActionForm.amount) || 0,
-          wallet_id: debtActionForm.wallet_id
+          wallet_id: debtActionForm.wallet_id,
+          date: debtActionForm.date
         });
         fetchData(true);
         setIsModalOpen(false);
