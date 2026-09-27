@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Wallet, Plus, ArrowUpRight, ArrowDownRight, Activity, CreditCard, Clock, Users, Package, ArrowRightLeft, Building2, Smartphone, Banknote, Coffee, Home as HomeIcon, ShoppingBag, Gamepad2, Car, AlertTriangle, ArrowDown, ArrowUp, CalendarDays, User, Calendar, CheckCircle2, Minus, ShieldAlert, Wheat, Edit3, Save, ChevronDown, ChevronRight, Trash2, Camera, RotateCcw } from 'lucide-react';
+import { Wallet, Plus, ArrowUpRight, ArrowDownRight, Activity, CreditCard, Clock, Users, Package, ArrowRightLeft, Building2, Smartphone, Banknote, Coffee, Home as HomeIcon, ShoppingBag, Gamepad2, Car, AlertTriangle, ArrowDown, ArrowUp, CalendarDays, User, Calendar, CheckCircle2, Minus, ShieldAlert, Wheat, Edit3, Save, ChevronDown, ChevronRight, Trash2, Camera, RotateCcw, Image as ImageIcon } from 'lucide-react';
 import SaoModal from '../../components/SaoModal/SaoModal';
 import SaoSelect from '../../components/SaoSelect/SaoSelect';
 import SaoTabs from '../../components/SaoTabs/SaoTabs';
@@ -58,6 +58,7 @@ export default function FinancePage() {
   const [scannedBillItems, setScannedBillItems] = useState<any[]>([]);
   const [billWalletId, setBillWalletId] = useState('');
   const [debtActionType, setDebtActionType] = useState<'borrow_more' | 'pay_back' | null>(null);
+  const [isInventoryFabExpanded, setIsInventoryFabExpanded] = useState(false);
 
   const closeModal = () => setIsModalOpen(false);
   const { showAlert, showConfirm } = useSaoAlert();
@@ -762,15 +763,35 @@ export default function FinancePage() {
           })}
         </div>
 
-        <div style={{ position: "absolute", bottom: 30, right: 30, zIndex: 100, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <label className={styles.scanFabLabel} title="Quét hóa đơn bằng AI">
-            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleScanBill} />
-            <div className={styles.scanFab}>
-              <Camera size={24} />
-            </div>
-          </label>
-          <SaoButton variant="primary" style={{ borderRadius: "50%", width: 50, height: 50, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)" }} title="Thêm đồ dự trữ mới" onClick={() => openModal('inventory')}>
-            <Plus size={32} />
+        <div style={{ position: "absolute", bottom: 30, right: 30, zIndex: 100, display: 'flex', flexDirection: 'column', gap: 15, alignItems: 'center' }}>
+          {isInventoryFabExpanded && (
+            <>
+              <label className={styles.scanFabLabel} title="Chụp ảnh hóa đơn" style={{ marginBottom: 0 }}>
+                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { setIsInventoryFabExpanded(false); handleScanBill(e); }} />
+                <div className={styles.scanFab} style={{ width: 40, height: 40, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <Camera size={18} />
+                </div>
+              </label>
+              
+              <label className={styles.scanFabLabel} title="Chọn từ thư viện" style={{ marginBottom: 0 }}>
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { setIsInventoryFabExpanded(false); handleScanBill(e); }} />
+                <div className={styles.scanFab} style={{ width: 40, height: 40, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <ImageIcon size={18} />
+                </div>
+              </label>
+
+              <SaoButton variant="primary" style={{ borderRadius: "50%", width: 40, height: 40, padding: 0 }} title="Thêm thủ công" onClick={() => { setIsInventoryFabExpanded(false); openModal('inventory'); }}>
+                <Edit3 size={18} />
+              </SaoButton>
+            </>
+          )}
+          
+          <SaoButton 
+            variant="primary" 
+            style={{ borderRadius: "50%", width: 56, height: 56, boxShadow: "0 0 15px rgba(0, 240, 255, 0.4)", transition: 'transform 0.3s' }} 
+            onClick={() => setIsInventoryFabExpanded(!isInventoryFabExpanded)}
+          >
+            <Plus size={32} style={{ transform: isInventoryFabExpanded ? 'rotate(45deg)' : 'none', transition: 'transform 0.3s' }} />
           </SaoButton>
         </div>
       </div>
@@ -1331,16 +1352,16 @@ export default function FinancePage() {
       
       return (
         <form onSubmit={handleSaveScannedBill}>
-          <div className={styles.scannedItemsTable}>
-            <div className={styles.tableHeader}>
-              <div style={{ flex: 2 }}>Tên món đồ</div>
-              <div style={{ flex: 1 }}>SL</div>
-              <div style={{ flex: 1 }}>Giá tiền</div>
-              <div style={{ flex: 1 }}>Loại</div>
-              <div style={{ width: 60, textAlign: 'center' }}>Tùy chọn</div>
+          <div className={styles.scannedItemsTable} style={{ overflowX: 'auto', paddingBottom: 10 }}>
+            <div className={styles.tableHeader} style={{ minWidth: 600 }}>
+              <div style={{ flex: 2, minWidth: 120 }}>Tên món đồ</div>
+              <div style={{ flex: 1, minWidth: 100 }}>SL</div>
+              <div style={{ flex: 1, minWidth: 90 }}>Giá tiền</div>
+              <div style={{ flex: 1, minWidth: 120 }}>Loại</div>
+              <div style={{ width: 60, minWidth: 60, textAlign: 'center' }}>Tùy chọn</div>
             </div>
             {scannedBillItems.map((item, index) => (
-              <div key={item.id} className={`${styles.tableRow} ${!item.keep ? styles.deletedRow : ''}`}>
+              <div key={item.id} className={`${styles.tableRow} ${!item.keep ? styles.deletedRow : ''}`} style={{ minWidth: 600 }}>
                 <div style={{ flex: 2 }}>
                   <SaoInput type="text" value={item.name} onChange={e => {
                     const newItems = [...scannedBillItems];
