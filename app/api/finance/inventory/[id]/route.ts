@@ -55,11 +55,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         const oldTx = await Transaction.findById(oldTransactionId);
         if (oldTx && oldWalletId) {
           oldTxAmount = oldTx.amount;
-          const oldWallet = await Wallet.findById(oldWalletId);
-          if (oldWallet) {
-            oldWallet.balance += oldTx.amount; // Hoàn tiền toàn bộ
-            await oldWallet.save();
-          }
+          await Wallet.findOneAndUpdate(
+            { _id: oldWalletId, user_id: decoded.userId },
+            { $inc: { balance: oldTx.amount } }
+          );
           await Transaction.findByIdAndDelete(oldTransactionId);
         }
         newTransactionId = undefined;
@@ -70,22 +69,30 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       if (!isGift && totalValue !== undefined && totalValue !== null) {
         if (!wallet_id) return NextResponse.json({ error: 'Cần chọn ví thanh toán' }, { status: 400 });
         
-        const wallet = await Wallet.findOne({ _id: wallet_id, user_id: decoded.userId });
-        if (!wallet) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
-        
         // Số tiền giao dịch mới = Tiền gốc ban đầu + (Giá trị tổng mới - Giá trị tổng hiện tại)
-        // Nếu user đã ăn 200đ (còn 1800đ), rồi sửa giá thành 2000đ -> diff = +200đ
-        // Giao dịch mới sẽ là: 2000 (gốc) + 200 = 2200đ.
         const diff = totalValue - oldTotalValue;
         const newTxAmount = oldTxAmount + diff;
 
         if (newTxAmount > 0) {
-          if (wallet.balance < newTxAmount) {
+          const wallet = await Wallet.findOneAndUpdate(
+            { _id: wallet_id, user_id: decoded.userId, balance: { $gte: newTxAmount } },
+            { $inc: { balance: -newTxAmount } },
+            { returnDocument: 'after' }
+          );
+
+          if (!wallet) {
+            // Rollback oldTx refund if new wallet balance fails
+            if (oldTxAmount > 0 && oldWalletId) {
+              await Wallet.findOneAndUpdate(
+                { _id: oldWalletId, user_id: decoded.userId },
+                { $inc: { balance: -oldTxAmount } }
+              );
+            }
+            const exists = await Wallet.findOne({ _id: wallet_id, user_id: decoded.userId });
+            if (!exists) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
             return NextResponse.json({ error: 'Số dư ví không đủ' }, { status: 400 });
           }
 
-          wallet.balance -= newTxAmount;
-          await wallet.save();
           newWalletName = wallet.name;
 
           const transaction = await Transaction.create({
@@ -155,21 +162,19 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     if (item.transaction_id && item.quantity > 0 && currentTotalValue > 0) {
       const tx = await Transaction.findById(item.transaction_id);
       if (tx && item.wallet_id) {
-        const wallet = await Wallet.findById(item.wallet_id);
-        
         // Nếu số lượng vẫn y nguyên lúc mua (chưa ăn), hoặc totalValue == tx.amount
         if (currentTotalValue === tx.amount || item.quantity === item.originalQuantity) {
-          if (wallet) {
-            wallet.balance += tx.amount; // Hoàn tiền toàn bộ
-            await wallet.save();
-          }
+          await Wallet.findOneAndUpdate(
+            { _id: item.wallet_id, user_id: decoded.userId },
+            { $inc: { balance: tx.amount } }
+          );
           await Transaction.findByIdAndDelete(item.transaction_id); // Xóa chi tiêu
         } else {
           // Nếu đã ăn một phần
-          if (wallet) {
-            wallet.balance += currentTotalValue; // Chỉ hoàn tiền phần chưa ăn
-            await wallet.save();
-          }
+          await Wallet.findOneAndUpdate(
+            { _id: item.wallet_id, user_id: decoded.userId },
+            { $inc: { balance: currentTotalValue } }
+          );
           tx.amount -= currentTotalValue; // Giảm giá trị chi tiêu đi phần hoàn lại
           await tx.save();
         }

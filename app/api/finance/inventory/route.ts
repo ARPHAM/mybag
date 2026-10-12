@@ -59,15 +59,17 @@ export async function POST(req: Request) {
     if (!isGift && totalValue && totalValue > 0) {
       if (!wallet_id) return NextResponse.json({ error: 'Cần chọn ví thanh toán' }, { status: 400 });
       
-      const wallet = await Wallet.findOne({ _id: wallet_id, user_id: decoded.userId });
-      if (!wallet) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
-      
-      if (wallet.balance < totalValue) {
+      // Atomic query: chỉ trừ tiền nếu số dư >= totalValue (tránh race condition)
+      const wallet = await Wallet.findOneAndUpdate(
+        { _id: wallet_id, user_id: decoded.userId, balance: { $gte: totalValue } },
+        { $inc: { balance: -totalValue } },
+        { returnDocument: 'after' }
+      );
+      if (!wallet) {
+        const exists = await Wallet.findOne({ _id: wallet_id, user_id: decoded.userId });
+        if (!exists) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
         return NextResponse.json({ error: 'Số dư ví không đủ' }, { status: 400 });
       }
-
-      wallet.balance -= totalValue;
-      await wallet.save();
       walletName = wallet.name;
 
       const transaction = await Transaction.create({

@@ -3,10 +3,8 @@ import { cookies } from 'next/headers';
 import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import { verifyToken } from '@/lib/auth';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateContentWithFallback } from '@/lib/ai';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
-
-const apiKey = process.env.GEMINI_API_KEY;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -28,10 +26,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'No image attached to this meal' }, { status: 400 });
     }
 
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Thiếu cấu hình Gemini API' }, { status: 500 });
-    }
-
     // 1. Fetch the image from S3 URL to get its base64 buffer for Gemini
     const imageRes = await fetch(meal.image_url);
     if (!imageRes.ok) {
@@ -44,11 +38,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const buffer = Buffer.from(arrayBuffer);
     const base64Data = buffer.toString('base64');
     const mimeType = imageRes.headers.get('content-type') || 'image/jpeg';
+    const imageDataUri = `data:${mimeType};base64,${base64Data}`;
 
-    // 2. Call Gemini API
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
+    // 2. Call Gemini API via shared helper
     const prompt = `Bạn là một chuyên gia dinh dưỡng. Dưới đây là hình ảnh một bữa ăn có tên là "${meal.food_name}".
 Hãy phân tích hình ảnh này và trả về kết quả định dạng JSON chuẩn với các trường sau:
 {
@@ -61,27 +53,15 @@ Hãy phân tích hình ảnh này và trả về kết quả định dạng JSON
 }
 Chỉ trả về JSON, không thêm bất kỳ văn bản nào khác. Ước lượng ở mức tương đối chính xác nhất.`;
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Data,
-          mimeType
-        }
-      }
-    ]);
-    
-    const response = await result.response;
-    let text = response.text();
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    
     let parsedData;
     try {
+      const text = await generateContentWithFallback(prompt, imageDataUri, true);
       parsedData = JSON.parse(text);
-    } catch (e) {
+    } catch (aiError) {
+      console.error("AI Generation Error in meal scan:", aiError);
       meal.ai_status = 'failed';
       await meal.save();
-      return NextResponse.json({ error: 'AI không trả về đúng định dạng JSON' }, { status: 500 });
+      return NextResponse.json({ error: 'AI không thể phân tích hoặc lỗi định dạng JSON' }, { status: 500 });
     }
 
     // 3. Delete the image from S3
@@ -115,9 +95,20 @@ Chỉ trả về JSON, không thêm bất kỳ văn bản nào khác. Ước lư
     meal.sugar = parsedData.sugar || meal.sugar;
     meal.ai_description = parsedData.description;
     meal.image_url = undefined; // clear image url since we deleted it
+    // Cập nhật HP thực tế dựa trên Calo (1 Calo = 1 HP)
+    const trueHp = Math.floor((meal.calo || 0) * 1.0);
+    const hpDelta = trueHp - meal.hp_restored;
+    meal.hp_restored = trueHp;
     meal.ai_status = 'completed';
 
     await meal.save();
+
+    const User = (await import('@/models/User')).default;
+    const user = await User.findById(meal.user_id);
+    if (user) {
+      user.current_hp = Math.min(user.max_hp, Math.max(0, user.current_hp + hpDelta));
+      await user.save();
+    }
 
     return NextResponse.json({ message: 'AI quét thành công!', mealLog: meal });
 

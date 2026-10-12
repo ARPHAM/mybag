@@ -1,9 +1,13 @@
 import { jwtVerify, SignJWT } from 'jose';
 
 const getJwtSecretKey = () => {
-  const secret = process.env.JWT_SECRET || 'sao_link_start_secret_key_change_in_production';
+  const secret = process.env.JWT_SECRET;
   if (!secret) {
-    throw new Error('JWT_SECRET env variable is not set');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('SECURITY CRITICAL: JWT_SECRET environment variable is required in production.');
+    }
+    console.warn('⚠️ WARNING: Using fallback JWT_SECRET in development. Set JWT_SECRET in .env for security.');
+    return new TextEncoder().encode('sao_link_start_secret_key_change_in_production');
   }
   return new TextEncoder().encode(secret);
 };

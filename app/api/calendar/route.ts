@@ -160,6 +160,7 @@ export async function GET(req: Request) {
     
     // We don't await this so it doesn't slow down the response
     CalendarEvent.deleteMany({
+      user_id: decoded.userId,
       $or: [
         { is_recurring: true, recurrence_end: { $lt: thirtyDaysAgo } },
         { is_recurring: false, end_time: { $lt: thirtyDaysAgo } }
