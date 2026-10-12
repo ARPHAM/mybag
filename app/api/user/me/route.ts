@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { verifyToken } from '@/lib/auth';
+import { copyS3Object, deleteS3Object, BUCKET_NAME } from '@/lib/s3';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,31 +94,16 @@ export async function PUT(req: Request) {
     if (body.username) user.username = body.username;
     
     if (body.avatar_url && body.avatar_url !== user.avatar_url) {
-      const { S3Client, CopyObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
-      const s3 = new S3Client({
-        region: process.env.AWS_REGION!,
-        credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-        },
-      });
-      const bucketName = process.env.AWS_S3_BUCKET_NAME;
-
       let finalAvatarUrl = body.avatar_url;
 
       // 1. Nếu ảnh mới nằm trong thư mục temp/, copy sang avatars/
-      if (body.avatar_url.includes(`${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/temp/`)) {
+      if (BUCKET_NAME && body.avatar_url.includes(`${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/temp/`)) {
         try {
           const tempKey = body.avatar_url.split('.amazonaws.com/')[1];
           const newKey = tempKey.replace('temp/', 'avatars/');
           
-          await s3.send(new CopyObjectCommand({
-            Bucket: bucketName,
-            CopySource: `${bucketName}/${tempKey}`,
-            Key: newKey,
-          }));
-
-          finalAvatarUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${newKey}`;
+          await copyS3Object(tempKey, newKey);
+          finalAvatarUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${newKey}`;
         } catch (e) {
           console.error("Lỗi khi copy ảnh từ temp sang avatars:", e);
         }
@@ -126,10 +113,7 @@ export async function PUT(req: Request) {
       if (user.avatar_url && user.avatar_url.includes('.amazonaws.com/')) {
         try {
           const oldKey = user.avatar_url.split('.amazonaws.com/')[1];
-          await s3.send(new DeleteObjectCommand({
-            Bucket: bucketName,
-            Key: oldKey,
-          }));
+          await deleteS3Object(oldKey);
         } catch (e) {
           console.error("Lỗi khi xóa ảnh cũ trên S3:", e);
         }
@@ -139,7 +123,6 @@ export async function PUT(req: Request) {
     }
     
     if (body.password && body.new_password) {
-      const bcrypt = require('bcryptjs');
       const isMatch = await bcrypt.compare(body.password, user.password_hash);
       if (!isMatch) {
         return NextResponse.json({ error: 'Mật khẩu cũ không chính xác' }, { status: 400 });

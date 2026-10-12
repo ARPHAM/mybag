@@ -26,3 +26,7 @@ export const deleteTransaction = (id: string) => axiosClient.delete(`/api/financ
 export const deleteBudget = (id: string) => axiosClient.delete(`/api/finance/budgets/${id}`);
 export const deleteDebt = (id: string) => axiosClient.delete(`/api/finance/debts/${id}`);
 export const deleteInventory = (id: string) => axiosClient.delete(`/api/finance/inventory/${id}`);
+
+// SMART EXPENSE AI
+export const parseSmartExpense = (text: string) => axiosClient.post('/api/ai/smart-expense', { text });
+export const executeSmartExpense = (actions: any[]) => axiosClient.put('/api/ai/smart-expense', { actions });

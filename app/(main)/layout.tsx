@@ -11,14 +11,12 @@ import {
   Utensils,
   ShoppingCart,
   Settings,
-  Sun,
-  Clock,
-  Brain,
   Calendar
 } from 'lucide-react';
 import { AlertProvider } from '../contexts/AlertContext';
 import { getUserProfile } from './api';
 import SaoAlert from '../components/SaoAlert/SaoAlert';
+import SaoHeaderStatus from '../components/SaoHeaderStatus/SaoHeaderStatus';
 import styles from './layout.module.css';
 
 export default function DashboardLayout({
@@ -27,36 +25,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [user, setUser] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-
-      setUser((prevUser: any) => {
-        if (!prevUser) return prevUser;
-        const newHp = Math.max(0, prevUser.current_hp - (50 / 3600));
-
-        let newMp = prevUser.current_mp;
-        const overdue = prevUser.overdueCount || 0;
-        if (overdue > 0) {
-          newMp = Math.max(0, prevUser.current_mp - ((20 * overdue) / 3600));
-        } else {
-          newMp = Math.min(prevUser.max_mp || 500, prevUser.current_mp + (30 / 3600));
-        }
-
-        return {
-          ...prevUser,
-          current_hp: newHp,
-          current_mp: newMp
-        };
-      });
-
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     fetchUser();
@@ -77,7 +47,6 @@ export default function DashboardLayout({
       setIsInitializing(false);
     }
   };
-
 
   const menuItems = [
     { id: 'profile', path: '/profile', icon: Home, label: 'Hồ sơ' },
@@ -123,15 +92,6 @@ export default function DashboardLayout({
     }
   }, [themeColor]);
 
-  const formatDate = (date: Date) => {
-    const days = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
-    return `${days[date.getDay()]}, ${date.getDate()} Tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-  };
-
   if (isInitializing) {
     return (
       <div className={styles.saoLoaderContainer}>
@@ -150,54 +110,8 @@ export default function DashboardLayout({
       <div className={styles.topHeader}>
         <div className={styles.topHeaderLine}></div>
 
-        <div className={styles.headerLeftContainer}>
-
-          <div className={styles.headerLeftTilted}>
-            <div className={styles.avatarHex} style={user?.avatar_url ? { backgroundImage: `url(${user.avatar_url})` } : {}}></div>
-            <div className={styles.userDetails}>
-              <div className={styles.userName}>{user ? user.username : 'GUEST'}</div>
-              <div className={styles.userLevel}>Level {user ? user.level : 1}</div>
-            </div>
-          </div>
-
-          <div className={styles.headerLeftFlat}>
-            <div className={styles.statusBars}>
-              <div className={styles.barRow} title="Năng lượng (HP)">
-                <div className={`${styles.barLabel} ${styles.hp}`}>
-                  <Utensils size={16} /> HP
-                </div>
-                <div className={styles.barWrapper}>
-                  <div className={`${styles.barFill} ${styles.hp}`} style={{ width: user ? `${(user.current_hp / user.max_hp) * 100}%` : '100%' }}></div>
-                </div>
-                <div className={styles.barValues}>{user ? `${Math.floor(user.current_hp)} / ${user.max_hp}` : '0 / 0'}</div>
-              </div>
-              <div className={styles.barRow} title="Tinh thần (MP)">
-                <div className={`${styles.barLabel} ${styles.mp}`}>
-                  <Brain size={16} /> MP
-                </div>
-                <div className={styles.barWrapper}>
-                  <div className={`${styles.barFill} ${styles.mp}`} style={{ width: user ? `${(user.current_mp / user.max_mp) * 100}%` : '100%' }}></div>
-                </div>
-                <div className={styles.barValues}>{user ? `${Math.floor(user.current_mp)} / ${user.max_mp}` : '0 / 0'}</div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <div className={styles.headerRight}>
-          <div className={styles.hrDecorTop}></div>
-          <div className={styles.hrDecorBottom}></div>
-          <div className={styles.hrDecorLeft}></div>
-
-          <div className={styles.dateTime}>
-            <div className={styles.weatherRow}>
-              <Sun size={18} color="#00f0ff" /> Today <Clock size={18} color="#00f0ff" style={{ marginLeft: 10 }} />
-              <span className={styles.time} suppressHydrationWarning>{formatTime(currentTime)}</span>
-            </div>
-            <div className={styles.date} suppressHydrationWarning>{formatDate(currentTime)}</div>
-          </div>
-        </div>
+        {/* SaoHeaderStatus runs its own 1-second timer; only IT re-renders each tick */}
+        <SaoHeaderStatus user={user} />
       </div>
 
       <div className={styles.dashboardLayout}>

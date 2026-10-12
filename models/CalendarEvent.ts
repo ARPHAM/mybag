@@ -41,4 +41,7 @@ const CalendarEventSchema = new mongoose.Schema<ICalendarEvent>({
   is_cancelled: { type: Boolean, default: false },
 }, { timestamps: true });
 
+CalendarEventSchema.index({ user_id: 1, start_time: 1, end_time: 1 });
+CalendarEventSchema.index({ user_id: 1, is_recurring: 1 });
+
 export default mongoose.models.CalendarEvent || mongoose.model<ICalendarEvent>('CalendarEvent', CalendarEventSchema);

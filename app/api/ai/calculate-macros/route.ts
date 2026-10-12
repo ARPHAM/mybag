@@ -4,6 +4,7 @@ import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import { verifyToken } from '@/lib/auth';
 import { generateContentWithFallback } from '@/lib/ai';
+import { deleteS3Object } from '@/lib/s3';
 
 export async function POST(req: Request) {
   try {
@@ -88,20 +89,8 @@ Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ
     // Delete image from S3 if present
     if (meal.image_url && meal.image_url.includes('.amazonaws.com/')) {
       try {
-        const { S3Client, DeleteObjectCommand } = require("@aws-sdk/client-s3");
-        const bucketName = process.env.AWS_S3_BUCKET_NAME;
-        const s3 = new S3Client({
-          region: process.env.AWS_REGION!,
-          credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-          },
-        });
         const oldKey = meal.image_url.split('.amazonaws.com/')[1];
-        await s3.send(new DeleteObjectCommand({
-          Bucket: bucketName,
-          Key: oldKey,
-        }));
+        await deleteS3Object(oldKey);
       } catch (err) {
         console.error("Error deleting image from S3:", err);
       }

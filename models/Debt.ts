@@ -41,6 +41,8 @@ const DebtSchema = new mongoose.Schema<IDebt>({
   history: [DebtHistorySchema]
 }, { timestamps: true });
 
+DebtSchema.index({ user_id: 1, createdAt: -1 });
+
 if (mongoose.models.Debt) {
   delete mongoose.models.Debt;
 }

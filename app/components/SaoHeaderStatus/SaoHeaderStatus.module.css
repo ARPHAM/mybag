@@ -1,0 +1,333 @@
+/* SaoHeaderStatus.module.css
+   Re-uses the same visual classes as layout.module.css for header blocks.
+   Kept here so the component is self-contained and doesn't force a full layout re-render. */
+
+/* HEADER LEFT COMPLEX - CONTAINER */
+.headerLeftContainer {
+  display: flex;
+  position: relative;
+  z-index: 2;
+  margin-left: 0;
+  height: 90px;
+  transform-style: preserve-3d;
+}
+
+/* Nửa trái (Tilted) */
+.headerLeftTilted {
+  display: flex;
+  align-items: center;
+  background: rgba(10, 25, 45, 0.85);
+  backdrop-filter: blur(15px);
+  padding: 0 10px 0 25px;
+  width: 240px;
+  height: 100%;
+
+  transform: rotateY(15deg);
+  transform-origin: right center;
+
+  border-left: 4px solid var(--sao-primary-hex);
+  border-top: 3px solid var(--sao-primary-hex);
+  border-bottom: 3px solid var(--sao-primary-hex);
+  box-shadow: -2px 0 10px rgba(var(--sao-primary-rgb), 0.6);
+
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 100%,
+    15px 100%,
+    0 calc(100% - 15px)
+  );
+}
+
+/* Nửa phải (Flat) */
+.headerLeftFlat {
+  display: flex;
+  align-items: center;
+  background: rgba(10, 25, 45, 0.75);
+  backdrop-filter: blur(15px);
+  padding: 0 50px 0 20px;
+  height: 100%;
+
+  border-top: 3px solid var(--sao-primary-hex);
+  border-bottom: 3px solid var(--sao-primary-hex);
+
+  clip-path: polygon(
+    0 0,
+    calc(100% - 30px) 0,
+    100% 30px,
+    100% calc(100% - 15px),
+    calc(100% - 15px) 100%,
+    0 100%
+  );
+}
+
+.headerLeftFlat::after {
+  content: "";
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  pointer-events: none;
+  border-right: 2px solid var(--sao-primary-hex);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 30px) 0,
+    100% 30px,
+    100% calc(100% - 15px),
+    calc(100% - 15px) 100%,
+    0 100%
+  );
+}
+
+/* HEADER RIGHT COMPLEX */
+.headerRight {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(10, 25, 45, 0.75);
+  backdrop-filter: blur(15px);
+  padding: 15px 35px 15px 50px;
+  margin-right: 0;
+  z-index: 2;
+
+  clip-path: polygon(
+    30px 0,
+    100% 0,
+    100% calc(100% - 15px),
+    calc(100% - 15px) calc(100% - 15px),
+    calc(100% - 30px) 100%,
+    15px 100%,
+    0 calc(100% - 15px),
+    0 30px
+  );
+}
+
+.hrDecorTop {
+  position: absolute;
+  top: 0; left: 29px; right: 0;
+  height: 3px;
+  background: var(--sao-primary-hex);
+  box-shadow: 0 0 8px var(--sao-primary-hex);
+}
+
+.hrDecorBottom {
+  position: absolute;
+  bottom: 0; left: 14px; right: 29px;
+  height: 3px;
+  background: var(--sao-primary-hex);
+  box-shadow: 0 0 8px var(--sao-primary-hex);
+}
+
+.hrDecorLeft {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 40px; height: 100%;
+  background: linear-gradient(270deg, transparent, rgba(var(--sao-primary-rgb), 0.2));
+  clip-path: polygon(0 30px, 0 calc(100% - 15px), 15px 100%, 100% 100%, 70% 30px);
+  border-left: 2px solid var(--sao-primary-hex);
+}
+
+/* Avatar */
+.avatarHex {
+  width: 65px;
+  height: 65px;
+  background: url('https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=200&auto=format&fit=crop') center/cover;
+  border-radius: 50%;
+  border: 2px solid var(--sao-primary-hex);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.6), inset 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  margin-left: 12px;
+}
+
+.userName {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.userLevel {
+  color: #fff;
+  background: rgba(var(--sao-primary-rgb), 0.3);
+  border: 1px solid var(--sao-primary-hex);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: fit-content;
+  box-shadow: 0 0 8px rgba(var(--sao-primary-rgb), 0.3);
+}
+
+/* HP / MP Bars */
+.statusBars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-left: 40px;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.barLabel {
+  width: 30px;
+  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.barLabel.hp { color: #00ffaa; }
+.barLabel.mp { color: #00aaff; }
+
+.barWrapper {
+  width: 250px;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  clip-path: polygon(0 0, 95% 0, 100% 100%, 5% 100%);
+}
+
+.barFill {
+  height: 100%;
+  box-shadow: 0 0 10px currentColor;
+  transition: width 0.5s linear;
+}
+
+.barFill.hp {
+  background: linear-gradient(90deg, #008855, #00ffaa);
+  color: #00ffaa;
+}
+
+.barFill.mp {
+  background: linear-gradient(90deg, #005588, #00aaff);
+  color: #00aaff;
+}
+
+.barValues {
+  width: 100px;
+  color: #ccc;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* Date Time Section */
+.dateTime {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  color: #8ab4f8;
+  font-size: 0.9rem;
+  gap: 5px;
+}
+
+.weatherRow {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.time {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.date {
+  font-size: 0.85rem;
+}
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  .headerLeftContainer {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    margin: 0;
+    background: rgba(10, 25, 45, 0.85);
+    border: 2px solid var(--sao-primary-hex);
+    box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+  }
+
+  .headerLeftTilted {
+    transform: none;
+    width: auto;
+    clip-path: none;
+    padding: 8px 10px;
+    border: none;
+    border-right: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+    justify-content: center;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .avatarHex { width: 45px; height: 45px; min-width: 45px; }
+  .userName { font-size: 1.1rem; gap: 5px; }
+  .userLevel { font-size: 0.8rem; }
+
+  .headerLeftFlat {
+    flex: 1;
+    width: auto;
+    clip-path: none;
+    padding: 8px 10px;
+    border: none;
+    background: transparent;
+  }
+
+  .headerLeftFlat::after { display: none; }
+
+  .statusBars { margin-left: 0; width: 100%; gap: 6px; }
+  .barRow { font-size: 0.7rem; gap: 8px; }
+  .barLabel { width: 25px; }
+  .barLabel svg { width: 12px; height: 12px; }
+
+  .barWrapper {
+    width: 100%;
+    height: 8px;
+    clip-path: polygon(0 0, 98% 0, 100% 100%, 2% 100%);
+    border-radius: 2px;
+  }
+
+  .barValues { width: auto; font-size: 0.65rem; }
+
+  .headerRight {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    background: transparent;
+    border: none;
+    clip-path: none;
+    padding: 0 10px;
+    margin-top: 0;
+    box-shadow: none;
+  }
+
+  .hrDecorTop, .hrDecorBottom, .hrDecorLeft { display: none; }
+
+  .dateTime { flex-direction: row; align-items: center; gap: 10px; color: rgba(255, 255, 255, 0.7); }
+  .weatherRow { gap: 5px; }
+  .weatherRow svg { width: 14px; height: 14px; }
+  .time { font-size: 0.9rem; }
+  .date { font-size: 0.8rem; }
+}

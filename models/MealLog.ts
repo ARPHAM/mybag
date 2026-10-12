@@ -62,4 +62,6 @@ const MealLogSchema = new mongoose.Schema<IMealLog>({
   }]
 });
 
+MealLogSchema.index({ user_id: 1, consumed_at: -1 });
+
 export default mongoose.models.MealLog || mongoose.model<IMealLog>('MealLog', MealLogSchema);

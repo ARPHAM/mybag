@@ -34,6 +34,9 @@ const InventorySchema = new mongoose.Schema<IInventory>({
   transaction_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }
 }, { timestamps: true });
 
+InventorySchema.index({ user_id: 1, createdAt: -1 });
+InventorySchema.index({ user_id: 1, quantity: 1 });
+
 if (mongoose.models.Inventory) {
   delete mongoose.models.Inventory;
 }

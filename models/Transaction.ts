@@ -26,6 +26,8 @@ const TransactionSchema = new mongoose.Schema<ITransaction>({
   walletName: { type: String, required: true }
 }, { timestamps: true });
 
+TransactionSchema.index({ user_id: 1, date: -1 });
+
 if (mongoose.models.Transaction) {
   delete mongoose.models.Transaction;
 }

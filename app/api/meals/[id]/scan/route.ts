@@ -4,7 +4,7 @@ import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import { verifyToken } from '@/lib/auth';
 import { generateContentWithFallback } from '@/lib/ai';
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { deleteS3Object } from '@/lib/s3';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -65,26 +65,13 @@ Chỉ trả về JSON, không thêm bất kỳ văn bản nào khác. Ước lư
     }
 
     // 3. Delete the image from S3
-    try {
-      const bucketName = process.env.AWS_S3_BUCKET_NAME;
-      const s3 = new S3Client({
-        region: process.env.AWS_REGION!,
-        credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-        },
-      });
-      // Extract key from URL
-      if (meal.image_url.includes('.amazonaws.com/')) {
+    if (meal.image_url && meal.image_url.includes('.amazonaws.com/')) {
+      try {
         const oldKey = meal.image_url.split('.amazonaws.com/')[1];
-        await s3.send(new DeleteObjectCommand({
-          Bucket: bucketName,
-          Key: oldKey,
-        }));
+        await deleteS3Object(oldKey);
+      } catch (err) {
+        console.error("Lỗi khi xóa ảnh trên S3:", err);
       }
-    } catch (err) {
-      console.error("Lỗi khi xóa ảnh trên S3:", err);
-      // We don't fail the request if S3 deletion fails (it will be cleaned up by lifecycle rule since it's in temp)
     }
 
     // 4. Update the DB with the AI analysis and clear image_url

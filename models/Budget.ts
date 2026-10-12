@@ -18,6 +18,8 @@ const BudgetSchema = new mongoose.Schema<IBudget>({
   limit: { type: Number, required: true, min: [0, 'Hạn mức không thể âm'] },
 }, { timestamps: true });
 
+BudgetSchema.index({ user_id: 1, month: 1 });
+
 if (mongoose.models.Budget) {
   delete mongoose.models.Budget;
 }

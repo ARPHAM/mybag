@@ -34,4 +34,7 @@ const TaskSchema = new mongoose.Schema<ITask>({
   mp_penalty_applied: { type: Boolean, required: true, default: false },
 }, { timestamps: true });
 
+TaskSchema.index({ user_id: 1, status: 1, due_date: 1 });
+TaskSchema.index({ user_id: 1, createdAt: -1 });
+
 export default mongoose.models.Task || mongoose.model<ITask>('Task', TaskSchema);

@@ -18,6 +18,8 @@ const WalletSchema = new mongoose.Schema<IWallet>({
   color: { type: String, required: true, default: '#0055ff' }
 }, { timestamps: true });
 
+WalletSchema.index({ user_id: 1 });
+
 // Prevent caching in dev
 if (mongoose.models.Wallet) {
   delete mongoose.models.Wallet;

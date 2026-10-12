@@ -14,4 +14,6 @@ const WeightLogSchema = new mongoose.Schema<IWeightLog>({
   date: { type: Date, required: true },
 }, { timestamps: true });
 
+WeightLogSchema.index({ user_id: 1, date: -1 });
+
 export default mongoose.models.WeightLog || mongoose.model<IWeightLog>('WeightLog', WeightLogSchema);
