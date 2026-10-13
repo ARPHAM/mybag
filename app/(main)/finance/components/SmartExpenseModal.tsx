@@ -36,8 +36,8 @@ export default function SmartExpenseModal({
     setParsedResult(null);
     try {
       const res: any = await parseSmartExpense(inputText);
-      if (res?.data?.success && res?.data?.data) {
-        setParsedResult(res.data.data);
+      if (res?.success && res?.data) {
+        setParsedResult(res.data);
       } else {
         showAlert("Không thể phân tích dữ liệu, vui lòng kiểm tra lại câu nhập");
       }
@@ -55,8 +55,8 @@ export default function SmartExpenseModal({
     setIsExecuting(true);
     try {
       const res: any = await executeSmartExpense(parsedResult.actions);
-      if (res?.data?.success) {
-        showAlert(`🎉 ${res.data.message || 'Thực hiện thành công!'}`);
+      if (res?.success) {
+        showAlert(`🎉 ${res.message || 'Thực hiện thành công!'}`);
         handleClose();
         onSuccess();
       }

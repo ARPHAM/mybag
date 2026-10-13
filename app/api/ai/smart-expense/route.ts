@@ -4,6 +4,8 @@ import dbConnect from '@/lib/db';
 import Wallet from '@/models/Wallet';
 import Transaction from '@/models/Transaction';
 import Debt from '@/models/Debt';
+import MealLog from '@/models/MealLog';
+import User from '@/models/User';
 import { verifyToken } from '@/lib/auth';
 import { generateContentWithFallback } from '@/lib/ai';
 
@@ -50,6 +52,7 @@ Nhiệm vụ của bạn:
    - Hành động 1: Chi tiêu ăn uống 40.000đ (danh mục food).
    - Hành động 2: Cho vay / Trả hộ anh Tiệp 40.000đ (loại nợ: lent, người: Anh Tiệp).
    - Cả 2 đều trừ từ ví MB Bank tương ứng.
+3. Nếu là món ăn/đồ uống người dùng TỰ ĂN (VD "ăn phở bò 50k", "uống trà sữa 30k"), dùng actionType "meal" (KHÔNG dùng expense) và ước tính dinh dưỡng của 1 suất tiêu chuẩn. Hệ thống sẽ tự tạo cả lịch sử ăn uống lẫn chi tiêu. Món ăn được người khác đãi/miễn phí thì amount = 0 và vẫn dùng "meal".
 
 Danh mục chi tiêu hợp lệ (category):
 - "food" (Ăn uống)
@@ -69,7 +72,10 @@ Yêu cầu trả về DUY NHẤT một chuỗi JSON hợp lệ với cấu trúc
   },
   "actions": [
     {
-      "actionType": "expense" | "income" | "debt_lent" | "debt_borrowed",
+      "actionType": "expense" | "income" | "debt_lent" | "debt_borrowed" | "meal",
+      "food_name": "Tên món (chỉ cho meal)",
+      "meal_tier": "HEAVY" | "LIGHT" | "DRINK" (chỉ cho meal),
+      "calo": number, "protein": number, "fat": number, "carbs": number, "sugar": number (chỉ cho meal, đơn vị gram/kcal),
       "amount": number (số tiền VND, vd 40000),
       "category": "food" | "housing" | "transport" | "entertainment" | "shopping" | "health" | "other" (chỉ cần cho expense/income),
       "description": "Mô tả hành động",
@@ -121,7 +127,62 @@ export async function PUT(req: Request) {
     const now = new Date();
 
     for (const action of actions) {
-      const amount = Number(action.amount);
+      const amount = Number(action.amount) || 0;
+
+      if (action.actionType === 'meal') {
+        let txId: any = undefined;
+        if (amount > 0) {
+          if (action.wallet_id) {
+            await Wallet.findOneAndUpdate(
+              { _id: action.wallet_id, user_id: decoded.userId },
+              { $inc: { balance: -amount } }
+            );
+          }
+          const tx = await Transaction.create({
+            user_id: decoded.userId,
+            type: 'expense',
+            amount,
+            date: now,
+            description: `Ăn uống: ${action.food_name || action.description}`,
+            category: 'food',
+            wallet_id: action.wallet_id || undefined,
+            walletName: action.walletName || 'Ví không xác định'
+          });
+          txId = tx._id;
+        }
+
+        const calo = Math.max(0, Number(action.calo) || 0);
+        const hp = Math.floor(calo * 1.0); // 1 Calo = 1 HP (đồng bộ với calculate-macros)
+        const tier = ['HEAVY', 'LIGHT', 'DRINK'].includes(action.meal_tier) ? action.meal_tier : 'LIGHT';
+
+        const meal = await MealLog.create({
+          user_id: decoded.userId,
+          food_name: action.food_name || action.description || 'Bữa ăn',
+          meal_tier: tier,
+          hp_restored: hp,
+          consumed_at: now,
+          calo,
+          protein: Number(action.protein) || 0,
+          fat: Number(action.fat) || 0,
+          carbs: Number(action.carbs) || 0,
+          sugar: Number(action.sugar) || 0,
+          cost: amount,
+          ai_status: 'completed',
+          ai_description: 'Ghi nhận bởi Yui',
+          source: 'eat_out',
+          transaction_id: txId,
+          wallet_id: amount > 0 ? action.wallet_id : undefined
+        });
+
+        const user = await User.findById(decoded.userId);
+        if (user) {
+          user.current_hp = Math.min(user.max_hp, user.current_hp + hp);
+          await user.save();
+        }
+        executedResults.push({ type: 'meal', id: meal._id, amount, hp });
+        continue;
+      }
+
       if (!amount || amount <= 0) continue;
 
       if (action.actionType === 'expense') {

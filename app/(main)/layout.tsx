@@ -16,6 +16,7 @@ import {
 import { AlertProvider } from '../contexts/AlertContext';
 import { getUserProfile } from './api';
 import SaoAlert from '../components/SaoAlert/SaoAlert';
+import YuiAssistant from '../components/YuiAssistant/YuiAssistant';
 import SaoHeaderStatus from '../components/SaoHeaderStatus/SaoHeaderStatus';
 import styles from './layout.module.css';
 
@@ -161,6 +162,7 @@ export default function DashboardLayout({
           <AlertProvider>
             {children}
             <SaoAlert />
+            <YuiAssistant />
           </AlertProvider>
         </div>
       </div>
