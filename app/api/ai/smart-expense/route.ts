@@ -35,12 +35,48 @@ export async function POST(req: Request) {
       balance: w.balance
     }));
 
+    // Ngữ cảnh đọc thêm cho câu hỏi (tính sẵn ở server để số liệu chính xác)
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const [monthTx, recentTx, openDebts] = await Promise.all([
+      Transaction.find({ user_id: decoded.userId, date: { $gte: monthStart } }).lean(),
+      Transaction.find({ user_id: decoded.userId }).sort({ date: -1 }).limit(15).lean(),
+      Debt.find({ user_id: decoded.userId, status: { $ne: 'paid' } }).lean()
+    ]);
+
+    let monthIncome = 0, monthExpense = 0;
+    const expenseByCategory: Record<string, number> = {};
+    (monthTx as any[]).forEach(t => {
+      if (t.type === 'income') monthIncome += t.amount;
+      else if (t.type === 'expense') {
+        monthExpense += t.amount;
+        const c = t.category || 'other';
+        expenseByCategory[c] = (expenseByCategory[c] || 0) + t.amount;
+      }
+    });
+    const financeContext = {
+      thang_nay: { tong_thu: monthIncome, tong_chi: monthExpense, chi_theo_danh_muc: expenseByCategory },
+      giao_dich_gan_day: (recentTx as any[]).map(t => ({
+        ngay: new Date(t.date).toISOString().split('T')[0],
+        loai: t.type, so_tien: t.amount, mo_ta: t.description, danh_muc: t.category, vi: t.walletName
+      })),
+      so_no_chua_tra: (openDebts as any[]).map(d => ({
+        nguoi: d.personName,
+        loai: d.type === 'lent' ? 'cho vay (họ nợ mình)' : 'đi vay (mình nợ họ)',
+        con_lai: d.remainingAmount, tong: d.totalAmount
+      }))
+    };
+
     // 2. Build prompt for Gemini AI
     const prompt = `Bạn là một trợ lý tài chính thông minh của hệ thống MyBag (SAO Life System).
 Người dùng nhập một câu văn tự nhiên ghi lại chi tiêu, thu nhập hoặc cho vay/nợ.
 
-Danh sách ví hiện có của người dùng:
+Danh sách ví hiện có của người dùng (Tổng số dư tất cả ví: ${walletListContext.reduce((s, w) => s + (w.balance || 0), 0)} VND):
 ${JSON.stringify(walletListContext, null, 2)}
+
+Dữ liệu tài chính tham khảo (dùng để trả lời câu hỏi, số liệu đã được tính sẵn, đừng tự tính lại):
+${JSON.stringify(financeContext, null, 2)}
 
 Câu người dùng nhập:
 "${text}"
@@ -53,6 +89,7 @@ Nhiệm vụ của bạn:
    - Hành động 2: Cho vay / Trả hộ anh Tiệp 40.000đ (loại nợ: lent, người: Anh Tiệp).
    - Cả 2 đều trừ từ ví MB Bank tương ứng.
 3. Nếu là món ăn/đồ uống người dùng TỰ ĂN (VD "ăn phở bò 50k", "uống trà sữa 30k"), dùng actionType "meal" (KHÔNG dùng expense) và ước tính dinh dưỡng của 1 suất tiêu chuẩn. Hệ thống sẽ tự tạo cả lịch sử ăn uống lẫn chi tiêu. Món ăn được người khác đãi/miễn phí thì amount = 0 và vẫn dùng "meal".
+4. Nếu người dùng chỉ HỎ/trò chuyện (VD "còn bao nhiêu tiền", "ví nào nhiều nhất") thì để "actions": [] và trả lời trực tiếp, thân mật (xưng "Yui", gọi người dùng là "Papa") trong trường "reply", dựa trên dữ liệu ví ở trên. Tuyệt đối KHÔNG tự bịa số liệu.
 
 Danh mục chi tiêu hợp lệ (category):
 - "food" (Ăn uống)
@@ -66,6 +103,7 @@ Danh mục chi tiêu hợp lệ (category):
 Yêu cầu trả về DUY NHẤT một chuỗi JSON hợp lệ với cấu trúc sau, KHÔNG kèm giải thích thêm ngoài JSON:
 {
   "summary": "Tóm tắt ngắn gọn các hành động",
+  "reply": "Câu trả lời trực tiếp cho người dùng (bắt buộc khi actions rỗng)",
   "matched_wallet": {
     "id": "ID của ví khớp từ danh sách trên",
     "name": "Tên ví khớp"

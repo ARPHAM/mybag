@@ -34,7 +34,9 @@ export default function YuiAssistant() {
     try {
       const res: any = await parseSmartExpense(text);
       const plan = res?.data;
-      if (!plan?.actions?.length) {
+      if (plan && !plan.actions?.length && (plan.reply || plan.summary)) {
+        setMsgs(m => [...m, { role: 'yui', text: plan.reply || plan.summary }]);
+      } else if (!plan?.actions?.length) {
         setMsgs(m => [...m, { role: 'yui', text: 'Hmm, Yui chưa hiểu lắm. Papa nói rõ số tiền và món/việc giúp Yui nha?' }]);
       } else {
         setMsgs(m => [...m, { role: 'yui', text: plan.summary || 'Yui hiểu thế này, Papa xác nhận nhé:', plan }]);
