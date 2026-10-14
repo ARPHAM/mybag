@@ -12,7 +12,7 @@ import ShoppingItem from '@/models/ShoppingItem';
 import WeightLog from '@/models/WeightLog';
 import Recipe from '@/models/Recipe';
 import { generateContentWithFallback } from '@/lib/ai';
-import { getExpandedCalendarEvents, formatVnDateTime, formatVnDateOnly } from '@/lib/calendarHelper';
+import { getExpandedCalendarEvents, formatVnDateTime, formatVnDateOnly, getVnDayOfWeek } from '@/lib/calendarHelper';
 
 const EXP_REWARDS: Record<string, number> = {
   S: 1000,
@@ -46,40 +46,158 @@ export function capitalizeFirst(str: string): string {
 }
 
 /**
- * Hàm trích xuất JSON an toàn tuyệt đối từ phản hồi của LLM,
- * tự động bóc tách kể cả khi model chèn thêm lời dẫn hay block markdown ```json ... ```.
+ * Hàm trích xuất JSON an toàn tuyệt đối từ phản hồi của LLM:
+ * - Hỗ trợ cả Object {...} và Array [...]
+ * - Xử lý trailing commas
+ * - Fallback trả về object hội thoại chuẩn nếu AI trả lời dạng text tự nhiên (không bao giờ quăng lỗi làm sập giao diện).
  */
-function extractJsonFromAiResponse(raw: string): any {
+export function extractJsonFromAiResponse(raw: string): any {
   if (!raw || typeof raw !== 'string') {
-    throw new Error('Phản hồi từ AI rỗng');
+    return {
+      summary: 'Yui trả lời',
+      reply: 'Dạ Yui đây ạ! Papa cần Yui hỗ trợ gì thế ạ?',
+      actions: []
+    };
   }
 
   const cleaned = raw.trim();
 
+  const tryParse = (str: string) => {
+    try {
+      return JSON.parse(str);
+    } catch {
+      try {
+        // Xóa trailing commas: { a: 1, } hoặc [ 1, ]
+        const sanitized = str.replace(/,\s*([}\]])/g, '$1');
+        return JSON.parse(sanitized);
+      } catch {
+        return null;
+      }
+    }
+  };
+
   // 1. Thử parse trực tiếp
-  try {
-    return JSON.parse(cleaned);
-  } catch {}
+  const direct = tryParse(cleaned);
+  if (direct) return direct;
 
   // 2. Thử tìm khối code block ```json ... ``` hoặc ``` ... ```
   const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (codeBlockMatch) {
-    try {
-      return JSON.parse(codeBlockMatch[1].trim());
-    } catch {}
+    const fromBlock = tryParse(codeBlockMatch[1].trim());
+    if (fromBlock) return fromBlock;
   }
 
   // 3. Thử tìm cặp ngoặc nhọn { ... } ngoài cùng
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    try {
-      return JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
-    } catch {}
+    const fromBrace = tryParse(cleaned.substring(firstBrace, lastBrace + 1));
+    if (fromBrace) return fromBrace;
   }
 
-  console.error("Failed to extract JSON from AI response:", raw);
-  throw new Error('Yui không thể định dạng dữ liệu, Papa thử lại giúp Yui nhé!');
+  // 4. Thử tìm cặp ngoặc vuông [ ... ] ngoài cùng (cho router hoặc mảng)
+  const firstBracket = cleaned.indexOf('[');
+  const lastBracket = cleaned.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    const fromBracket = tryParse(cleaned.substring(firstBracket, lastBracket + 1));
+    if (fromBracket) return fromBracket;
+  }
+
+  // 5. Fallback nhân đạo: Nếu model chỉ trả về câu trò chuyện bằng text thuần mà không định dạng JSON
+  console.warn("AI returned conversational text instead of strict JSON:", cleaned);
+  const cleanReply = cleaned
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  return {
+    summary: 'Yui trò chuyện cùng Papa',
+    reply: cleanReply,
+    actions: []
+  };
+}
+
+/**
+ * Nhận diện phạm vi nghiệp vụ siêu tốc (Fast-Path Scope Detection) bằng regex:
+ * Chạy trong 0ms, không tốn AI token/quota, chống hoàn toàn lỗi 429 rate limit khi hỏi nhiều câu liên tiếp.
+ */
+export function detectFastScopes(text: string): YuiDataScope[] | null {
+  const t = text.toLowerCase().trim();
+  const scopes = new Set<YuiDataScope>();
+
+  // Lịch trình & Cuộc hẹn
+  if (
+    /\b(lịch|lich|hẹn|hen|cuộc họp|cuoc hop|thời gian biểu|thoi gian bieu|rảnh không|ranh khong|bận không|ban khong)\b/i.test(t) ||
+    /\b(tuần tới|tuan toi|tuần sau|tuan sau|cuối tuần|cuoi tuan|ngày mai có việc gì|ngay mai co viec gi)\b/i.test(t)
+  ) {
+    scopes.add('calendar');
+  }
+
+  // Câu hỏi tổng quan ngày hôm nay ("hôm nay có gì", "thế lịch hôm nay có gì", "hôm nay thế nào")
+  if (
+    /\b(hôm nay có gì|hom nay co gi|hôm nay thế nào|hom nay the nao|hôm nay có việc gì|có việc gì làm|phải làm gì)\b/i.test(t)
+  ) {
+    scopes.add('calendar');
+    scopes.add('tasks');
+  }
+
+  // Nhiệm vụ & Quests SAO
+  if (
+    /\b(nhiệm vụ|nhiem vu|quest|task|việc cần làm|viec can lam|việc phải làm|xong việc|hoàn thành|qua hạn|quá hạn)\b/i.test(t)
+  ) {
+    scopes.add('tasks');
+  }
+
+  // Tài chính & Ví & Tiền nong
+  if (
+    /\b(tiền|tien|ví|vi|momo|mb|mb bank|bank|tiền mặt|tien mat|số dư|so du|chi tiêu|chi tieu|thu nhập|thu nhap|lương|luong|giao dịch|giao dich|vay|nợ|no|ngân sách|ngan sach|chi hết|tốn bao nhiêu)\b/i.test(t) ||
+    /\b(\d+k|\d+tr|\d+\s*(nghìn|ngàn|triệu|dong|đ|vnd))\b/i.test(t)
+  ) {
+    scopes.add('finances');
+  }
+
+  // Bữa ăn & Dinh dưỡng
+  if (
+    /\b(ăn|an|uống|uong|bữa sáng|bua sang|bữa trưa|bua trua|bữa tối|bua toi|cà phê|ca phe|bánh mì|banh mi|phở|pho|cơm|com|calo|bún|bun|trà sữa|tra sua|uống nước|hồi máu|hp)\b/i.test(t)
+  ) {
+    scopes.add('meals_nutrition');
+    scopes.add('finances');
+  }
+
+  // Kho đồ tủ lạnh & Công thức nấu ăn
+  if (
+    /\b(tủ lạnh|tu lanh|kho đồ|kho do|nguyên liệu|nguyen lieu|hết hạn|het han|nấu gì|nau gi|món gì|mon gi|công thức|cong thuc|cất vào tủ|bảo quản)\b/i.test(t)
+  ) {
+    scopes.add('inventory_recipes');
+  }
+
+  // Cân nặng & Sức khỏe
+  if (
+    /\b(cân nặng|can nang|cân|can|kg|chiều cao|chieu cao|nặng bao nhiêu|sức khỏe|suc khoe)\b/i.test(t)
+  ) {
+    scopes.add('weight_health');
+  }
+
+  // Danh sách mua sắm
+  if (
+    /\b(mua sắm|mua sam|shopping|danh sách mua|cần mua|can mua)\b/i.test(t)
+  ) {
+    scopes.add('shopping');
+  }
+
+  // Trò chuyện thông thường / Chào hỏi
+  if (
+    scopes.size === 0 &&
+    /\b(chào|chao|hi|hello|yui ơi|yui oi|cảm ơn|cam on|thanks|tạm biệt|tam biet|em là ai|bạn là ai)\b/i.test(t)
+  ) {
+    scopes.add('general_chat');
+  }
+
+  if (scopes.size > 0) {
+    return Array.from(scopes);
+  }
+
+  return null;
 }
 
 /**
@@ -129,7 +247,20 @@ export async function buildUserSystemContext(
   const todayVnStr = vnFormatter.format(now); // "YYYY-MM-DD"
   const todayStart = new Date(`${todayVnStr}T00:00:00+07:00`);
   const todayEnd = new Date(`${todayVnStr}T23:59:59.999+07:00`);
-  const sevenDaysLater = new Date(todayEnd.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  // Tính các mốc tuần này và tuần tới chuẩn theo múi giờ Việt Nam (bắt đầu Thứ 2 -> kết thúc Chủ Nhật)
+  const vnDay = getVnDayOfWeek(todayStart); // 0: Chủ Nhật, 1: Thứ Hai, ..., 6: Thứ Bảy
+  const daysSinceMonday = vnDay === 0 ? 6 : vnDay - 1;
+  const daysUntilSunday = vnDay === 0 ? 0 : 7 - vnDay;
+
+  const thisMondayStart = new Date(todayStart.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000);
+  const thisSundayEnd = new Date(todayStart.getTime() + (daysUntilSunday + 1) * 24 * 60 * 60 * 1000 - 1);
+
+  const nextMondayStart = new Date(thisSundayEnd.getTime() + 1);
+  const nextSundayEnd = new Date(nextMondayStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+
+  // Mở rộng tìm kiếm lịch trình tới 30 ngày để Yui nắm trọn lịch tuần này, tuần tới và cả tháng
+  const thirtyDaysLater = new Date(todayEnd.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   // 1. Tự động chuyển các task quá hạn thành OVERDUE nếu cần tasks
   if (needTasks) {
@@ -167,7 +298,7 @@ export async function buildUserSystemContext(
     needTasks ? Task.find({ user_id: userId, status: { $in: ['PENDING', 'IN_PROGRESS'] } }).sort({ due_date: 1 }).limit(15).lean() : Promise.resolve([]),
     needTasks ? Task.find({ user_id: userId, status: 'OVERDUE' }).sort({ due_date: 1 }).limit(10).lean() : Promise.resolve([]),
     needTasks ? Task.find({ user_id: userId, status: 'COMPLETED' }).sort({ completed_at: -1 }).limit(5).lean() : Promise.resolve([]),
-    needCalendar ? getExpandedCalendarEvents(userId, todayStart, sevenDaysLater) : Promise.resolve([]),
+    needCalendar ? getExpandedCalendarEvents(userId, todayStart, thirtyDaysLater) : Promise.resolve([]),
     needMeals ? MealLog.find({ user_id: userId, consumed_at: { $gte: todayStart } }).sort({ consumed_at: -1 }).lean() : Promise.resolve([]),
     needWeight ? WeightLog.findOne({ user_id: userId }).sort({ date: -1 }).lean() : Promise.resolve(null),
     needShopping ? ShoppingItem.find({ user_id: userId, checked: false }).limit(20).lean() : Promise.resolve([]),
@@ -300,47 +431,57 @@ export async function buildUserSystemContext(
 
   // Lịch trình (mở rộng đầy đủ cả sự kiện một lần và sự kiện lặp lại)
   if (needCalendar) {
+    const formatEventForYui = (e: any) => ({
+      id: e._id.toString(),
+      tieu_de: e.title,
+      thu_va_ngay: formatVnDateOnly(e.start_time),
+      thoi_gian: `${new Date(e.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} - ${new Date(e.end_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}`,
+      bat_dau: formatVnDateTime(e.start_time),
+      bat_dau_iso: new Date(e.start_time).toISOString(),
+      ket_thuc: formatVnDateTime(e.end_time),
+      ket_thuc_iso: new Date(e.end_time).toISOString(),
+      ghi_chu: e.description || '',
+      la_lich_lap: !!(e.is_recurring || e.is_virtual || e.parent_event_id),
+      loai_lap: e.recurrence_type || null
+    });
+
+    // 1. Sự kiện hôm nay
     const todayEvents = (expandedCalendarEvents as any[]).filter(e => {
       const eStart = new Date(e.start_time);
       const eEnd = new Date(e.end_time);
       return eStart <= todayEnd && eEnd >= todayStart;
     });
 
-    const upcoming7DaysEvents = (expandedCalendarEvents as any[]).filter(e => {
+    // 2. Sự kiện còn lại trong tuần này (từ ngày mai đến hết Chủ Nhật tuần này)
+    const restOfThisWeekEvents = (expandedCalendarEvents as any[]).filter(e => {
+      const eStart = new Date(e.start_time);
+      return eStart > todayEnd && eStart <= thisSundayEnd;
+    });
+
+    // 3. Toàn bộ sự kiện tuần tới / tuần sau (từ Thứ Hai tuần sau đến hết Chủ Nhật tuần sau)
+    const nextWeekEvents = (expandedCalendarEvents as any[]).filter(e => {
+      const eStart = new Date(e.start_time);
+      return eStart >= nextMondayStart && eStart <= nextSundayEnd;
+    });
+
+    // 4. Tất cả sự kiện sắp tới trong 30 ngày (tối đa 30 sự kiện)
+    const upcoming30DaysEvents = (expandedCalendarEvents as any[]).filter(e => {
       const eStart = new Date(e.start_time);
       return eStart > todayEnd;
     });
 
     context.lich_trinh = {
+      thong_tin_thoi_gian: {
+        hom_nay: formatVnDateOnly(todayStart),
+        tuan_nay: `${formatVnDateOnly(thisMondayStart)} đến ${formatVnDateOnly(thisSundayEnd)}`,
+        tuan_toi_tuan_sau: `${formatVnDateOnly(nextMondayStart)} đến ${formatVnDateOnly(nextSundayEnd)}`
+      },
       tong_so_su_kien_hom_nay: todayEvents.length,
-      su_kien_hom_nay: todayEvents.map(e => ({
-        id: e._id.toString(),
-        tieu_de: e.title,
-        thu_va_ngay: formatVnDateOnly(e.start_time),
-        thoi_gian: `${new Date(e.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} - ${new Date(e.end_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}`,
-        bat_dau: formatVnDateTime(e.start_time),
-        bat_dau_iso: new Date(e.start_time).toISOString(),
-        ket_thuc: formatVnDateTime(e.end_time),
-        ket_thuc_iso: new Date(e.end_time).toISOString(),
-        ghi_chu: e.description || '',
-        la_lich_lap: !!(e.is_recurring || e.is_virtual || e.parent_event_id),
-        loai_lap: e.recurrence_type || null
-      })),
-      su_kien_sap_toi_7_ngay: upcoming7DaysEvents.slice(0, 15).map(e => ({
-        id: e._id.toString(),
-        tieu_de: e.title,
-        thu_va_ngay: formatVnDateOnly(e.start_time),
-        thoi_gian: `${new Date(e.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} - ${new Date(e.end_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}`,
-        bat_dau: formatVnDateTime(e.start_time),
-        bat_dau_iso: new Date(e.start_time).toISOString(),
-        ket_thuc: formatVnDateTime(e.end_time),
-        ket_thuc_iso: new Date(e.end_time).toISOString(),
-        ghi_chu: e.description || '',
-        la_lich_lap: !!(e.is_recurring || e.is_virtual || e.parent_event_id),
-        loai_lap: e.recurrence_type || null
-      }))
+      su_kien_hom_nay: todayEvents.map(formatEventForYui),
+      su_kien_con_lai_tuan_nay: restOfThisWeekEvents.map(formatEventForYui),
+      su_kien_tuan_toi_tuan_sau: nextWeekEvents.map(formatEventForYui),
+      tat_ca_su_kien_sap_toi_30_ngay: upcoming30DaysEvents.slice(0, 30).map(formatEventForYui)
     };
-
   }
 
   // Sức khỏe & Bữa ăn
@@ -423,11 +564,17 @@ ${lines.join('\n')}
   // =========================================================================
   let detectedScopes: YuiDataScope[] = ['all'];
 
-  const routerPrompt = `Bạn là hệ thống phân loại ý định (Intent Router) của Trợ lý ảo Yui (SAO).
+  // BƯỚC 1.1: Fast-Path Regex Router (0ms, không tốn AI token/quota, chống 429 rate limit)
+  const fastScopes = detectFastScopes(text);
+  if (fastScopes && fastScopes.length > 0) {
+    detectedScopes = fastScopes;
+  } else {
+    // BƯỚC 1.2: AI Router (Chỉ gọi khi câu hỏi phức tạp hoặc phụ thuộc lịch sử ngữ cảnh)
+    const routerPrompt = `Bạn là hệ thống phân loại ý định (Intent Router) của Trợ lý ảo Yui (SAO).
 Dựa vào câu nói mới nhất của Papa và lịch sử đối thoại, hãy xác định các mảng dữ liệu nghiệp vụ (scopes) mà hệ thống CẦN TRUY XUẤT từ Database để cung cấp cho Yui trả lời hoặc thực thi.
 
 CÁC MẢNG NGHIỆP VỤ (SCOPES) HỢP LỆ:
-- "calendar": Lịch trình, cuộc hẹn, sự kiện diễn ra hôm nay / tuần này, sự kiện lặp lại, thêm sự kiện mới ("hôm nay có lịch gì?", "hôm nay có rảnh không?", "thêm lịch họp lúc 14h chiều nay").
+- "calendar": Lịch trình, cuộc hẹn, sự kiện diễn ra hôm nay / tuần này / tuần tới, sự kiện lặp lại, thêm sự kiện mới ("hôm nay có lịch gì?", "tuần tới có lịch gì?", "hôm nay có rảnh không?", "thêm lịch họp lúc 14h chiều nay").
 - "tasks": Nhiệm vụ, Quest SAO, việc cần làm hôm nay, việc quá hạn, hoàn thành quest, tạo quest mới ("hôm nay có nhiệm vụ gì?", "xong quest dọn dẹp").
 - "finances": Tiền nong, kiểm tra số dư ví, báo cáo chi tiêu, thu nhập, lịch sử giao dịch, vay nợ, ngân sách, hoặc khi thực hiện hành động chi tiêu/thu tiền.
 - "inventory_recipes": Tủ lạnh, kho thực phẩm, đồ sắp hết hạn, công thức nấu ăn, tư vấn nấu món từ nguyên liệu có sẵn ("kho có gì?", "nấu được món gì?").
@@ -449,15 +596,18 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ (không kèm văn bản nào
   "scopes": ["calendar", ...]
 }`;
 
-  try {
-    const routeResRaw = await generateContentWithFallback(routerPrompt, undefined, true);
-    const routeJson = extractJsonFromAiResponse(routeResRaw);
-    if (routeJson?.scopes && Array.isArray(routeJson.scopes) && routeJson.scopes.length > 0) {
-      detectedScopes = routeJson.scopes as YuiDataScope[];
+    try {
+      const routeResRaw = await generateContentWithFallback(routerPrompt, undefined, true);
+      const routeJson = extractJsonFromAiResponse(routeResRaw);
+      if (Array.isArray(routeJson)) {
+        detectedScopes = routeJson as YuiDataScope[];
+      } else if (routeJson?.scopes && Array.isArray(routeJson.scopes) && routeJson.scopes.length > 0) {
+        detectedScopes = routeJson.scopes as YuiDataScope[];
+      }
+    } catch (err) {
+      console.warn("Yui Router Turn 1 fallback to all:", err);
+      detectedScopes = ['all'];
     }
-  } catch (err) {
-    console.warn("Yui Router Turn 1 fallback to all:", err);
-    detectedScopes = ['all'];
   }
 
   // =========================================================================
@@ -534,11 +684,18 @@ QUY TẮC VỀ LỊCH TRÌNH VÀ THỨ TRONG TUẦN (CALENDAR & WEEKDAY ACCURACY
 - Thời gian hiện tại của hệ thống: ${nowStr}.
 - BẮT BUỘC SỬ DỤNG CHÍNH XÁC THỨ TRONG TUẦN TỪ TRƯỜNG "thu_va_ngay", TUYỆT ĐỐI KHÔNG TỰ TÍNH NHẨM HOẶC SUY DIỄN THỨ TRONG TUẦN!
   (Ví dụ: Ngày 14/10/2026 là Thứ Tư; Ngày 18/10/2026 là Chủ Nhật; TUYỆT ĐỐI KHÔNG ĐƯỢC báo 14/10 là Thứ Ba hay 18/10 là Thứ Bảy).
-- Khi Papa hỏi về lịch trình ("hôm nay có lịch gì không?", "hôm nay có việc gì làm?", "lịch hôm nay thế nào?", "lịch tuần này ra sao?"):
-  * BẮT BUỘC kiểm tra trường "lich_trinh.su_kien_hom_nay" và "lich_trinh.su_kien_sap_toi_7_ngay" trong DỮ LIỆU HIỆN TẠI!
-  * Danh sách này ĐÃ ĐƯỢC hệ thống mở rộng và tính toán chính xác cho cả các sự kiện lặp lại (hàng ngày, hàng tuần, hàng năm).
-  * Nếu "lich_trinh.su_kien_hom_nay" có sự kiện (kể cả có cờ 'la_lich_lap': true), TUYỆT ĐỐI KHÔNG ĐƯỢC báo ngày trống! Hãy liệt kê cụ thể từng sự kiện với thứ và ngày ('thu_va_ngay'), mốc thời gian ('thoi_gian'), tiêu đề ('tieu_de'), ghi chú ('ghi_chu') và loại lặp ('loai_lap') nếu có, rồi nhắc nhở Papa chuẩn bị chu đáo.
-  * Chỉ khi "lich_trinh.tong_so_su_kien_hom_nay" === 0 và "nhiem_vu_quests.can_lam_hom_nay_va_sap_toi" cũng không có việc thì mới báo hôm nay Papa rảnh rỗi.
+- Khi Papa hỏi về lịch trình:
+  * "hôm nay có lịch gì?", "lịch hôm nay", "thế lịch hôm nay có gì?", "hôm nay có rảnh không?":
+    -> BẮT BUỘC kiểm tra trường "lich_trinh.su_kien_hom_nay"!
+    -> Nếu có sự kiện (kể cả có cờ 'la_lich_lap': true), TUYỆT ĐỐI KHÔNG ĐƯỢC báo ngày trống! Hãy liệt kê cụ thể từng sự kiện với thứ và ngày ('thu_va_ngay'), mốc thời gian ('thoi_gian'), tiêu đề ('tieu_de'), ghi chú ('ghi_chu') và loại lặp ('loai_lap') nếu có.
+  * "tuần này có gì?", "còn lại trong tuần", "cuối tuần này":
+    -> BẮT BUỘC xem cả "lich_trinh.su_kien_hom_nay" và "lich_trinh.su_kien_con_lai_tuan_nay"!
+  * "tuần tới", "tuần sau", "lịch trình tuần tới có gì?":
+    -> BẮT BUỘC xem trường "lich_trinh.su_kien_tuan_toi_tuan_sau" (đã được hệ thống tổng hợp đầy đủ từ Thứ Hai đến Chủ Nhật tuần sau)!
+    -> Nếu có sự kiện, hãy liệt kê đầy đủ từng ngày trong tuần tới cho Papa. Tuyệt đối không nói chỉ có dữ liệu 7 ngày!
+  * "sắp tới", "30 ngày tới", "tháng này":
+    -> Xem "lich_trinh.tat_ca_su_kien_sap_toi_30_ngay".
+  * Chỉ khi danh sách sự kiện cần xem rỗng và "nhiem_vu_quests.can_lam_hom_nay_va_sap_toi" cũng không có việc thì mới báo khoảng thời gian đó Papa rảnh rỗi.
 
 
 NHIỆM VỤ CỦA BẠN:
