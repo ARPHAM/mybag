@@ -13,13 +13,45 @@ export function getVnDayOfWeek(date: Date): number {
 /**
  * Trả về chuỗi ngày YYYY-MM-DD theo múi giờ Việt Nam (UTC+7)
  */
-export function getVnDateKey(date: Date): string {
-  const vnTime = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+export function getVnDateKey(date: Date | string): string {
+  const d = new Date(date);
+  const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
   const y = vnTime.getUTCFullYear();
   const m = String(vnTime.getUTCMonth() + 1).padStart(2, '0');
-  const d = String(vnTime.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const dNum = String(vnTime.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${dNum}`;
 }
+
+/**
+ * Trả về chuỗi đầy đủ: "Thứ X, ngày DD/MM/YYYY lúc HH:mm" theo giờ Việt Nam (UTC+7)
+ */
+export function formatVnDateTime(date: Date | string): string {
+  const d = new Date(date);
+  const vnDays = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  const dayName = vnDays[vnTime.getUTCDay()];
+  const day = String(vnTime.getUTCDate()).padStart(2, '0');
+  const month = String(vnTime.getUTCMonth() + 1).padStart(2, '0');
+  const year = vnTime.getUTCFullYear();
+  const hours = String(vnTime.getUTCHours()).padStart(2, '0');
+  const minutes = String(vnTime.getUTCMinutes()).padStart(2, '0');
+  return `${dayName}, ngày ${day}/${month}/${year} lúc ${hours}:${minutes}`;
+}
+
+/**
+ * Trả về chuỗi Thứ và Ngày: "Thứ X, ngày DD/MM/YYYY" theo giờ Việt Nam (UTC+7)
+ */
+export function formatVnDateOnly(date: Date | string): string {
+  const d = new Date(date);
+  const vnDays = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  const dayName = vnDays[vnTime.getUTCDay()];
+  const day = String(vnTime.getUTCDate()).padStart(2, '0');
+  const month = String(vnTime.getUTCMonth() + 1).padStart(2, '0');
+  const year = vnTime.getUTCFullYear();
+  return `${dayName}, ngày ${day}/${month}/${year}`;
+}
+
 
 /**
  * Mở rộng tất cả sự kiện (bao gồm sự kiện một lần và các biến thể ảo của sự kiện lặp lại)

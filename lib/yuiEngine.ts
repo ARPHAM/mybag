@@ -12,7 +12,7 @@ import ShoppingItem from '@/models/ShoppingItem';
 import WeightLog from '@/models/WeightLog';
 import Recipe from '@/models/Recipe';
 import { generateContentWithFallback } from '@/lib/ai';
-import { getExpandedCalendarEvents } from '@/lib/calendarHelper';
+import { getExpandedCalendarEvents, formatVnDateTime, formatVnDateOnly } from '@/lib/calendarHelper';
 
 const EXP_REWARDS: Record<string, number> = {
   S: 1000,
@@ -316,10 +316,11 @@ export async function buildUserSystemContext(
       su_kien_hom_nay: todayEvents.map(e => ({
         id: e._id.toString(),
         tieu_de: e.title,
+        thu_va_ngay: formatVnDateOnly(e.start_time),
         thoi_gian: `${new Date(e.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} - ${new Date(e.end_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}`,
-        bat_dau: new Date(e.start_time).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+        bat_dau: formatVnDateTime(e.start_time),
         bat_dau_iso: new Date(e.start_time).toISOString(),
-        ket_thuc: new Date(e.end_time).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+        ket_thuc: formatVnDateTime(e.end_time),
         ket_thuc_iso: new Date(e.end_time).toISOString(),
         ghi_chu: e.description || '',
         la_lich_lap: !!(e.is_recurring || e.is_virtual || e.parent_event_id),
@@ -328,15 +329,18 @@ export async function buildUserSystemContext(
       su_kien_sap_toi_7_ngay: upcoming7DaysEvents.slice(0, 15).map(e => ({
         id: e._id.toString(),
         tieu_de: e.title,
-        bat_dau: new Date(e.start_time).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+        thu_va_ngay: formatVnDateOnly(e.start_time),
+        thoi_gian: `${new Date(e.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} - ${new Date(e.end_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}`,
+        bat_dau: formatVnDateTime(e.start_time),
         bat_dau_iso: new Date(e.start_time).toISOString(),
-        ket_thuc: new Date(e.end_time).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+        ket_thuc: formatVnDateTime(e.end_time),
         ket_thuc_iso: new Date(e.end_time).toISOString(),
         ghi_chu: e.description || '',
         la_lich_lap: !!(e.is_recurring || e.is_virtual || e.parent_event_id),
         loai_lap: e.recurrence_type || null
       }))
     };
+
   }
 
   // Sức khỏe & Bữa ăn
@@ -398,7 +402,7 @@ export async function parseYuiRequest(
 ) {
   await dbConnect();
   const now = new Date();
-  const nowStr = `${now.toISOString()} (${now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })})`;
+  const nowStr = `${formatVnDateTime(now)} (ISO: ${now.toISOString()})`;
 
   // Định dạng lịch sử trò chuyện gần nhất (tối đa 6 lượt)
   let historySection = '';
@@ -525,12 +529,17 @@ QUY TẮC ĐÁNH GIÁ DINH DƯỠNG & CALO (CHUẨN CHUYÊN GIA DINH DƯỠNG):
 - BẮT BUỘC cung cấp trường "ai_description" cho mỗi action meal:
   Mô tả chi tiết nguyên liệu, thành phần và ƯỚC TÍNH ĐỊNH LƯỢNG cụ thể của khẩu phần ăn (vd: "1 ổ bánh mì kẹp (~120g) gồm 75g bánh mì, 35g thịt nguội/chả, 15g pate, dưa leo, ngò và sốt bơ trứng. Cung cấp khoảng 420 kcal giàu protein và carb, nạp năng lượng nhanh cho cơ thể.", khoảng 2-3 câu). Tuyệt đối không để trống hoặc chỉ ghi chung chung!
 
-QUY TẮC VỀ LỊCH TRÌNH VÀ SỰ KIỆN LẶP (CALENDAR & RECURRING EVENTS):
-- Khi Papa hỏi về lịch trình ("hôm nay có lịch gì không?", "hôm nay có việc gì làm?", "lịch hôm nay thế nào?", "hôm nay có rảnh không?"):
-  * BẮT BUỘC kiểm tra trường "lich_trinh.su_kien_hom_nay" trong DỮ LIỆU HIỆN TẠI!
+QUY TẮC VỀ LỊCH TRÌNH VÀ THỨ TRONG TUẦN (CALENDAR & WEEKDAY ACCURACY):
+- Trong dữ liệu "lich_trinh" đã có sẵn trường "thu_va_ngay" (Ví dụ: "Thứ Tư, ngày 14/10/2026", "Chủ Nhật, ngày 18/10/2026") được hệ thống tính toán chính xác tuyệt đối theo lịch thiên văn.
+- Thời gian hiện tại của hệ thống: ${nowStr}.
+- BẮT BUỘC SỬ DỤNG CHÍNH XÁC THỨ TRONG TUẦN TỪ TRƯỜNG "thu_va_ngay", TUYỆT ĐỐI KHÔNG TỰ TÍNH NHẨM HOẶC SUY DIỄN THỨ TRONG TUẦN!
+  (Ví dụ: Ngày 14/10/2026 là Thứ Tư; Ngày 18/10/2026 là Chủ Nhật; TUYỆT ĐỐI KHÔNG ĐƯỢC báo 14/10 là Thứ Ba hay 18/10 là Thứ Bảy).
+- Khi Papa hỏi về lịch trình ("hôm nay có lịch gì không?", "hôm nay có việc gì làm?", "lịch hôm nay thế nào?", "lịch tuần này ra sao?"):
+  * BẮT BUỘC kiểm tra trường "lich_trinh.su_kien_hom_nay" và "lich_trinh.su_kien_sap_toi_7_ngay" trong DỮ LIỆU HIỆN TẠI!
   * Danh sách này ĐÃ ĐƯỢC hệ thống mở rộng và tính toán chính xác cho cả các sự kiện lặp lại (hàng ngày, hàng tuần, hàng năm).
-  * Nếu "lich_trinh.su_kien_hom_nay" có sự kiện (kể cả có cờ 'la_lich_lap': true), TUYỆT ĐỐI KHÔNG ĐƯỢC báo ngày trống! Hãy liệt kê cụ thể từng sự kiện với mốc thời gian ('thoi_gian'), tiêu đề ('tieu_de'), ghi chú ('ghi_chu') và loại lặp ('loai_lap') nếu có, rồi nhắc nhở Papa chuẩn bị chu đáo.
+  * Nếu "lich_trinh.su_kien_hom_nay" có sự kiện (kể cả có cờ 'la_lich_lap': true), TUYỆT ĐỐI KHÔNG ĐƯỢC báo ngày trống! Hãy liệt kê cụ thể từng sự kiện với thứ và ngày ('thu_va_ngay'), mốc thời gian ('thoi_gian'), tiêu đề ('tieu_de'), ghi chú ('ghi_chu') và loại lặp ('loai_lap') nếu có, rồi nhắc nhở Papa chuẩn bị chu đáo.
   * Chỉ khi "lich_trinh.tong_so_su_kien_hom_nay" === 0 và "nhiem_vu_quests.can_lam_hom_nay_va_sap_toi" cũng không có việc thì mới báo hôm nay Papa rảnh rỗi.
+
 
 NHIỆM VỤ CỦA BẠN:
 1. XEM HỘ (Tra cứu, hỏi thông tin, tình hình, hỏi ý kiến, trò chuyện):
