@@ -23,6 +23,27 @@ const EXP_REWARDS: Record<string, number> = {
 const getExpForNextLevel = (level: number) => level * 500;
 
 /**
+ * Loại bỏ triệt để các từ ngữ chỉ thời gian tương đối khỏi tên món ăn, tiêu đề, mô tả
+ * để tránh việc lưu vào DB bị outdate (ví dụ: "Bánh mì sáng nay" -> "Bánh mì").
+ */
+export function cleanTemporalWords(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/\b(sáng|trưa|chiều|tối|đêm)\s+(nay|qua|kia|hôm nay|hôm qua)\b/gi, '')
+    .replace(/\b(hôm nay|hôm qua|hôm kia|ngày mai|chiều mai|sáng mai|tối mai)\b/gi, '')
+    .replace(/\b(vừa ăn|vừa uống|mới ăn|mới uống|vừa mới|vừa mua|mới mua|vừa xong|mới xong|hồi nãy|lúc nãy)\b/gi, '')
+    .replace(/\b(buổi\s+(sáng|trưa|chiều|tối|đêm))\b/gi, '')
+    .replace(/\b(bữa\s+(sáng|trưa|tối|đêm))\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+export function capitalizeFirst(str: string): string {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
  * Thu thập toàn bộ ngữ cảnh hệ thống của riêng User hiện tại (tuyệt đối không lấy của user khác).
  */
 export async function buildUserSystemContext(userId: string) {
@@ -251,6 +272,41 @@ ${JSON.stringify(userContext, null, 2)}
 CÂU NÓI CỦA PAPA:
 "${text}"
 
+QUY TẮC BẮT BUỘC VỀ VÍ / TÀI KHOẢN KHI CÓ NHIỀU NGUỒN (MULTI-WALLET):
+- Khi người dùng đề cập nhiều hành động chi tiêu/thu tiền với nhiều ví khác nhau trong cùng một câu:
+  (Ví dụ: "ăn phở 50k bằng mb, uống cà phê 20k bằng momo"):
+  - TỪNG hành động trong mảng "actions" BẮT BUỘC phải mang "wallet_id" và "walletName" CHÍNH XÁC tương ứng với tài khoản/ví mà người dùng chỉ định cho món đó!
+  - Hành động 1: amount: 50000, wallet_id: "<id ví MB>", walletName: "MB Bank"
+  - Hành động 2: amount: 20000, wallet_id: "<id ví Momo>", walletName: "Ví Momo"
+  - TUYỆT ĐỐI KHÔNG GỘP CHUNG VÍ nếu người dùng đã chỉ định 2 nguồn khác nhau!
+
+QUY TẮC CHUẨN HOÁ TÊN MÓN VÀ MÔ TẢ (CHỐNG LỖI TỪ OUTDATE):
+- Tuyệt đối LOẠI BỎ mọi từ chỉ thời gian tương đối khỏi "food_name", "title" và "description" như:
+  "sáng nay", "trưa nay", "chiều nay", "tối nay", "hôm nay", "hôm qua", "vừa ăn", "vừa mới", "mới mua", "lúc nãy", "buổi sáng", "bữa sáng"...
+  Ví dụ:
+  - User nói: "sáng nay ăn bánh mì 25k bằng mb" -> food_name: "Bánh mì", description: "Bánh mì" (KHÔNG ĐƯỢC để "Bánh mì sáng nay").
+  - User nói: "trưa nay ăn bún chả 45k" -> food_name: "Bún chả", description: "Bún chả".
+  - User nói: "uống sinh tố bơ tối qua" -> food_name: "Sinh tố bơ", description: "Sinh tố bơ".
+- Nếu câu nói có từ chỉ thời gian trong ngày ("sáng nay", "trưa nay", "chiều nay", "tối qua"...), hãy xác định thời điểm thực tế và lưu vào trường "custom_time" (chuỗi ISO 8601):
+  * "sáng nay" / "buổi sáng": khoảng 08:00 sáng hôm nay.
+  * "trưa nay" / "buổi trưa": khoảng 12:00 trưa hôm nay.
+  * "chiều nay" / "buổi chiều": khoảng 15:30 chiều hôm nay.
+  * "tối nay" / "buổi tối": khoảng 19:00 tối hôm nay.
+  * "hôm qua": lùi lại 1 ngày so với hiện tại.
+  * Mặc định là thời gian hiện tại nếu không nói rõ.
+
+QUY TẮC ĐÁNH GIÁ DINH DƯỠNG & CALO (CHUẨN CHUYÊN GIA DINH DƯỠNG):
+- Bạn đóng vai trò một chuyên gia dinh dưỡng thực thụ (tương đồng với bộ máy phân tích macro chuyên sâu của MyBag).
+- BẮT BUỘC ước tính calo dựa trên MỘT KHẨU PHẦN ĂN TIÊU CHUẨN ĐẦY ĐỦ CỦA NGƯỜI VIỆT NAM (tính cả dầu mỡ chiên xào, gia vị, nhân thịt, tinh bột, sốt, đồ ăn kèm). Không ước lượng quá thấp như thực phẩm thô chưa chế biến!
+  Tham chiếu thực tế:
+  * 1 ổ Bánh mì kẹp đầy đủ (thịt/chả/pate, bơ, sốt, đồ chua): 380 - 450 kcal.
+  * 1 bát Phở bò / Bún bò Huế / Bún chả: 480 - 580 kcal.
+  * 1 đĩa Cơm tấm sườn bì chả / Cơm rang dưa bò: 680 - 850 kcal.
+  * 1 phần Xôi xéo / xôi thịt: 450 - 550 kcal.
+  * 1 ly Cà phê sữa / Trà sữa trân châu: 180 - 420 kcal.
+- BẮT BUỘC cung cấp trường "ai_description" cho mỗi action meal:
+  Mô tả chi tiết nguyên liệu, thành phần và ƯỚC TÍNH ĐỊNH LƯỢNG cụ thể của khẩu phần ăn (vd: "1 ổ bánh mì kẹp (~120g) gồm 75g bánh mì, 35g thịt nguội/chả, 15g pate, dưa leo, ngò và sốt bơ trứng. Cung cấp khoảng 420 kcal giàu protein và carb, nạp năng lượng nhanh cho cơ thể.", khoảng 2-3 câu). Tuyệt đối không để trống hoặc chỉ ghi chung chung!
+
 NHIỆM VỤ CỦA BẠN:
 1. XEM HỘ (Tra cứu, hỏi thông tin, tình hình, hỏi ý kiến, trò chuyện):
    - Nếu Papa chỉ hỏi về thông tin hệ thống (vd: "hôm nay có việc gì làm?", "ví còn bao nhiêu tiền?", "tủ lạnh còn gì ăn?", "hôm nay ăn bao nhiêu calo rồi?", "có quest nào trễ hạn không?"):
@@ -264,15 +320,15 @@ NHIỆM VỤ CỦA BẠN:
    - Phân tích và bóc tách thành danh sách các hành động trong "actions".
    - Các actionType hợp lệ:
      a) "meal": Món ăn/uống Papa tự nạp (VD: "vừa ăn phở bò 45k trả bằng Momo", "uống cốc sinh tố bơ").
-        - Fields: { actionType: "meal", food_name: string, meal_tier: "HEAVY"|"LIGHT"|"DRINK", calo: number, protein: number, fat: number, carbs: number, sugar: number, amount: number (0 nếu miễn phí/tự nấu), wallet_id: string, walletName: string, description: string }
+        - Fields: { actionType: "meal", food_name: string (ĐÃ LỌC BỎ từ chỉ thời gian), meal_tier: "HEAVY"|"LIGHT"|"DRINK", calo: number, protein: number, fat: number, carbs: number, sugar: number, amount: number (0 nếu miễn phí/tự nấu), wallet_id: string, walletName: string, description: string, ai_description: string, custom_time: ISO 8601 string }
      b) "expense": Chi tiêu thông thường không phải ăn uống tự ăn (VD: "mua xăng 50k bằng tiền mặt", "trả tiền điện 300k").
-        - Fields: { actionType: "expense", amount: number, category: "housing"|"transport"|"entertainment"|"shopping"|"health"|"other", description: string, wallet_id: string, walletName: string }
+        - Fields: { actionType: "expense", amount: number, category: "housing"|"transport"|"entertainment"|"shopping"|"health"|"other", description: string (ĐÃ LỌC BỎ từ chỉ thời gian), wallet_id: string, walletName: string, custom_time: ISO 8601 string }
      c) "income": Tiền thu vào (VD: "nhận lương 15tr vào MB", "được thưởng 500k").
-        - Fields: { actionType: "income", amount: number, category: "salary"|"bonus"|"investment"|"gift"|"other", description: string, wallet_id: string, walletName: string }
+        - Fields: { actionType: "income", amount: number, category: "salary"|"bonus"|"investment"|"gift"|"other", description: string, wallet_id: string, walletName: string, custom_time: ISO 8601 string }
      d) "debt_lent": Cho vay / Trả tiền hộ ai đó (VD: "trả hộ anh Nam 50k tiền ăn trưa").
-        - Fields: { actionType: "debt_lent", person: string, amount: number, description: string, wallet_id: string, walletName: string }
+        - Fields: { actionType: "debt_lent", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: ISO 8601 string }
      e) "debt_borrowed": Đi vay tiền ai đó (VD: "vay bạn Hùng 200k").
-        - Fields: { actionType: "debt_borrowed", person: string, amount: number, description: string, wallet_id: string, walletName: string }
+        - Fields: { actionType: "debt_borrowed", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: ISO 8601 string }
      f) "create_task": Tạo Quest/Nhiệm vụ mới (VD: "tạo quest rank B nộp báo cáo trước 17h chiều mai").
         - Fields: { actionType: "create_task", title: string, description: string, quest_rank: "S"|"A"|"B"|"C"|"D", due_date: ISO 8601 string (tính dựa vào thời gian hiện tại) }
      g) "complete_task": Hoàn thành Quest đã có (VD: "đã xong quest dọn dẹp phòng").
@@ -284,18 +340,11 @@ NHIỆM VỤ CỦA BẠN:
      j) "create_inventory": Thêm đồ vào kho đồ / tủ lạnh (VD: "vừa mua 5 gói mì Hảo Hảo cất vào tủ").
         - Fields: { actionType: "create_inventory", name: string, quantity: number, unit: string, category: string, expiryDate: ISO 8601 string (nếu có đề cập hạn dùng) }
 
-XÁC ĐỊNH VÍ NGUỒN (Cho meal, expense, income, debt):
-- So khớp tên viết tắt hoặc gần đúng với danh sách ví (VD "mb" -> MB Bank, "momo" -> Momo, "tiền mặt" -> Tiền mặt). Nếu không nói rõ, hãy chọn ví có số dư cao nhất.
-
 YÊU CẦU TRẢ VỀ:
 Trả về DUY NHẤT một chuỗi JSON hợp lệ không bọc thêm bất kỳ văn bản nào ngoài JSON:
 {
   "summary": "Tóm tắt ngắn gọn các hành động chuẩn bị thực hiện",
   "reply": "Câu trả lời thân mật của Yui gửi Papa (BẮT BUỘC khi actions rỗng; khi có actions thì giải thích kế hoạch để Papa xác nhận)",
-  "matched_wallet": {
-    "id": "ID ví",
-    "name": "Tên ví"
-  },
   "actions": [ ... ]
 }`;
 
@@ -324,10 +373,23 @@ export async function executeYuiActions(userId: string, actions: any[]) {
   for (const action of actions) {
     const actionType = action.actionType;
 
+    // Trích xuất ngày giờ tùy chỉnh (nếu có nói về "sáng nay", "hôm qua", v.v.)
+    let actionDate = now;
+    if (action.custom_time) {
+      const parsedTime = new Date(action.custom_time);
+      if (!isNaN(parsedTime.getTime())) {
+        actionDate = parsedTime;
+      }
+    }
+
     // 1. MEAL
     if (actionType === 'meal') {
       const amount = Number(action.amount) || 0;
       let txId: any = undefined;
+
+      // Chuẩn hóa tên món và mô tả (loại bỏ từ outdate)
+      const rawFoodName = action.food_name || action.description || 'Món ăn';
+      const cleanFoodName = capitalizeFirst(cleanTemporalWords(rawFoodName)) || 'Bữa ăn';
 
       if (amount > 0) {
         if (action.wallet_id) {
@@ -340,8 +402,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
           user_id: userId,
           type: 'expense',
           amount,
-          date: now,
-          description: `Ăn uống: ${action.food_name || action.description}`,
+          date: actionDate,
+          description: `Ăn uống: ${cleanFoodName}`,
           category: 'food',
           wallet_id: action.wallet_id || undefined,
           walletName: action.walletName || 'Ví không xác định'
@@ -353,12 +415,15 @@ export async function executeYuiActions(userId: string, actions: any[]) {
       const hp = Math.floor(calo * 1.0); // 1 calo = 1 HP
       const tier = ['HEAVY', 'LIGHT', 'DRINK'].includes(action.meal_tier) ? action.meal_tier : 'LIGHT';
 
+      // Mô tả dinh dưỡng chuyên sâu từ AI, không còn hardcode "Ghi nhận bởi Yui"
+      const aiDesc = action.ai_description?.trim() || `Khẩu phần tiêu chuẩn: ${cleanFoodName}. Ước tính cung cấp khoảng ${calo} kcal.`;
+
       const meal = await MealLog.create({
         user_id: userId,
-        food_name: action.food_name || action.description || 'Bữa ăn',
+        food_name: cleanFoodName,
         meal_tier: tier,
         hp_restored: hp,
-        consumed_at: now,
+        consumed_at: actionDate,
         calo,
         protein: Number(action.protein) || 0,
         fat: Number(action.fat) || 0,
@@ -366,7 +431,7 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         sugar: Number(action.sugar) || 0,
         cost: amount,
         ai_status: 'completed',
-        ai_description: 'Ghi nhận bởi Yui',
+        ai_description: aiDesc,
         source: 'eat_out',
         transaction_id: txId,
         wallet_id: amount > 0 ? action.wallet_id : undefined
@@ -383,7 +448,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         id: meal._id,
         food_name: meal.food_name,
         amount,
-        hp
+        hp,
+        walletName: action.walletName
       });
       continue;
     }
@@ -392,6 +458,9 @@ export async function executeYuiActions(userId: string, actions: any[]) {
     if (actionType === 'expense') {
       const amount = Number(action.amount) || 0;
       if (amount <= 0) continue;
+
+      const rawDesc = action.description || 'Chi tiêu';
+      const cleanDesc = capitalizeFirst(cleanTemporalWords(rawDesc)) || 'Chi tiêu';
 
       if (action.wallet_id) {
         await Wallet.findOneAndUpdate(
@@ -404,8 +473,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         user_id: userId,
         type: 'expense',
         amount,
-        date: now,
-        description: action.description || 'Chi tiêu',
+        date: actionDate,
+        description: cleanDesc,
         category: action.category || 'other',
         wallet_id: action.wallet_id || undefined,
         walletName: action.walletName || 'Ví không xác định'
@@ -415,7 +484,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         type: 'expense',
         id: tx._id,
         amount,
-        description: tx.description
+        description: tx.description,
+        walletName: action.walletName
       });
       continue;
     }
@@ -424,6 +494,9 @@ export async function executeYuiActions(userId: string, actions: any[]) {
     if (actionType === 'income') {
       const amount = Number(action.amount) || 0;
       if (amount <= 0) continue;
+
+      const rawDesc = action.description || 'Thu nhập';
+      const cleanDesc = capitalizeFirst(cleanTemporalWords(rawDesc)) || 'Thu nhập';
 
       if (action.wallet_id) {
         await Wallet.findOneAndUpdate(
@@ -436,8 +509,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         user_id: userId,
         type: 'income',
         amount,
-        date: now,
-        description: action.description || 'Thu nhập',
+        date: actionDate,
+        description: cleanDesc,
         category: action.category || 'other',
         wallet_id: action.wallet_id || undefined,
         walletName: action.walletName || 'Ví không xác định'
@@ -447,7 +520,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         type: 'income',
         id: tx._id,
         amount,
-        description: tx.description
+        description: tx.description,
+        walletName: action.walletName
       });
       continue;
     }
@@ -456,6 +530,9 @@ export async function executeYuiActions(userId: string, actions: any[]) {
     if (actionType === 'debt_lent') {
       const amount = Number(action.amount) || 0;
       if (amount <= 0) continue;
+
+      const rawDesc = action.description || '';
+      const cleanDesc = cleanTemporalWords(rawDesc);
 
       if (action.wallet_id) {
         await Wallet.findOneAndUpdate(
@@ -466,8 +543,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
           user_id: userId,
           type: 'expense',
           amount,
-          date: now,
-          description: `Trả hộ / Cho vay: ${action.person || 'Khác'} - ${action.description || ''}`,
+          date: actionDate,
+          description: `Trả hộ / Cho vay: ${action.person || 'Khác'}${cleanDesc ? ` - ${cleanDesc}` : ''}`,
           category: 'other',
           wallet_id: action.wallet_id,
           walletName: action.walletName || 'Ví không xác định'
@@ -482,7 +559,7 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         totalAmount: amount,
         remainingAmount: amount,
         history: [{
-          date: now,
+          date: actionDate,
           amount,
           type: 'borrow_more',
           walletName: action.walletName || 'Tiền mặt'
@@ -493,7 +570,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         type: 'debt_lent',
         id: debt._id,
         amount,
-        person: action.person
+        person: action.person,
+        walletName: action.walletName
       });
       continue;
     }
@@ -502,6 +580,9 @@ export async function executeYuiActions(userId: string, actions: any[]) {
     if (actionType === 'debt_borrowed') {
       const amount = Number(action.amount) || 0;
       if (amount <= 0) continue;
+
+      const rawDesc = action.description || '';
+      const cleanDesc = cleanTemporalWords(rawDesc);
 
       if (action.wallet_id) {
         await Wallet.findOneAndUpdate(
@@ -512,8 +593,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
           user_id: userId,
           type: 'income',
           amount,
-          date: now,
-          description: `Đi vay: ${action.person || 'Khác'} - ${action.description || ''}`,
+          date: actionDate,
+          description: `Đi vay: ${action.person || 'Khác'}${cleanDesc ? ` - ${cleanDesc}` : ''}`,
           category: 'other',
           wallet_id: action.wallet_id,
           walletName: action.walletName || 'Ví không xác định'
@@ -528,7 +609,7 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         totalAmount: amount,
         remainingAmount: amount,
         history: [{
-          date: now,
+          date: actionDate,
           amount,
           type: 'borrow_more',
           walletName: action.walletName || 'Tiền mặt'
@@ -539,20 +620,22 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         type: 'debt_borrowed',
         id: debt._id,
         amount,
-        person: action.person
+        person: action.person,
+        walletName: action.walletName
       });
       continue;
     }
 
     // 6. CREATE TASK / QUEST
     if (actionType === 'create_task') {
-      const title = action.title?.trim() || 'Nhiệm vụ mới';
+      const rawTitle = action.title?.trim() || 'Nhiệm vụ mới';
+      const cleanTitle = capitalizeFirst(cleanTemporalWords(rawTitle)) || 'Nhiệm vụ mới';
       const questRank = ['S', 'A', 'B', 'C', 'D'].includes(action.quest_rank) ? action.quest_rank : 'C';
       const dueDate = action.due_date ? new Date(action.due_date) : new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       const task = await Task.create({
         user_id: userId,
-        title,
+        title: cleanTitle,
         description: action.description || '',
         quest_rank: questRank,
         due_date: isNaN(dueDate.getTime()) ? new Date(Date.now() + 24 * 60 * 60 * 1000) : dueDate,
@@ -575,10 +658,11 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         task = await Task.findOne({ _id: action.task_id, user_id: userId });
       }
       if (!task && action.title) {
+        const cleanTitle = cleanTemporalWords(action.title);
         task = await Task.findOne({
           user_id: userId,
           status: { $ne: 'COMPLETED' },
-          title: new RegExp(action.title.trim(), 'i')
+          title: new RegExp(cleanTitle || action.title.trim(), 'i')
         });
       }
 
@@ -622,13 +706,14 @@ export async function executeYuiActions(userId: string, actions: any[]) {
 
     // 8. CREATE CALENDAR EVENT
     if (actionType === 'create_calendar_event') {
-      const title = action.title?.trim() || 'Sự kiện mới';
+      const rawTitle = action.title?.trim() || 'Sự kiện mới';
+      const cleanTitle = capitalizeFirst(cleanTemporalWords(rawTitle)) || 'Sự kiện mới';
       const startTime = action.start_time ? new Date(action.start_time) : now;
       const endTime = action.end_time ? new Date(action.end_time) : new Date(startTime.getTime() + 60 * 60 * 1000);
 
       const event = await CalendarEvent.create({
         user_id: userId,
-        title,
+        title: cleanTitle,
         description: action.description || '',
         start_time: isNaN(startTime.getTime()) ? now : startTime,
         end_time: isNaN(endTime.getTime()) ? new Date(startTime.getTime() + 60 * 60 * 1000) : endTime,
@@ -647,14 +732,15 @@ export async function executeYuiActions(userId: string, actions: any[]) {
 
     // 9. CREATE SHOPPING ITEM
     if (actionType === 'create_shopping_item') {
-      const name = action.name?.trim() || 'Món đồ';
+      const rawName = action.name?.trim() || 'Món đồ';
+      const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Món đồ';
       const quantity = Math.max(1, Number(action.quantity) || 1);
       const unit = action.unit?.trim() || 'món';
       const category = ['food', 'household', 'other'].includes(action.category) ? action.category : 'food';
 
       const item = await ShoppingItem.create({
         user_id: userId,
-        name,
+        name: cleanName,
         quantity,
         unit,
         category,
@@ -673,7 +759,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
 
     // 10. CREATE INVENTORY ITEM
     if (actionType === 'create_inventory') {
-      const name = action.name?.trim() || 'Vật phẩm';
+      const rawName = action.name?.trim() || 'Vật phẩm';
+      const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Vật phẩm';
       const quantity = Math.max(1, Number(action.quantity) || 1);
       const unit = action.unit?.trim() || 'món';
       const category = action.category?.trim() || 'food';
@@ -681,7 +768,7 @@ export async function executeYuiActions(userId: string, actions: any[]) {
 
       const item = await Inventory.create({
         user_id: userId,
-        name,
+        name: cleanName,
         category,
         quantity,
         originalQuantity: quantity,

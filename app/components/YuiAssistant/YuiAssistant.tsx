@@ -17,7 +17,8 @@ import {
   ShoppingCart,
   Package,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Wallet
 } from 'lucide-react';
 import { parseYuiMessage, executeYuiActions } from './api';
 import styles from './YuiAssistant.module.css';
@@ -290,22 +291,37 @@ export default function YuiAssistant() {
 
                     {m.plan.actions.map((a: any, j: number) => (
                       <div key={j} className={styles.planRow}>
-                        {iconFor(a.actionType)}
-                        {renderActionBadge(a.actionType)}
-                        <span className={styles.planDesc}>
-                          {renderActionDesc(a)}
-                        </span>
-                        {a.amount !== undefined && a.amount > 0 && (
-                          <span className={styles.planAmt}>{fmt(a.amount)}đ</span>
+                        <div className={styles.planRowHeader}>
+                          <div className={styles.planTypeInfo}>
+                            {iconFor(a.actionType)}
+                            {renderActionBadge(a.actionType)}
+                            <span className={styles.planDesc}>
+                              {renderActionDesc(a)}
+                            </span>
+                          </div>
+                          {a.amount !== undefined && a.amount > 0 && (
+                            <span className={styles.planAmt}>
+                              {a.actionType === 'income' ? '+' : '-'}{fmt(a.amount)}đ
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Hiển thị ví nguồn riêng cho từng hành động */}
+                        {a.walletName && (
+                          <div className={styles.planWalletTag}>
+                            <Wallet size={12} color="#00f0ff" />
+                            <span>Tài khoản/Ví: <strong>{a.walletName}</strong></span>
+                          </div>
+                        )}
+
+                        {/* Hiển thị chi tiết định lượng dinh dưỡng chuyên gia */}
+                        {a.actionType === 'meal' && a.ai_description && (
+                          <div className={styles.planNutritionDetail}>
+                            {a.ai_description}
+                          </div>
                         )}
                       </div>
                     ))}
-
-                    {m.plan.matched_wallet?.name && (
-                      <div className={styles.wallet}>
-                        Ví sử dụng: <strong>{m.plan.matched_wallet.name}</strong>
-                      </div>
-                    )}
 
                     {!m.done ? (
                       <div className={styles.planBtns}>
