@@ -18,7 +18,8 @@ import {
   Package,
   AlertTriangle,
   RotateCcw,
-  Wallet
+  Wallet,
+  Scale
 } from 'lucide-react';
 import { parseYuiMessage, executeYuiActions } from './api';
 import styles from './YuiAssistant.module.css';
@@ -106,11 +107,13 @@ export default function YuiAssistant() {
       const results: any[] = res?.results ?? [];
 
       const hpRestored = results.filter(r => r.type === 'meal').reduce((s, r) => s + (r.hp || 0), 0);
-      const expGained = results.filter(r => r.type === 'complete_task').reduce((s, r) => s + (r.exp || 0), 0);
+      const expGained = results.reduce((s, r) => s + (r.exp || r.rewardExp || 0), 0);
+      const weightLogged = results.some(r => r.type === 'record_weight');
 
       const bonuses: string[] = [];
       if (hpRestored > 0) bonuses.push(`+${hpRestored} HP 💚`);
       if (expGained > 0) bonuses.push(`+${expGained} EXP ⭐`);
+      if (weightLogged) bonuses.push(`Đã ghi cân nặng ⚖️`);
 
       const bonusStr = bonuses.length > 0 ? ` (${bonuses.join(', ')})` : '';
 
@@ -132,6 +135,7 @@ export default function YuiAssistant() {
       window.dispatchEvent(new CustomEvent('sao-calendar-updated'));
       window.dispatchEvent(new CustomEvent('sao-shopping-updated'));
       window.dispatchEvent(new CustomEvent('sao-finance-updated'));
+      window.dispatchEvent(new CustomEvent('sao-health-updated'));
 
     } catch (err: any) {
       const errMsg = typeof err === 'string' ? err : err?.response?.data?.error || err?.message || 'Lỗi khi lưu';
@@ -174,6 +178,8 @@ export default function YuiAssistant() {
         return <span className={`${styles.badge} ${styles.badgeShopping}`}>Mua sắm</span>;
       case 'create_inventory':
         return <span className={`${styles.badge} ${styles.badgeInventory}`}>Kho đồ</span>;
+      case 'record_weight':
+        return <span className={`${styles.badge} ${styles.badgeHealth}`}>Cân nặng</span>;
       default:
         return <span className={styles.badge}>Hành động</span>;
     }
@@ -200,6 +206,8 @@ export default function YuiAssistant() {
         return <ShoppingCart size={15} color="#4ade80" />;
       case 'create_inventory':
         return <Package size={15} color="#fb923c" />;
+      case 'record_weight':
+        return <Scale size={15} color="#10b981" />;
       default:
         return <Sparkles size={15} color="#ffb6e6" />;
     }
@@ -226,6 +234,8 @@ export default function YuiAssistant() {
         return `Mua: ${a.name} (${a.quantity || 1} ${a.unit || 'món'})`;
       case 'create_inventory':
         return `Cất kho: ${a.name} (${a.quantity || 1} ${a.unit || 'món'})`;
+      case 'record_weight':
+        return `Cập nhật cân nặng: ${a.weight} kg${a.height ? ` (Chiều cao: ${a.height} cm)` : ''} (+100 EXP)`;
       default:
         return a.description || 'Hành động';
     }

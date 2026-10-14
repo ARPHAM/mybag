@@ -410,6 +410,8 @@ NHIỆM VỤ CỦA BẠN:
         - Fields: { actionType: "create_shopping_item", name: string, quantity: number, unit: string, category: "food"|"household"|"other" }
      j) "create_inventory": Thêm đồ vào kho đồ / tủ lạnh (VD: "vừa mua 5 gói mì Hảo Hảo cất vào tủ").
         - Fields: { actionType: "create_inventory", name: string, quantity: number, unit: string, category: string, expiryDate: ISO 8601 string (nếu có đề cập hạn dùng) }
+     k) "record_weight": Ghi nhận / Cập nhật cân nặng và chiều cao (VD: "cập nhật cân nặng hôm nay là 47kg", "cân nặng 52kg", "hôm nay nặng 48kg").
+        - Fields: { actionType: "record_weight", weight: number (số kg, vd: 47), height: number (chiều cao cm nếu có nhắc đến), custom_time: ISO 8601 string, description: "Cập nhật cân nặng" }
 
 YÊU CẦU TRẢ VỀ:
 Trả về DUY NHẤT một chuỗi JSON hợp lệ không bọc thêm bất kỳ văn bản nào ngoài JSON:
@@ -850,6 +852,74 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         quantity: item.quantity,
         unit: item.unit
       });
+      continue;
+    }
+
+    // 11. RECORD WEIGHT / HEALTH
+    if (actionType === 'record_weight') {
+      const weight = Number(action.weight);
+      if (weight && weight > 0) {
+        const user = await User.findById(userId);
+        if (user) {
+          if (action.height && Number(action.height) > 0) {
+            user.height = Number(action.height);
+          }
+
+          const recordDate = action.custom_time ? new Date(action.custom_time) : now;
+          const startOfDay = new Date(recordDate);
+          startOfDay.setHours(0, 0, 0, 0);
+          const endOfDay = new Date(recordDate);
+          endOfDay.setHours(23, 59, 59, 999);
+
+          // Xoá log cũ cùng ngày để tránh trùng lặp
+          await WeightLog.findOneAndDelete({
+            user_id: userId,
+            date: { $gte: startOfDay, $lte: endOfDay }
+          });
+
+          const weightLog = await WeightLog.create({
+            user_id: userId,
+            weight,
+            date: recordDate
+          });
+
+          // Gamification: Thưởng 100 EXP
+          const heightInM = (user.height || 170) / 100;
+          const bmi = weight / (heightInM * heightInM);
+          const isNormalBmi = bmi >= 18.5 && bmi <= 24.9;
+
+          const rewardExp = 100;
+          user.current_exp += rewardExp;
+
+          let requiredExp = getExpForNextLevel(user.level);
+          let leveledUp = false;
+          while (user.current_exp >= requiredExp) {
+            user.current_exp -= requiredExp;
+            user.level += 1;
+            user.max_hp += 50;
+            user.max_mp += 20;
+            leveledUp = true;
+            requiredExp = getExpForNextLevel(user.level);
+          }
+
+          if (isNormalBmi) {
+            user.max_hp += 100;
+            user.current_hp = user.max_hp;
+          }
+
+          await user.save();
+
+          executedResults.push({
+            type: 'record_weight',
+            id: weightLog._id,
+            weight,
+            bmi: parseFloat(bmi.toFixed(1)),
+            isNormalBmi,
+            rewardExp,
+            leveledUp
+          });
+        }
+      }
       continue;
     }
   }

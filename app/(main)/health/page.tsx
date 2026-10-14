@@ -36,6 +36,9 @@ export default function HealthPage() {
 
   useEffect(() => {
     fetchHealthData();
+    const handleHealthUpdate = () => fetchHealthData(true);
+    window.addEventListener('sao-health-updated', handleHealthUpdate);
+    return () => window.removeEventListener('sao-health-updated', handleHealthUpdate);
   }, []);
 
   const fetchHealthData = async (force = false) => {
