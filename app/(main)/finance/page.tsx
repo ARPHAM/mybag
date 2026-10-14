@@ -74,6 +74,9 @@ export default function FinancePage() {
 
   useEffect(() => {
     fetchData();
+    const handleFinanceUpdate = () => fetchData(true);
+    window.addEventListener('sao-finance-updated', handleFinanceUpdate);
+    return () => window.removeEventListener('sao-finance-updated', handleFinanceUpdate);
   }, []);
 
   const fetchData = async (force = false) => {

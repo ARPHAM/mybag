@@ -23,6 +23,9 @@ export default function TasksPage() {
 
   useEffect(() => {
     fetchTasks();
+    const handleUpdate = () => fetchTasks(true);
+    window.addEventListener('sao-tasks-updated', handleUpdate);
+    return () => window.removeEventListener('sao-tasks-updated', handleUpdate);
   }, []);
 
   const fetchTasks = async (force = false) => {

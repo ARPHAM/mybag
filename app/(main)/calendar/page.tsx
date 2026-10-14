@@ -49,6 +49,16 @@ export default function CalendarPage() {
 
   useEffect(() => {
     fetchEvents();
+    const handleCalendarUpdate = () => {
+      fetchEvents(true);
+      fetchTasks(true);
+    };
+    window.addEventListener('sao-calendar-updated', handleCalendarUpdate);
+    window.addEventListener('sao-tasks-updated', handleCalendarUpdate);
+    return () => {
+      window.removeEventListener('sao-calendar-updated', handleCalendarUpdate);
+      window.removeEventListener('sao-tasks-updated', handleCalendarUpdate);
+    };
   }, [selectedDate, viewMode]);
 
   useEffect(() => {

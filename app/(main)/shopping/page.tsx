@@ -30,6 +30,9 @@ export default function ShoppingPage() {
   useEffect(() => {
     fetchItems();
     fetchWallets();
+    const handleShoppingUpdate = () => fetchItems(true);
+    window.addEventListener('sao-shopping-updated', handleShoppingUpdate);
+    return () => window.removeEventListener('sao-shopping-updated', handleShoppingUpdate);
   }, []);
 
   const fetchItems = async (force = false) => {
