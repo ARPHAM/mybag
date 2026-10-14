@@ -10,6 +10,7 @@ import CalendarEvent from '@/models/CalendarEvent';
 import MealLog from '@/models/MealLog';
 import ShoppingItem from '@/models/ShoppingItem';
 import WeightLog from '@/models/WeightLog';
+import Recipe from '@/models/Recipe';
 import { generateContentWithFallback } from '@/lib/ai';
 
 const EXP_REWARDS: Record<string, number> = {
@@ -44,6 +45,43 @@ export function capitalizeFirst(str: string): string {
 }
 
 /**
+ * Hàm trích xuất JSON an toàn tuyệt đối từ phản hồi của LLM,
+ * tự động bóc tách kể cả khi model chèn thêm lời dẫn hay block markdown ```json ... ```.
+ */
+function extractJsonFromAiResponse(raw: string): any {
+  if (!raw || typeof raw !== 'string') {
+    throw new Error('Phản hồi từ AI rỗng');
+  }
+
+  const cleaned = raw.trim();
+
+  // 1. Thử parse trực tiếp
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+
+  // 2. Thử tìm khối code block ```json ... ``` hoặc ``` ... ```
+  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch {}
+  }
+
+  // 3. Thử tìm cặp ngoặc nhọn { ... } ngoài cùng
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
+    } catch {}
+  }
+
+  console.error("Failed to extract JSON from AI response:", raw);
+  throw new Error('Yui không thể định dạng dữ liệu, Papa thử lại giúp Yui nhé!');
+}
+
+/**
  * Thu thập toàn bộ ngữ cảnh hệ thống của riêng User hiện tại (tuyệt đối không lấy của user khác).
  */
 export async function buildUserSystemContext(userId: string) {
@@ -74,7 +112,8 @@ export async function buildUserSystemContext(userId: string) {
     upcomingEvents,
     todayMeals,
     latestWeight,
-    shoppingItems
+    shoppingItems,
+    recipes
   ] = await Promise.all([
     User.findById(userId).lean(),
     Wallet.find({ user_id: userId }).lean(),
@@ -82,7 +121,7 @@ export async function buildUserSystemContext(userId: string) {
     Transaction.find({ user_id: userId }).sort({ date: -1 }).limit(10).lean(),
     Debt.find({ user_id: userId, status: { $ne: 'paid' } }).lean(),
     Budget.find({ user_id: userId, month: currentMonthStr }).lean(),
-    Inventory.find({ user_id: userId, quantity: { $gt: 0 } }).sort({ expiryDate: 1 }).limit(20).lean(),
+    Inventory.find({ user_id: userId, quantity: { $gt: 0 } }).sort({ expiryDate: 1 }).limit(25).lean(),
     Task.find({ user_id: userId, status: { $in: ['PENDING', 'IN_PROGRESS'] } }).sort({ due_date: 1 }).limit(15).lean(),
     Task.find({ user_id: userId, status: 'OVERDUE' }).sort({ due_date: 1 }).limit(10).lean(),
     Task.find({ user_id: userId, status: 'COMPLETED' }).sort({ completed_at: -1 }).limit(5).lean(),
@@ -94,6 +133,7 @@ export async function buildUserSystemContext(userId: string) {
     MealLog.find({ user_id: userId, consumed_at: { $gte: todayStart } }).sort({ consumed_at: -1 }).lean(),
     WeightLog.findOne({ user_id: userId }).sort({ date: -1 }).lean(),
     ShoppingItem.find({ user_id: userId, checked: false }).limit(20).lean(),
+    Recipe.find({ user_id: userId }).limit(20).lean(),
   ]);
 
   // 3. Xử lý & tổng hợp số liệu
@@ -181,7 +221,7 @@ export async function buildUserSystemContext(userId: string) {
         so_luong: `${i.quantity} ${i.unit}`,
         han_su_dung: new Date(i.expiryDate).toISOString().split('T')[0]
       })),
-      kho_do_hien_co: (inventoryItems as any[]).slice(0, 10).map(i => ({
+      kho_do_hien_co: (inventoryItems as any[]).map(i => ({
         ten: i.name,
         so_luong: `${i.quantity} ${i.unit}`,
         danh_muc: i.category
@@ -239,18 +279,40 @@ export async function buildUserSystemContext(userId: string) {
       ten: s.name,
       so_luong: `${s.quantity} ${s.unit}`,
       danh_muc: s.category
+    })),
+    cong_thuc_nau_an_da_luu: (recipes as any[]).map(r => ({
+      ten: r.name,
+      nguyen_lieu: r.ingredients || []
     }))
   };
 }
 
 /**
- * Phân tích yêu cầu tự nhiên từ người dùng bằng Gemini AI.
+ * Phân tích yêu cầu tự nhiên từ người dùng bằng Gemini AI, có ghi nhớ lịch sử hội thoại gần đây.
  */
-export async function parseYuiRequest(userId: string, text: string) {
+export async function parseYuiRequest(
+  userId: string,
+  text: string,
+  history: { role: string; text: string }[] = []
+) {
   await dbConnect();
   const userContext = await buildUserSystemContext(userId);
   const now = new Date();
   const nowStr = `${now.toISOString()} (${now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })})`;
+
+  // Định dạng lịch sử trò chuyện gần nhất (tối đa 8 lượt)
+  let historySection = '';
+  if (history && Array.isArray(history) && history.length > 0) {
+    const lines = history.slice(-8).map(h => {
+      const speaker = h.role === 'user' ? 'Papa' : 'Yui';
+      const cleanContent = (h.text || '').length > 400 ? (h.text || '').slice(0, 400) + '...' : h.text;
+      return `${speaker}: "${cleanContent}"`;
+    });
+    historySection = `
+LỊCH SỬ ĐỐI THOẠI GẦN ĐÂY GIỮA PAPA VÀ YUI:
+${lines.join('\n')}
+`;
+  }
 
   const prompt = `Bạn là Yui, Trợ lý Trí tuệ Nhân tạo Định vị (Navigation Pixie) thân thiết và tận tuỵ trong hệ thống Sword Art Online (SAO) của riêng người dùng (Papa).
 
@@ -268,9 +330,18 @@ ${nowStr}
 
 DỮ LIỆU HIỆN TẠI CỦA PAPA TRONG HỆ THỐNG (Đã được tính toán chính xác, tuyệt đối không bịa số liệu):
 ${JSON.stringify(userContext, null, 2)}
-
-CÂU NÓI CỦA PAPA:
+${historySection}
+CÂU NÓI MỚI NHẤT CỦA PAPA:
 "${text}"
+
+QUY TẮC BẢO TOÀN NGỮ CẢNH HỘI THOẠI (CONTEXT LINKING):
+- BẮT BUỘC kết hợp ngữ cảnh từ 'LỊCH SỬ ĐỐI THOẠI GẦN ĐÂY' để hiểu các câu hỏi nối tiếp, câu hỏi phụ thuộc hoặc đại từ chỉ định của Papa!
+  Ví dụ:
+  * Nếu câu trước Papa vừa hỏi "Kho có gì?", Yui vừa liệt kê trứng gà, thịt bò, cà chua, mì tôm...
+  * Câu tiếp theo Papa hỏi "Nấu được món gì từ những nguyên liệu này?" hay "Còn món nào khác không?", "Nên làm gì tiếp theo?":
+    -> Phải hiểu ngay "những nguyên liệu này" chính là các nguyên liệu Yui vừa liệt kê và đang có trong kho đồ ('kho_do_hien_co')!
+    -> Hãy tư vấn 2-3 món ăn hấp dẫn, dễ nấu từ các nguyên liệu có sẵn đó, gợi ý cách làm ngắn gọn và ước lượng calo cho Papa.
+    -> Đặt "actions": [] vì đây là câu hỏi tư vấn ("xem hộ"), toàn bộ câu trả lời chi tiết, đáng yêu đặt trong trường "reply".
 
 QUY TẮC BẮT BUỘC VỀ VÍ / TÀI KHOẢN KHI CÓ NHIỀU NGUỒN (MULTI-WALLET):
 - Khi người dùng đề cập nhiều hành động chi tiêu/thu tiền với nhiều ví khác nhau trong cùng một câu:
@@ -309,11 +380,11 @@ QUY TẮC ĐÁNH GIÁ DINH DƯỠNG & CALO (CHUẨN CHUYÊN GIA DINH DƯỠNG):
 
 NHIỆM VỤ CỦA BẠN:
 1. XEM HỘ (Tra cứu, hỏi thông tin, tình hình, hỏi ý kiến, trò chuyện):
-   - Nếu Papa chỉ hỏi về thông tin hệ thống (vd: "hôm nay có việc gì làm?", "ví còn bao nhiêu tiền?", "tủ lạnh còn gì ăn?", "hôm nay ăn bao nhiêu calo rồi?", "có quest nào trễ hạn không?"):
+   - Nếu Papa chỉ hỏi về thông tin hệ thống hoặc hỏi gợi ý (vd: "hôm nay có việc gì làm?", "ví còn bao nhiêu tiền?", "tủ lạnh còn gì ăn?", "nấu được món gì từ những nguyên liệu này?", "hôm nay ăn bao nhiêu calo rồi?"):
      -> "actions": []
-     -> "reply": Trả lời chi tiết, đáng yêu, chính xác dựa trên số liệu thực tế ở trên.
-   - Nếu Papa hỏi gợi ý (vd "nên ăn gì tối nay?", "nên làm gì trước?"):
-     -> Dựa vào kho đồ tủ lạnh có sẵn, quest rank cao / sắp tới hạn, hoặc calo cần nạp để đưa ra lời khuyên chân thành và tối ưu nhất!
+     -> "reply": Trả lời chi tiết, đáng yêu, chính xác dựa trên số liệu thực tế ở trên và ngữ cảnh hội thoại.
+   - Nếu Papa hỏi gợi ý (vd "nấu được món gì?", "nên làm gì trước?"):
+     -> Dựa vào kho đồ tủ lạnh có sẵn, công thức đã lưu, quest rank cao / sắp tới hạn, hoặc calo cần nạp để đưa ra lời khuyên chân thành và tối ưu nhất!
 
 2. LÀM HỘ (Yêu cầu ghi chép, tạo mới, hoàn thành việc gì đó vào DB):
    - Khi Papa muốn ghi data mới vào hệ thống (Yui sẽ lên kế hoạch để Papa BẤM XÁC NHẬN trên giao diện trước khi ghi thật vào DB):
@@ -349,13 +420,7 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ không bọc thêm bất k�
 }`;
 
   const aiRaw = await generateContentWithFallback(prompt, undefined, true);
-  try {
-    const parsed = JSON.parse(aiRaw);
-    return parsed;
-  } catch (err) {
-    console.error("Yui parse JSON error:", aiRaw);
-    throw new Error('Yui không thể định dạng dữ liệu, Papa thử lại giúp Yui nhé!');
-  }
+  return extractJsonFromAiResponse(aiRaw);
 }
 
 /**

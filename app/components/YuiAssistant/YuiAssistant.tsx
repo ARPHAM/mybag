@@ -58,11 +58,18 @@ export default function YuiAssistant() {
     const text = textToSend.trim();
     if (!text || busy) return;
     setInput('');
+
+    // Thu thập 8 tin nhắn gần nhất làm ngữ cảnh hội thoại
+    const recentHistory = msgs.slice(-8).map(m => ({
+      role: m.role,
+      text: m.text
+    }));
+
     setMsgs(m => [...m, { role: 'user', text }]);
     setBusy(true);
 
     try {
-      const res: any = await parseYuiMessage(text);
+      const res: any = await parseYuiMessage(text, recentHistory);
       const plan = res?.data;
 
       if (plan && !plan.actions?.length && (plan.reply || plan.summary)) {

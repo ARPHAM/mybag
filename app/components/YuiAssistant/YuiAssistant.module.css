@@ -185,6 +185,8 @@
   line-height: 1.4;
   border-left: 2px solid rgba(255, 170, 0, 0.7);
   font-style: italic;
+}
+
 .badge {
   font-size: 0.68rem;
   padding: 2px 5px;

@@ -15,13 +15,13 @@ export async function POST(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const body = await req.json();
-    const { text } = body;
+    const { text, history } = body;
 
     if (!text || typeof text !== 'string' || !text.trim()) {
       return NextResponse.json({ error: 'Vui lòng cung cấp nội dung cần phân tích' }, { status: 400 });
     }
 
-    const data = await parseYuiRequest(decoded.userId, text.trim());
+    const data = await parseYuiRequest(decoded.userId, text.trim(), Array.isArray(history) ? history : []);
 
     return NextResponse.json({
       success: true,
