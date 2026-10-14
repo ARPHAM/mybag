@@ -8,8 +8,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .header {
@@ -23,6 +30,7 @@
   flex-shrink: 0;
   clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
   padding: 15px 25px;
+  margin-bottom: 20px;
 }
 
 .titleWrapper {
@@ -241,7 +249,8 @@
   font-weight: 500;
 }
 
-.input, .select {
+.input,
+.select {
   width: 100%;
   box-sizing: border-box;
   background: rgba(0, 0, 0, 0.3);
@@ -254,7 +263,8 @@
   transition: all 0.2s;
 }
 
-.input:focus, .select:focus {
+.input:focus,
+.select:focus {
   outline: none;
   border-color: var(--sao-primary-hex);
   box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.2);
@@ -347,7 +357,7 @@
     padding: 10px 15px;
     clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
   }
-  
+
   .titleIcon {
     width: 20px !important;
     height: 20px !important;
@@ -396,7 +406,8 @@
   /* Hiển thị nút xóa luôn trên mobile */
   .deleteBtn {
     opacity: 1;
-    padding: 10px; /* Touch target */
+    padding: 10px;
+    /* Touch target */
   }
 
   .addButton {

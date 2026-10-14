@@ -1,6 +1,5 @@
-"use client";
-
 import React, { useMemo } from 'react';
+import { getLocalDateKey } from '../utils';
 
 interface SAOMonthViewProps {
   selectedDate: Date;
@@ -92,18 +91,17 @@ export default function SAOMonthView({
         {monthDays.map(({ date, isCurrentMonth }, idx) => {
           const isSelected = isSameDay(date, selectedDate);
           const isCurrentToday = isSameDay(date, today);
-          const dateStr = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+          const targetDayKey = getLocalDateKey(date);
 
           const dayEvents = events.filter(ev => {
-            const evDate = new Date(ev.start_time).toISOString().split('T')[0];
-            return evDate === dateStr;
+            return getLocalDateKey(ev.start_time) === targetDayKey;
           });
 
           const dayTasks = tasks.filter(t => {
             if (!t.due_date) return false;
-            const taskDate = new Date(t.due_date).toISOString().split('T')[0];
-            return taskDate === dateStr;
+            return getLocalDateKey(t.due_date) === targetDayKey;
           });
+
 
           return (
             <div

@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Clock, ShieldAlert, Award } from 'lucide-react';
+import { getLocalDateKey } from '../utils';
 
 interface SAOWeekViewProps {
   selectedDate: Date;
@@ -28,18 +29,13 @@ export default function SAOWeekView({
   onEventClick,
   onTaskClick
 }: SAOWeekViewProps) {
-  // Get 7 days of the week containing selectedDate (Mon -> Sun)
+  // Lấy 7 ngày trong tuần chứa selectedDate (Thứ Hai -> Chủ Nhật)
   const weekDays = useMemo(() => {
-    const current = new Date(selectedDate);
-    const day = current.getDay();
-    const diff = current.getDate() - day + (day === 0 ? -6 : 1); // Monday start
-    const monday = new Date(current.setDate(diff));
-
-    const days = [];
+    const day = selectedDate.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const days: Date[] = [];
     for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      days.push(d);
+      days.push(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + diffToMonday + i));
     }
     return days;
   }, [selectedDate]);
@@ -59,20 +55,19 @@ export default function SAOWeekView({
         {weekDays.map((day, idx) => {
           const isSelected = isSameDay(day, selectedDate);
           const isCurrentToday = isSameDay(day, today);
-          const dateStr = new Date(day.getTime() - day.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+          const targetDayKey = getLocalDateKey(day);
 
-          // Filter events on this day
+          // Filter events on this day (chuẩn xác theo giờ địa phương)
           const dayEvents = events.filter(ev => {
-            const evDate = new Date(ev.start_time).toISOString().split('T')[0];
-            return evDate === dateStr;
+            return getLocalDateKey(ev.start_time) === targetDayKey;
           });
 
-          // Filter tasks due on this day
+          // Filter tasks due on this day (chuẩn xác theo giờ địa phương)
           const dayTasks = tasks.filter(t => {
             if (!t.due_date) return false;
-            const taskDate = new Date(t.due_date).toISOString().split('T')[0];
-            return taskDate === dateStr;
+            return getLocalDateKey(t.due_date) === targetDayKey;
           });
+
 
           return (
             <div

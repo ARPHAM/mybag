@@ -15,6 +15,7 @@ import SaoButton from '@/app/components/SaoButton/SaoButton';
 import SaoInput from '@/app/components/SaoInput/SaoInput';
 import { getEvents, createEvent, updateEvent, deleteEvent } from './api';
 import { getTasks } from '../tasks/api';
+import { getLocalDateKey, isSameLocalDate } from './utils';
 
 const RANK_BADGES: Record<string, { bg: string; text: string; border: string }> = {
   S: { bg: 'rgba(255, 215, 0, 0.2)', text: '#ffd700', border: '#ffd700' },
@@ -39,7 +40,7 @@ export default function CalendarPage() {
   // Form states
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDateStr, setStartDateStr] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
+  const [startDateStr, setStartDateStr] = useState(getLocalDateKey(new Date()));
   const [startTimeStr, setStartTimeStr] = useState('09:00');
   const [endTimeStr, setEndTimeStr] = useState('10:00');
   const [isRecurring, setIsRecurring] = useState(false);
@@ -77,34 +78,28 @@ export default function CalendarPage() {
   const fetchEvents = async (force = false) => {
     setLoading(true);
     try {
-      let start = new Date(selectedDate);
-      let end = new Date(selectedDate);
+      let start: Date;
+      let end: Date;
 
       if (viewMode === 'day') {
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
+        start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0);
+        end = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999);
       } else if (viewMode === 'week') {
         const day = selectedDate.getDay();
-        const diff = selectedDate.getDate() - day + (day === 0 ? -6 : 1);
-        start = new Date(selectedDate);
-        start.setDate(diff);
-        start.setHours(0, 0, 0, 0);
-
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        end.setHours(23, 59, 59, 999);
+        const diffToMonday = day === 0 ? -6 : 1 - day;
+        start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + diffToMonday, 0, 0, 0, 0);
+        end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6, 23, 59, 59, 999);
       } else if (viewMode === 'month') {
-        start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-        start.setDate(start.getDate() - 7); // include leading days
-        start.setHours(0, 0, 0, 0);
-
-        end = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-        end.setDate(end.getDate() + 7); // include trailing days
-        end.setHours(23, 59, 59, 999);
+        // Bao trọn tháng kèm các ngày đệm phía trước và phía sau
+        start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1 - 7, 0, 0, 0, 0);
+        end = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 7, 23, 59, 59, 999);
+      } else {
+        start = new Date(selectedDate);
+        end = new Date(selectedDate);
       }
 
       const data: any = await getEvents(start.toISOString(), end.toISOString(), force);
-      setEvents(data);
+      setEvents(data || []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -116,7 +111,7 @@ export default function CalendarPage() {
     setEditingEvent(null);
     setTitle('');
     setDescription('');
-    setStartDateStr(new Date(selectedDate.getTime() - selectedDate.getTimezoneOffset() * 60000).toISOString().split('T')[0]);
+    setStartDateStr(getLocalDateKey(selectedDate));
     setStartTimeStr('09:00');
     setEndTimeStr('10:00');
     setIsRecurring(false);
@@ -134,32 +129,36 @@ export default function CalendarPage() {
     const st = new Date(ev.start_time);
     const et = new Date(ev.end_time);
     
-    setStartDateStr(new Date(st.getTime() - st.getTimezoneOffset() * 60000).toISOString().split('T')[0]);
+    setStartDateStr(getLocalDateKey(st));
     setStartTimeStr(`${st.getHours().toString().padStart(2, '0')}:${st.getMinutes().toString().padStart(2, '0')}`);
     setEndTimeStr(`${et.getHours().toString().padStart(2, '0')}:${et.getMinutes().toString().padStart(2, '0')}`);
     
     setIsRecurring(ev.is_recurring || false);
     setRecurrenceType(ev.recurrence_type || 'WEEKLY');
     setRecurrenceDays(ev.recurrence_days || []);
-    setRecurrenceEndDateStr(ev.recurrence_end ? new Date(new Date(ev.recurrence_end).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] : '');
+    setRecurrenceEndDateStr(ev.recurrence_end ? getLocalDateKey(ev.recurrence_end) : '');
     setIsModalOpen(true);
   };
 
   const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    const start = new Date(startDateStr);
-    const [startH, startM] = startTimeStr.split(':');
-    start.setHours(parseInt(startH), parseInt(startM), 0, 0);
+    const [startYear, startMonth, startDay] = startDateStr.split('-').map(Number);
+    const [startH, startM] = startTimeStr.split(':').map(Number);
+    const start = new Date(startYear, startMonth - 1, startDay, startH, startM, 0, 0);
 
-    const end = new Date(startDateStr);
-    const [endH, endM] = endTimeStr.split(':');
-    end.setHours(parseInt(endH), parseInt(endM), 0, 0);
+    const [endH, endM] = endTimeStr.split(':').map(Number);
+    const end = new Date(startYear, startMonth - 1, startDay, endH, endM, 0, 0);
 
     let recEndIso: string | undefined = undefined;
     if (isRecurring && recurrenceEndDateStr) {
-      const recEndDate = new Date(recurrenceEndDateStr);
-      recEndDate.setHours(23, 59, 59, 999);
+      const [rY, rM, rD] = recurrenceEndDateStr.split('-').map(Number);
+      const recEndDate = new Date(rY, rM - 1, rD, 23, 59, 59, 999);
       recEndIso = recEndDate.toISOString();
+    }
+
+    let finalRecurrenceDays = recurrenceDays;
+    if (isRecurring && recurrenceType === 'WEEKLY' && (!recurrenceDays || recurrenceDays.length === 0)) {
+      finalRecurrenceDays = [start.getDay()];
     }
 
     const payload = {
@@ -170,7 +169,7 @@ export default function CalendarPage() {
       color_code: '#f97316',
       is_recurring: isRecurring,
       recurrence_type: recurrenceType,
-      recurrence_days: recurrenceDays,
+      recurrence_days: finalRecurrenceDays,
       recurrence_end: recEndIso
     };
 
@@ -225,19 +224,18 @@ export default function CalendarPage() {
     }
   };
 
-  // Filter items for selectedDate in Quest Log
-  const selectedDateStr = new Date(selectedDate.getTime() - selectedDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  // Filter items for selectedDate in Quest Log & Day view
+  const selectedDateKey = getLocalDateKey(selectedDate);
 
   const dayEvents = events.filter(ev => {
-    const evDate = new Date(ev.start_time).toISOString().split('T')[0];
-    return evDate === selectedDateStr;
+    return getLocalDateKey(ev.start_time) === selectedDateKey;
   });
 
   const dayTasks = tasks.filter(t => {
     if (!t.due_date) return false;
-    const taskDate = new Date(t.due_date).toISOString().split('T')[0];
-    return taskDate === selectedDateStr;
+    return getLocalDateKey(t.due_date) === selectedDateKey;
   });
+
 
   return (
     <div className="p-2 lg:p-4 flex flex-col font-mono h-full overflow-hidden">
