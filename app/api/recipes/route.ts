@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, ingredients } = body;
+    const { name, ingredients, instructions } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Thiếu tên công thức' }, { status: 400 });
@@ -56,6 +56,7 @@ export async function POST(req: Request) {
       user_id: decoded.userId,
       name,
       ingredients: ingredients || [],
+      instructions: instructions || undefined,
     });
 
     return NextResponse.json({ message: 'Đã tạo công thức mới!', recipe: newRecipe }, { status: 201 });

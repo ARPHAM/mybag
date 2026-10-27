@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   RotateCcw,
   Wallet,
-  Scale
+  Scale,
+  ChefHat
 } from 'lucide-react';
 import { parseYuiMessage, executeYuiActions } from './api';
 import styles from './YuiAssistant.module.css';
@@ -136,6 +137,8 @@ export default function YuiAssistant() {
       window.dispatchEvent(new CustomEvent('sao-shopping-updated'));
       window.dispatchEvent(new CustomEvent('sao-finance-updated'));
       window.dispatchEvent(new CustomEvent('sao-health-updated'));
+      window.dispatchEvent(new CustomEvent('sao-menu-updated'));
+      window.dispatchEvent(new CustomEvent('sao-inventory-updated'));
 
     } catch (err: any) {
       const errMsg = typeof err === 'string' ? err : err?.response?.data?.error || err?.message || 'Lỗi khi lưu';
@@ -180,6 +183,8 @@ export default function YuiAssistant() {
         return <span className={`${styles.badge} ${styles.badgeInventory}`}>Kho đồ</span>;
       case 'record_weight':
         return <span className={`${styles.badge} ${styles.badgeHealth}`}>Cân nặng</span>;
+      case 'create_recipe':
+        return <span className={`${styles.badge} ${styles.badgeRecipe}`}>Công thức</span>;
       default:
         return <span className={styles.badge}>Hành động</span>;
     }
@@ -208,6 +213,8 @@ export default function YuiAssistant() {
         return <Package size={15} color="#fb923c" />;
       case 'record_weight':
         return <Scale size={15} color="#10b981" />;
+      case 'create_recipe':
+        return <ChefHat size={15} color="#00f0ff" />;
       default:
         return <Sparkles size={15} color="#ffb6e6" />;
     }
@@ -236,6 +243,8 @@ export default function YuiAssistant() {
         return `Cất kho: ${a.name} (${a.quantity || 1} ${a.unit || 'món'})`;
       case 'record_weight':
         return `Cập nhật cân nặng: ${a.weight} kg${a.height ? ` (Chiều cao: ${a.height} cm)` : ''} (+100 EXP)`;
+      case 'create_recipe':
+        return `Công thức: ${a.name || 'Món mới'} (${(a.ingredients || []).length} nguyên liệu)`;
       default:
         return a.description || 'Hành động';
     }
@@ -335,6 +344,24 @@ export default function YuiAssistant() {
                         {a.actionType === 'meal' && a.ai_description && (
                           <div className={styles.planNutritionDetail}>
                             {a.ai_description}
+                          </div>
+                        )}
+
+                        {/* Hiển thị nguyên liệu và các bước nấu của công thức */}
+                        {a.actionType === 'create_recipe' && (
+                          <div className={styles.planRecipeBox}>
+                            {Array.isArray(a.ingredients) && a.ingredients.length > 0 && (
+                              <div className={styles.planRecipeTags}>
+                                {a.ingredients.map((ing: string, k: number) => (
+                                  <span key={k} className={styles.planRecipeTag}>{ing}</span>
+                                ))}
+                              </div>
+                            )}
+                            {a.instructions && (
+                              <div className={styles.planInstructions}>
+                                <strong>Cách nấu:</strong> {a.instructions}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

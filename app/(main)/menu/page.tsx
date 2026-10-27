@@ -38,6 +38,7 @@ export default function MenuPage() {
   // Form states
   const [formName, setFormName] = useState('');
   const [formIngredients, setFormIngredients] = useState(''); 
+  const [formInstructions, setFormInstructions] = useState('');
   const [formCookSource, setFormCookSource] = useState<'home' | 'eat_out'>('home');
   const [formDate, setFormDate] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
   const [formActualIngredients, setFormActualIngredients] = useState(''); 
@@ -59,6 +60,13 @@ export default function MenuPage() {
 
   useEffect(() => {
     fetchData();
+    const handleUpdate = () => fetchData(true);
+    window.addEventListener('sao-menu-updated', handleUpdate);
+    window.addEventListener('sao-inventory-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('sao-menu-updated', handleUpdate);
+      window.removeEventListener('sao-inventory-updated', handleUpdate);
+    };
   }, []);
 
   const fetchData = async (force = false) => {
@@ -115,6 +123,7 @@ export default function MenuPage() {
       setEditingRecipe(null);
       setFormName('');
       setFormIngredients('');
+      setFormInstructions('');
       setIsModalOpen(true);
     } else {
       setModalType('meal');
@@ -186,7 +195,8 @@ export default function MenuPage() {
     try {
       await createRecipe({
         name: formName,
-        ingredients: formIngredients.split(',').map(s => s.trim()).filter(Boolean)
+        ingredients: formIngredients.split(',').map(s => s.trim()).filter(Boolean),
+        instructions: formInstructions ? formInstructions.trim() : undefined
       });
       setIsModalOpen(false);
       fetchData(true);
@@ -280,6 +290,10 @@ export default function MenuPage() {
             <label className={styles.formLabel}>Nguyên liệu cơ bản (Cách nhau bằng dấu phẩy)</label>
             <SaoInput isTextarea  placeholder="VD: Sườn non, Hành tím, Tương cà..." rows={3} value={formIngredients} onChange={e => setFormIngredients(e.target.value)} required />
           </div>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Hướng dẫn nấu (Tùy chọn)</label>
+            <SaoInput isTextarea  placeholder="VD: B1: Chặt sườn và chần nước sôi... B2: Nấu sốt..." rows={3} value={formInstructions} onChange={e => setFormInstructions(e.target.value)} />
+          </div>
           <SaoButton variant="primary" type="submit" >
             <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> Lưu Công thức
           </SaoButton>
@@ -355,6 +369,12 @@ export default function MenuPage() {
                   <span key={i} style={{ background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', padding: '4px 10px', borderRadius: '12px', fontSize: '0.85rem' }}>{ing}</span>
                 ))}
               </div>
+              {editingRecipe.instructions && (
+                <div style={{ marginTop: '10px', fontSize: '0.82rem', color: '#cbd5e1', background: 'rgba(0,0,0,0.3)', padding: '8px 10px', borderRadius: '6px', borderLeft: '3px solid #00f0ff', whiteSpace: 'pre-line', lineHeight: '1.45' }}>
+                  <strong style={{ color: '#00f0ff', display: 'block', marginBottom: '4px' }}>Hướng dẫn nấu:</strong>
+                  {editingRecipe.instructions}
+                </div>
+              )}
             </div>
           )}
 
@@ -492,6 +512,11 @@ export default function MenuPage() {
                       <span key={i} className={styles.ingredientTag}>{ing}</span>
                     ))}
                   </div>
+                  {recipe.instructions && (
+                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', marginTop: '6px', fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={recipe.instructions}>
+                      {recipe.instructions}
+                    </div>
+                  )}
                   <SaoButton className={styles.cookBtn} onClick={() => openCookModal(recipe)}>
                     Nấu Món Này
                   </SaoButton>
