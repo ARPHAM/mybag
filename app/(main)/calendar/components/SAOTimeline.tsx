@@ -8,6 +8,19 @@ interface SAOTimelineProps {
 
 export default function SAOTimeline({ events, onEventClick }: SAOTimelineProps) {
   const hours = Array.from({ length: 24 }, (_, i) => i);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    let targetHour = 7; // Default scroll to 07:00
+    if (events && events.length > 0) {
+      const earliestHour = Math.min(
+        ...events.map((ev) => new Date(ev.start_time).getHours())
+      );
+      targetHour = Math.max(0, earliestHour - 1);
+    }
+    scrollContainerRef.current.scrollTop = targetHour * 60;
+  }, [events]);
 
   // Process events for overlapping
   const processedEvents = React.useMemo(() => {
@@ -102,9 +115,9 @@ export default function SAOTimeline({ events, onEventClick }: SAOTimelineProps) 
   };
 
   return (
-    <div className="relative mt-4 lg:mt-0 bg-zinc-900/90 border border-zinc-700 rounded-sm font-mono text-zinc-300 shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col h-full">
+    <div className="relative bg-zinc-900/90 border border-zinc-700 rounded-sm font-mono text-zinc-300 shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col h-full min-h-[380px] lg:min-h-0">
       {/* Grid container with vertical scroll */}
-      <div className="flex-1 overflow-y-auto relative custom-scrollbar min-h-0">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto relative custom-scrollbar min-h-0">
         {/* Render hour lines */}
         {hours.map((hour) => (
           <div key={hour} className="flex border-b border-zinc-800/50 h-[60px] relative group">

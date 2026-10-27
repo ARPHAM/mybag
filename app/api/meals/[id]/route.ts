@@ -64,7 +64,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!meal) return NextResponse.json({ error: 'Meal not found' }, { status: 404 });
 
     const body = await req.json();
-    const { food_name, consumed_at, recipe_id, source, ingredients_used, cost, ingredients_text, wallet_id } = body;
+    const { food_name, consumed_at, recipe_id, source, ingredients_used, cost, ingredients_text, wallet_id, image_url } = body;
 
     // --- VALIDATION PHASE ---
     let txToRevert = null;
@@ -150,6 +150,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     meal.recipe_id = recipe_id || null;
     meal.source = source || 'home';
     meal.ingredients_text = ingredients_text || undefined;
+    if (image_url !== undefined) {
+      meal.image_url = image_url || undefined;
+    }
     meal.cost = source === 'home' ? calculatedCost : (cost || 0);
     meal.ingredients_used = source === 'home' ? ingredients_used : undefined;
     meal.transaction_id = new_transaction_id;

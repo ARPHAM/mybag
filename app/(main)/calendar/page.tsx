@@ -238,7 +238,7 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="p-2 lg:p-4 flex flex-col font-mono h-full overflow-hidden">
+    <div className="p-1.5 lg:p-4 flex flex-col font-mono h-full overflow-y-auto lg:overflow-hidden">
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
@@ -246,29 +246,29 @@ export default function CalendarPage() {
           <h1 className={styles.title}>Lịch trình</h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 lg:gap-3 flex-wrap justify-end">
           {/* View Mode Toggle: Day / Week / Month */}
           <div className="flex items-center gap-1 bg-zinc-900/80 p-1 rounded border border-cyan-500/30">
             <SaoButton
               variant={viewMode === 'day' ? 'primary' : 'ghost'}
-              style={{ padding: '4px 10px', fontSize: '0.85rem' }}
+              style={{ padding: '4px 8px', fontSize: '0.8rem' }}
               onClick={() => setViewMode('day')}
             >
-              <Clock size={14} style={{ marginRight: 4 }} /> Ngày
+              <Clock size={13} style={{ marginRight: 4 }} /> Ngày
             </SaoButton>
             <SaoButton
               variant={viewMode === 'week' ? 'primary' : 'ghost'}
-              style={{ padding: '4px 10px', fontSize: '0.85rem' }}
+              style={{ padding: '4px 8px', fontSize: '0.8rem' }}
               onClick={() => setViewMode('week')}
             >
-              <Columns3 size={14} style={{ marginRight: 4 }} /> Tuần
+              <Columns3 size={13} style={{ marginRight: 4 }} /> Tuần
             </SaoButton>
             <SaoButton
               variant={viewMode === 'month' ? 'primary' : 'ghost'}
-              style={{ padding: '4px 10px', fontSize: '0.85rem' }}
+              style={{ padding: '4px 8px', fontSize: '0.8rem' }}
               onClick={() => setViewMode('month')}
             >
-              <CalendarDays size={14} style={{ marginRight: 4 }} /> Tháng
+              <CalendarDays size={13} style={{ marginRight: 4 }} /> Tháng
             </SaoButton>
           </div>
 
@@ -276,7 +276,7 @@ export default function CalendarPage() {
             onClick={openCreateModal}
             className={styles.addButton}
           >
-            <Plus size={18} /> Thêm sự kiện
+            <Plus size={18} /> <span className="hidden sm:inline">Thêm sự kiện</span><span className="sm:hidden">Thêm</span>
           </SaoButton>
         </div>
       </div>
@@ -285,9 +285,9 @@ export default function CalendarPage() {
       <DateSelector selectedDate={selectedDate} onChange={setSelectedDate} />
 
       {/* Main Layout Area */}
-      <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 lg:gap-6 flex-1 mt-4 min-h-0">
+      <div className="flex flex-col lg:grid lg:grid-cols-3 gap-3 lg:gap-6 lg:flex-1 mt-2.5 lg:mt-4 lg:min-h-0">
         {/* Left 2 Cols: Main View (Timeline / Week / Month) */}
-        <div className="flex-1 lg:col-span-2 relative flex flex-col min-h-0">
+        <div className="h-[420px] sm:h-[480px] lg:h-auto lg:flex-1 shrink-0 lg:shrink lg:col-span-2 relative flex flex-col min-h-[380px] lg:min-h-0">
           {loading && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm font-mono" style={{ color: 'var(--sao-primary-hex)' }}>
               Scanning data...

@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { TrendingUp, PieChart as PieChartIcon, Calendar } from 'lucide-react';
 import SaoButton from '../../../components/SaoButton/SaoButton';
+import styles from '../finance.module.css';
 import type { Transaction } from '@/lib/types';
 import { FINANCE_CATEGORY_OPTIONS } from '@/lib/constants/finance';
 
@@ -185,89 +186,74 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
   };
 
   return (
-    <div style={{
-      background: 'rgba(10, 25, 45, 0.65)',
-      border: '1px solid rgba(var(--sao-primary-rgb), 0.3)',
-      padding: '20px',
-      clipPath: 'polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)',
-      boxShadow: 'inset 0 0 20px rgba(var(--sao-primary-rgb), 0.08)',
-      gridColumn: 'span 2',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '15px'
-    }}>
+    <div className={styles.chartsCard}>
       {/* Chart Header & Controls */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '12px',
-        borderBottom: '1px solid rgba(var(--sao-primary-rgb), 0.2)',
-        paddingBottom: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <TrendingUp size={22} color="var(--sao-primary-hex)" />
-          <span style={{ fontSize: '1.15rem', fontWeight: 'bold', color: '#fff', letterSpacing: '1px' }}>
-            BIỂU ĐỒ TÀI CHÍNH
-          </span>
+      <div className={styles.chartsHeader}>
+        <div className={styles.chartsTitle}>
+          <TrendingUp size={20} color="var(--sao-primary-hex)" />
+          <span>BIỂU ĐỒ TÀI CHÍNH</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* View mode toggle */}
-          <SaoButton
-            variant={viewMode === 'comparison' ? 'primary' : 'ghost'}
-            style={{ padding: '4px 12px', fontSize: '0.85rem' }}
-            onClick={() => setViewMode('comparison')}
-          >
-            <TrendingUp size={14} style={{ marginRight: 5 }} />
-            Thu & Chi
-          </SaoButton>
-          <SaoButton
-            variant={viewMode === 'category' ? 'primary' : 'ghost'}
-            style={{ padding: '4px 12px', fontSize: '0.85rem' }}
-            onClick={() => setViewMode('category')}
-          >
-            <PieChartIcon size={14} style={{ marginRight: 5 }} />
-            Danh mục
-          </SaoButton>
+        <div className={styles.chartsControls}>
+          <div className={styles.chartsControlGroup}>
+            {/* View mode toggle */}
+            <SaoButton
+              variant={viewMode === 'comparison' ? 'primary' : 'ghost'}
+              style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+              onClick={() => setViewMode('comparison')}
+            >
+              <TrendingUp size={13} style={{ marginRight: 4 }} />
+              Thu & Chi
+            </SaoButton>
+            <SaoButton
+              variant={viewMode === 'category' ? 'primary' : 'ghost'}
+              style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+              onClick={() => setViewMode('category')}
+            >
+              <PieChartIcon size={13} style={{ marginRight: 4 }} />
+              Danh mục
+            </SaoButton>
+          </div>
 
-          <span style={{ color: 'rgba(255,255,255,0.2)', margin: '0 4px' }}>|</span>
+          <span className={styles.chartsDivider}>|</span>
 
-          {/* Period toggle */}
-          <SaoButton
-            variant={period === '30days' ? 'primary' : 'ghost'}
-            style={{ padding: '4px 10px', fontSize: '0.85rem' }}
-            onClick={() => setPeriod('30days')}
-          >
-            30 Ngày
-          </SaoButton>
-          <SaoButton
-            variant={period === '6months' ? 'primary' : 'ghost'}
-            style={{ padding: '4px 10px', fontSize: '0.85rem' }}
-            onClick={() => setPeriod('6months')}
-          >
-            6 Tháng
-          </SaoButton>
+          <div className={styles.chartsControlGroup}>
+            {/* Period toggle */}
+            <SaoButton
+              variant={period === '30days' ? 'primary' : 'ghost'}
+              style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+              onClick={() => setPeriod('30days')}
+            >
+              30 Ngày
+            </SaoButton>
+            <SaoButton
+              variant={period === '6months' ? 'primary' : 'ghost'}
+              style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+              onClick={() => setPeriod('6months')}
+            >
+              6 Tháng
+            </SaoButton>
+          </div>
         </div>
       </div>
 
       {/* Chart Content */}
       {viewMode === 'comparison' ? (
-        <div style={{ height: '280px', width: '100%', marginTop: '5px' }}>
+        <div className={styles.comparisonChartBox}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={comparisonData} margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
+            <BarChart data={comparisonData} margin={{ top: 10, right: 6, bottom: 5, left: -12 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--sao-primary-rgb), 0.15)" vertical={false} />
-              <XAxis dataKey="date" stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 11 }} />
+              <XAxis dataKey="date" stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 10 }} />
               <YAxis
                 stroke="#a0c4ff"
-                tick={{ fill: '#a0c4ff', fontSize: 11 }}
+                tick={{ fill: '#a0c4ff', fontSize: 10 }}
+                width={48}
                 tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`}
               />
               <Tooltip content={<CustomComparisonTooltip />} cursor={{ fill: 'rgba(0, 240, 255, 0.08)' }} />
               <Legend
                 formatter={(value) => (
-                  <span style={{ color: value === 'income' ? '#00f0ff' : '#ff4444', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                  <span style={{ color: value === 'income' ? '#00f0ff' : '#ff4444', fontSize: '0.82rem', fontWeight: 'bold' }}>
                     {value === 'income' ? 'Thu nhập' : 'Chi tiêu'}
                   </span>
                 )}
@@ -278,28 +264,28 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
           </ResponsiveContainer>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: categoryData.items.length > 0 ? '1.5fr 1fr' : '1fr', gap: '20px', minHeight: '260px', alignItems: 'center' }}>
+        <div className={categoryData.items.length > 0 ? styles.categoryChartGrid : styles.categoryChartGridEmpty}>
           {categoryData.items.length === 0 ? (
             <div style={{ textAlign: 'center', color: '#a0c4ff', padding: '40px 0', fontStyle: 'italic' }}>
               Chưa có dữ liệu chi tiêu trong khoảng thời gian này.
             </div>
           ) : (
             <>
-              <div style={{ height: '260px', width: '100%' }}>
+              <div className={styles.categoryBarBox}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     layout="vertical"
                     data={categoryData.items}
-                    margin={{ top: 5, right: 30, bottom: 5, left: 30 }}
+                    margin={{ top: 5, right: 16, bottom: 5, left: 10 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--sao-primary-rgb), 0.15)" horizontal={false} />
                     <XAxis
                       type="number"
                       stroke="#a0c4ff"
-                      tick={{ fill: '#a0c4ff', fontSize: 11 }}
+                      tick={{ fill: '#a0c4ff', fontSize: 10 }}
                       tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : `${(v / 1000).toFixed(0)}k`}
                     />
-                    <YAxis dataKey="name" type="category" stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 12 }} />
+                    <YAxis dataKey="name" type="category" width={75} stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 11 }} />
                     <Tooltip content={<CustomCategoryTooltip />} cursor={{ fill: 'rgba(0, 240, 255, 0.08)' }} />
                     <Bar dataKey="amount" radius={[0, 4, 4, 0]} maxBarSize={20}>
                       {categoryData.items.map((entry, index) => (

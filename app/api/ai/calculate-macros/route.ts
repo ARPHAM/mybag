@@ -39,27 +39,33 @@ export async function POST(req: Request) {
     }
 
     if (!image_data && meal.image_url) {
-      try {
-        const imageRes = await fetch(meal.image_url);
-        if (imageRes.ok) {
-          const arrayBuffer = await imageRes.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const mimeType = imageRes.headers.get('content-type') || 'image/jpeg';
-          image_data = `data:${mimeType};base64,${buffer.toString('base64')}`;
+      if (meal.image_url.startsWith('data:')) {
+        image_data = meal.image_url;
+      } else {
+        try {
+          const imageRes = await fetch(meal.image_url);
+          if (imageRes.ok) {
+            const arrayBuffer = await imageRes.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const rawMime = imageRes.headers.get('content-type') || 'image/jpeg';
+            const mimeType = rawMime.startsWith('image/') ? rawMime : 'image/jpeg';
+            image_data = `data:${mimeType};base64,${buffer.toString('base64')}`;
+          }
+        } catch (err) {
+          console.error("Error fetching S3 image for AI:", err);
         }
-      } catch (err) {
-        console.error("Error fetching S3 image for AI:", err);
       }
     }
 
     const prompt = `Bạn là một chuyên gia dinh dưỡng.
 Hãy ước tính lượng Calories, Protein (g), Fat (g), Carbs (g), Sugar (g) cho bữa ăn sau.
 Nếu có danh sách nguyên liệu và định lượng thực tế, hãy ưu tiên tính dựa trên định lượng đó. Nếu không, hãy ước lượng dựa trên một khẩu phần ăn tiêu chuẩn bình thường.
-Nếu có hình ảnh cung cấp kèm theo, hãy dùng hình ảnh để đánh giá khẩu phần, kích cỡ và thành phần để tính toán lượng calo chính xác nhất có thể.
+Nếu có hình ảnh cung cấp kèm theo, hãy dùng hình ảnh để nhận diện tên món ăn (nếu chưa có tên cụ thể), đánh giá khẩu phần, kích cỡ và thành phần để tính toán lượng calo chính xác nhất có thể.
 ${promptContext}
 
 Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ trả về JSON, không có text nào khác):
 {
+  "food_name": string, // Tên món ăn nhận diện được từ ảnh hoặc chuẩn hóa lại ngắn gọn (VD: "Phở bò tái chín", "Cơm tấm sườn bì")
   "calo": number,
   "protein": number,
   "fat": number,
@@ -79,6 +85,19 @@ Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ
       return NextResponse.json({ error: 'AI Error, all models failed', status: 'failed', mealLog: meal }, { status: 500 });
     }
 
+    if (result.food_name && (!meal.food_name || meal.food_name.includes('AI đang nhận diện') || meal.food_name === 'Bữa ăn từ ảnh')) {
+      meal.food_name = result.food_name;
+      if (meal.transaction_id) {
+        try {
+          const Transaction = (await import('@/models/Transaction')).default;
+          await Transaction.findByIdAndUpdate(meal.transaction_id, {
+            description: `[Ăn ngoài] ${result.food_name}`
+          });
+        } catch (txErr) {
+          console.error("Error updating transaction description with AI food name:", txErr);
+        }
+      }
+    }
     meal.calo = result.calo || 0;
     meal.protein = result.protein || 0;
     meal.fat = result.fat || 0;

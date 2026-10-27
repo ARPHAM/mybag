@@ -41,12 +41,10 @@
 @keyframes fadeIn {
   0% {
     opacity: 0;
-    filter: blur(5px);
   }
 
   100% {
     opacity: 1;
-    filter: none;
   }
 }
 
@@ -56,9 +54,11 @@
   flex-direction: column;
   position: relative;
 
-  transform: rotateY(15deg) translateZ(0);
+  transform: perspective(1200px) rotateY(15deg) translateZ(0);
   transform-style: preserve-3d;
   transform-origin: right center;
+  backface-visibility: hidden;
+  will-change: transform;
   padding-top: 4px;
   padding-left: 4px;
 }
@@ -342,8 +342,10 @@
   height: 100%;
   
   /* 3D Bend */
-  transform: rotateY(15deg);
+  transform: perspective(1200px) rotateY(15deg) translateZ(0);
   transform-origin: right center;
+  backface-visibility: hidden;
+  will-change: transform;
   
   /* Viền trái phát sáng + mép phải thẳng để nối với nửa phẳng */
   border-left: 4px solid var(--sao-primary-hex);

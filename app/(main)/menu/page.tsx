@@ -197,6 +197,12 @@ export default function MenuPage() {
 
   const handleSaveMeal = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const resolvedFoodName = formName.trim() || (formImageUrl ? 'Món ăn (AI đang nhận diện...)' : '');
+    if (!resolvedFoodName) {
+      showAlert("Vui lòng nhập tên món ăn hoặc tải ảnh bữa ăn lên!");
+      return;
+    }
     
     let ingredients_context = formActualIngredients;
     if (formCookSource === 'home' && selectedIngredients.length > 0) {
@@ -217,18 +223,19 @@ export default function MenuPage() {
       let data: any;
       if (editingMeal) {
         data = await updateMeal(editingMeal._id, {
-          food_name: formName,
+          food_name: resolvedFoodName,
           consumed_at: formDate,
           source: formCookSource,
           ingredients_used: selectedIngredients,
           ingredients_text: ingredients_context,
           cost: formCookSource === 'eat_out' ? Number(formCost) || 0 : undefined,
-          wallet_id: formCookSource === 'eat_out' ? formWalletId : undefined
+          wallet_id: formCookSource === 'eat_out' ? formWalletId : undefined,
+          image_url: formImageUrl || undefined
         });
         setMeals(meals.map(m => m._id === editingMeal._id ? data.mealLog : m));
       } else {
         data = await createMeal({
-          food_name: formName,
+          food_name: resolvedFoodName,
           consumed_at: formDate,
           source: formCookSource,
           recipe_id: editingRecipe ? editingRecipe._id : undefined,
@@ -244,15 +251,14 @@ export default function MenuPage() {
       setIsModalOpen(false);
       
       // Send AI request (which will also call fetchData(true) to sync)
-      // We don't need to pass base64 anymore, backend will fetch the S3 image using meal.image_url
-      calculateAI(data.mealLog._id, formName, ingredients_context);
+      calculateAI(data.mealLog._id, resolvedFoodName, ingredients_context);
       
       // Update local state temporarily, or just let fetchData(true) handle it.
       // We also do fetchData(true) directly here to guarantee instant UI update
       fetchData(true);
       window.dispatchEvent(new Event('sao-user-updated'));
     } catch (e: any) {
-      showAlert(e.response?.data?.error || "Lỗi lưu bữa ăn");
+      showAlert(e.response?.data?.error || e.message || "Lỗi lưu bữa ăn");
     }
   };
 
@@ -285,8 +291,37 @@ export default function MenuPage() {
       return (
         <form onSubmit={handleSaveMeal}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Tên món ăn</label>
-            <SaoInput type="text"  value={formName} onChange={e => setFormName(e.target.value)} required={modalType === 'meal'} readOnly={modalType === 'cook'} />
+            <label className={styles.formLabel}>Hình ảnh bữa ăn (Tùy chọn, tải lên bất cứ lúc nào để AI phân tích)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {formImageUrl && (
+                <div style={{ position: 'relative', width: '44px', height: '44px', flexShrink: 0 }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '6px', border: '1px solid #00f0ff', backgroundImage: `url(${formImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+                  <button
+                    type="button"
+                    onClick={() => setFormImageUrl('')}
+                    title="Xóa ảnh"
+                    style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', background: '#ff4444', color: '#fff', border: 'none', fontSize: '11px', lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              <SaoImageUpload onUploadSuccess={(url: string) => setFormImageUrl(url)} label={formImageUrl ? "Đổi ảnh" : "Tải ảnh lên"} />
+            </div>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>
+              Tên món ăn {formImageUrl && <span style={{ color: '#00ffaa', fontSize: '0.8rem', fontWeight: 'normal' }}>(Có thể bỏ trống để AI tự nhận diện từ ảnh)</span>}
+            </label>
+            <SaoInput
+              type="text"
+              placeholder={formImageUrl ? "Bỏ trống để AI tự đặt tên theo ảnh, hoặc nhập tên món..." : "VD: Phở bò, Cơm tấm..."}
+              value={formName}
+              onChange={e => setFormName(e.target.value)}
+              required={modalType === 'meal' && !formImageUrl}
+              readOnly={modalType === 'cook'}
+            />
           </div>
           
           <div className={styles.formGroup}>
@@ -394,17 +429,8 @@ export default function MenuPage() {
           {formCookSource === 'eat_out' && (
             <>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Hình ảnh bữa ăn (Tùy chọn, giúp AI phân tích tốt hơn)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {formImageUrl && (
-                    <div style={{ width: '40px', height: '40px', borderRadius: '4px', backgroundImage: `url(${formImageUrl})`, backgroundSize: 'cover' }}></div>
-                  )}
-                  <SaoImageUpload onUploadSuccess={(url: string) => setFormImageUrl(url)} label={formImageUrl ? "Đổi ảnh" : "Tải ảnh lên"} />
-                </div>
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Số tiền (VND)</label>
-                <SaoInput type="number" placeholder="Nhập số tiền..." value={formCost} onChange={e => setFormCost(e.target.value)} required />
+                <label className={styles.formLabel}>Số tiền (VND - Tùy chọn)</label>
+                <SaoInput type="number" placeholder="Nhập số tiền (Bỏ trống nếu 0đ)..." value={formCost} onChange={e => setFormCost(e.target.value)} />
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Chọn Ví trừ tiền</label>

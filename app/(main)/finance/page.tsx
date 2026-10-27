@@ -1003,9 +1003,9 @@ export default function FinancePage() {
         <SaoButton
           variant="primary"
           onClick={() => setIsSmartModalOpen(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.85rem', boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)' }}
         >
-          <Sparkles size={18} /> Ghi chép AI (Smart Command)
+          <Sparkles size={16} /> <span className="hidden sm:inline">Ghi chép AI (Smart Command)</span><span className="sm:hidden">Ghi chép AI</span>
         </SaoButton>
       </div>
 

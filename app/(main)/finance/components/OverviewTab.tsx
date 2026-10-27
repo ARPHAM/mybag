@@ -59,19 +59,19 @@ export default function OverviewTab({ wallets, transactions, formatMoney, onAddT
 
       <div className={`${styles.summaryCard} ${styles.income}`}>
         <div className={styles.summaryHeader}>
-          <ArrowUpRight size={18} color="#00ffaa" /> Tổng Thu (Tháng này)
+          <ArrowUpRight size={16} color="#00ffaa" style={{ flexShrink: 0 }} /> <span>Tổng Thu (Tháng)</span>
         </div>
         <div className={`${styles.summaryAmount} ${styles.income}`}>
-          +{formatMoney(monthlyIncome)} <span style={{ fontSize: '1rem', color: '#a0c4ff', fontWeight: 'normal' }}>VND</span>
+          +{formatMoney(monthlyIncome)} <span style={{ fontSize: '0.8rem', color: '#a0c4ff', fontWeight: 'normal' }}>VND</span>
         </div>
       </div>
 
       <div className={`${styles.summaryCard} ${styles.expense}`}>
         <div className={styles.summaryHeader}>
-          <ArrowDownRight size={18} color="#ff4444" /> Tổng Chi (Tháng này)
+          <ArrowDownRight size={16} color="#ff4444" style={{ flexShrink: 0 }} /> <span>Tổng Chi (Tháng)</span>
         </div>
         <div className={`${styles.summaryAmount} ${styles.expense}`}>
-          -{formatMoney(monthlyExpense)} <span style={{ fontSize: '1rem', color: '#a0c4ff', fontWeight: 'normal' }}>VND</span>
+          -{formatMoney(monthlyExpense)} <span style={{ fontSize: '0.8rem', color: '#a0c4ff', fontWeight: 'normal' }}>VND</span>
         </div>
       </div>
 
@@ -93,7 +93,7 @@ export default function OverviewTab({ wallets, transactions, formatMoney, onAddT
               <div className={styles.walletType}>{wallet.type}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.9rem', color: '#a0c4ff', textTransform: 'uppercase' }}>Số dư khả dụng</div>
+              <div style={{ fontSize: '0.8rem', color: '#a0c4ff', textTransform: 'uppercase' }}>Số dư khả dụng</div>
               <div className={styles.walletBalance}>
                 {formatMoney(wallet.balance)} <span className={styles.walletCurrency}>VND</span>
               </div>
@@ -104,11 +104,11 @@ export default function OverviewTab({ wallets, transactions, formatMoney, onAddT
 
       <SaoButton
         variant="primary"
-        style={{ borderRadius: '50%', width: 50, height: 50, position: 'absolute', bottom: 30, right: 30, zIndex: 100, boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)' }}
+        className={styles.overviewFab}
         title="Ghi chép giao dịch"
         onClick={onAddTransaction}
       >
-        <Plus size={32} />
+        <Plus size={28} />
       </SaoButton>
     </div>
   );
