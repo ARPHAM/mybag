@@ -507,7 +507,7 @@ export async function buildUserSystemContext(
     needFinances ? Debt.find({ user_id: userId, status: { $ne: 'paid' } }).lean() : Promise.resolve([]),
     needFinances ? Budget.find({ user_id: userId, month: currentMonthStr }).lean() : Promise.resolve([]),
     needInventory ? Inventory.find({ user_id: userId, quantity: { $gt: 0 } }).sort({ expiryDate: 1 }).limit(25).lean() : Promise.resolve([]),
-    needTasks ? Task.find({ user_id: userId, status: { $in: ['PENDING', 'IN_PROGRESS'] } }).sort({ due_date: 1 }).limit(5).lean() : Promise.resolve([]),
+    needTasks ? Task.find({ user_id: userId, status: { $in: ['PENDING', 'IN_PROGRESS'] } }).sort({ due_date: 1 }).lean() : Promise.resolve([]),
     needTasks ? Task.find({ user_id: userId, status: 'OVERDUE' }).sort({ due_date: 1 }).limit(5).lean() : Promise.resolve([]),
     needCalendar ? getExpandedCalendarEvents(userId, calStart, calEnd) : Promise.resolve([]),
     needMeals ? MealLog.find({ user_id: userId, consumed_at: { $gte: mealStart, $lte: mealEnd } }).sort({ consumed_at: -1 }).lean() : Promise.resolve([]),
@@ -837,7 +837,7 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ theo định dạng:
 }`;
 
     try {
-      const routeResRaw = await generateContentWithFallback(routerPrompt, undefined, true);
+      const routeResRaw = await generateContentWithFallback(routerPrompt, undefined, true, 5000);
       const routeJson = extractJsonFromAiResponse(routeResRaw);
       if (Array.isArray(routeJson)) {
         detectedScopes = routeJson as YuiDataScope[];
@@ -1016,7 +1016,7 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ không bọc thêm bất k�
   "actions": [ ... ]
 }`;
 
-  const aiRaw = await generateContentWithFallback(prompt, undefined, true);
+  const aiRaw = await generateContentWithFallback(prompt, undefined, true, 10000);
   return extractJsonFromAiResponse(aiRaw);
 }
 
@@ -1525,8 +1525,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
       const ingredients: string[] = Array.isArray(action.ingredients)
         ? action.ingredients.map((i: any) => String(i).trim()).filter(Boolean)
         : (typeof action.ingredients === 'string'
-            ? action.ingredients.split(',').map((s: string) => s.trim()).filter(Boolean)
-            : []);
+          ? action.ingredients.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : []);
       const instructions = action.instructions ? String(action.instructions).trim() : undefined;
 
       const recipe = await Recipe.create({

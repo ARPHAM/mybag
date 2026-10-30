@@ -1,19 +1,49 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Danh sách dự phòng ban đầu (chỉ dùng các model thực tế, tránh các model hư cấu gây lỗi 404)
+// Danh sách các model Flash hoạt động ổn định và phản hồi siêu nhanh (~1 giây)
 const DEFAULT_FALLBACK_MODELS = [
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'gemini-2.5-pro',
-  'gemini-2.0-pro-exp-02-05'
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-3-flash-preview',
+  'gemini-3.5-flash',
+  'gemini-3.6-flash'
+];
+
+// Danh sách các từ khóa model KHÔNG dùng cho tác vụ sinh text/JSON thông thường
+const EXCLUDED_MODEL_KEYWORDS = [
+  'tts',
+  'transcribe',
+  'image',
+  'robotics',
+  'computer-use',
+  'banana',
+  'customtools',
+  'lyria',
+  'antigravity',
+  'deep-research',
+  'aqa',
+  'embedding',
+  // Các model Pro thường xuyên vượt hạn mức quota (429) ở tài khoản tiêu chuẩn
+  'pro'
+];
+
+// Các model hiện đang bị Google quá tải cao điểm hoặc gặp lỗi mạng kéo dài
+const OVERLOADED_OR_UNSTABLE_MODELS = [
+  'gemini-3.8-flash',
+  'gemini-3.7-flash',
+  'gemini-flash-latest'
 ];
 
 // Bộ nhớ đệm danh sách model động lấy từ Google
-let activeModelsCache: string[] | null = null;
+let activeModelsCache: string[] = [...DEFAULT_FALLBACK_MODELS];
 let lastFetchTime: number = 0;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 giờ
+
+// Theo dõi tạm thời các model vừa bị lỗi quá tải để tránh thử lại liên tục
+const temporarilyDisabledModels = new Map<string, number>();
+const DISABLE_DURATION_MS = 3 * 60 * 1000; // 3 phút
 
 /**
  * Kiểm tra xem lỗi có phải do model không còn khả dụng (bị Google khai tử / 404 / unsupported) hay không
@@ -34,7 +64,8 @@ function isModelUnavailableError(err: any): boolean {
     'deprecated',
     'sunset',
     'unknown model',
-    'invalid model'
+    'invalid model',
+    'no longer available'
   ];
 
   const isNotFound = notFoundKeywords.some(keyword => msg.includes(keyword));
@@ -48,14 +79,14 @@ function isModelUnavailableError(err: any): boolean {
 }
 
 /**
- * Kiểm tra xem lỗi có phải do quá tải, cao điểm, rate-limit hay server bận không
+ * Kiểm tra xem lỗi có phải do quá tải, cao điểm, rate-limit, 503, timeout hay server bận không
  */
-function isOverloadedError(err: any): boolean {
+function isOverloadedOrTransientError(err: any): boolean {
   if (!err) return false;
   const msg = (err.message || String(err)).toLowerCase();
   const status = err.status || err.response?.status || err.code;
 
-  if (status === 429 || status === 503 || status === 500) return true;
+  if (status === 429 || status === 503 || status === 500 || status === 504) return true;
 
   const overloadKeywords = [
     'resource_exhausted',
@@ -66,7 +97,14 @@ function isOverloadedError(err: any): boolean {
     'high demand',
     'unavailable',
     '503',
-    'internal server error'
+    'internal server error',
+    'service unavailable',
+    'abort',
+    'aborted',
+    'timeout',
+    'fetch failed',
+    'econnreset',
+    'etimedout'
   ];
 
   return overloadKeywords.some(keyword => msg.includes(keyword));
@@ -83,73 +121,82 @@ export async function fetchLiveGeminiModels(apiKey: string, force: boolean = fal
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-    const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       console.warn(`[Gemini AI] Google API ListModels returned HTTP ${res.status}`);
-      return activeModelsCache || DEFAULT_FALLBACK_MODELS;
+      return activeModelsCache.length > 0 ? activeModelsCache : DEFAULT_FALLBACK_MODELS;
     }
 
     const data = await res.json();
     if (!data.models || !Array.isArray(data.models)) {
-      return activeModelsCache || DEFAULT_FALLBACK_MODELS;
+      return activeModelsCache.length > 0 ? activeModelsCache : DEFAULT_FALLBACK_MODELS;
     }
 
-    // Lọc các model hợp lệ hỗ trợ generateContent
+    // Lọc các model hợp lệ hỗ trợ generateContent, loại trừ các model chuyên dụng (audio/tts/image/pro)
     const validModels = data.models.filter((m: any) => {
-      const name = (m.name || '').toLowerCase();
+      const name = (m.name || '').toLowerCase().replace(/^models\//, '');
       const methods: string[] = m.supportedGenerationMethods || [];
-      return (
-        name.includes('gemini') &&
-        methods.includes('generateContent') &&
-        !name.includes('embedding') &&
-        !name.includes('aqa') &&
-        !name.includes('imagen')
-      );
-    });
+      if (!methods.includes('generateContent')) return false;
 
-    // Sắp xếp ưu tiên:
-    // 1. Model Flash trước (nhanh, nhẹ, rate limit cao), sau đó đến Pro
-    // 2. Phiên bản cao hơn lên trước (2.5 > 2.0 > 1.5)
-    validModels.sort((a: any, b: any) => {
-      const nameA = a.name.toLowerCase();
-      const nameB = b.name.toLowerCase();
+      // Loại trừ các model không phù hợp
+      for (const excluded of EXCLUDED_MODEL_KEYWORDS) {
+        if (name.includes(excluded)) return false;
+      }
 
-      const isFlashA = nameA.includes('flash');
-      const isFlashB = nameB.includes('flash');
-      if (isFlashA && !isFlashB) return -1;
-      if (!isFlashA && isFlashB) return 1;
-
-      const extractVer = (n: string) => {
-        const match = n.match(/gemini-(\d+(?:\.\d+)?)/);
-        return match ? parseFloat(match[1]) : 0;
-      };
-      const verA = extractVer(nameA);
-      const verB = extractVer(nameB);
-      if (verB !== verA) return verB - verA;
-
-      return nameA.localeCompare(nameB);
+      return true;
     });
 
     const modelNames = validModels.map((m: any) => m.name.replace(/^models\//, ''));
 
-    if (modelNames.length > 0) {
-      activeModelsCache = modelNames;
+    // Sắp xếp ưu tiên:
+    // 1. Các model đã được kiểm chứng hoạt động tốt (DEFAULT_FALLBACK_MODELS) lên trước
+    // 2. Đẩy các model thường quá tải (gemini-3.8-flash, 3.7-flash) xuống cuối danh sách
+    const orderedModels: string[] = [];
+
+    for (const defModel of DEFAULT_FALLBACK_MODELS) {
+      if (modelNames.includes(defModel)) {
+        orderedModels.push(defModel);
+      }
+    }
+
+    for (const name of modelNames) {
+      if (!orderedModels.includes(name) && !OVERLOADED_OR_UNSTABLE_MODELS.includes(name)) {
+        orderedModels.push(name);
+      }
+    }
+
+    // Cuối cùng mới thêm các model không ổn định làm phương án dự phòng chót
+    for (const unstable of OVERLOADED_OR_UNSTABLE_MODELS) {
+      if (modelNames.includes(unstable) && !orderedModels.includes(unstable)) {
+        orderedModels.push(unstable);
+      }
+    }
+
+    if (orderedModels.length > 0) {
+      activeModelsCache = orderedModels;
       lastFetchTime = now;
-      console.log(`[Gemini AI] Cập nhật thành công ${modelNames.length} model khả dụng từ Google API:`, modelNames);
-      return modelNames;
+      console.log(`[Gemini AI] Cập nhật thành công ${orderedModels.length} model khả dụng từ Google API:`, orderedModels);
+      return orderedModels;
     }
   } catch (err) {
-    console.error('[Gemini AI] Lỗi khi gọi Google API để lấy danh sách model:', err);
+    console.warn('[Gemini AI] Lỗi/hết thời gian khi lấy danh sách model từ Google:', err);
   }
 
-  return activeModelsCache || DEFAULT_FALLBACK_MODELS;
+  return activeModelsCache.length > 0 ? activeModelsCache : DEFAULT_FALLBACK_MODELS;
 }
 
 export async function generateContentWithFallback(
   prompt: string,
   imageData?: string,
-  isJson: boolean = false
+  isJson: boolean = false,
+  timeoutMs: number = 9000
 ): Promise<string> {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -157,11 +204,22 @@ export async function generateContentWithFallback(
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
+  const now = Date.now();
 
-  // Lấy danh sách model hiện có (từ cache hoặc danh sách mặc định)
-  let modelsToTry = activeModelsCache && activeModelsCache.length > 0
+  // Dọn dẹp danh sách tạm khóa quá 3 phút
+  for (const [mName, expireAt] of temporarilyDisabledModels.entries()) {
+    if (now > expireAt) {
+      temporarilyDisabledModels.delete(mName);
+    }
+  }
+
+  // Lấy danh sách model khả dụng, lọc bỏ các model đang bị tạm khóa (nếu còn model khác)
+  let candidateList = activeModelsCache && activeModelsCache.length > 0
     ? [...activeModelsCache]
     : [...DEFAULT_FALLBACK_MODELS];
+
+  const activeCandidates = candidateList.filter(m => !temporarilyDisabledModels.has(m));
+  let modelsToTry = activeCandidates.length > 0 ? activeCandidates : candidateList;
 
   const parts: any[] = [{ text: prompt }];
 
@@ -182,50 +240,67 @@ export async function generateContentWithFallback(
 
   for (let i = 0; i < modelsToTry.length; i++) {
     const modelName = modelsToTry[i];
+    const callStart = Date.now();
+
     try {
-      const model = genAI.getGenerativeModel({ model: modelName });
+      // Đặt timeout giới hạn chặt chẽ (mặc định 9s) để không bao giờ bị đứng hình chờ đợi
+      const model = genAI.getGenerativeModel(
+        { model: modelName },
+        { timeout: timeoutMs }
+      );
+
       const response = await model.generateContent(parts);
       text = response.response.text();
       aiSuccess = true;
+
+      // [TỐI ƯU HÓA TỐC ĐỘ]: Khi model này thành công siêu nhanh, đẩy nó lên vị trí số 1 trong Cache
+      // để các yêu cầu tiếp theo dùng ngay lập tức, không tốn thời gian thử vòng lại!
+      if (activeModelsCache.length > 0 && activeModelsCache[0] !== modelName) {
+        activeModelsCache = [modelName, ...activeModelsCache.filter(m => m !== modelName)];
+      }
+
       break; // Thành công -> thoát vòng lặp
     } catch (aiError: any) {
+      const elapsed = Date.now() - callStart;
+
       // 1. TRƯỜNG HỢP MODEL BỊ KHAI TỬ / 404 / KHÔNG CÒN KHẢ DỤNG
       if (isModelUnavailableError(aiError)) {
-        console.warn(`[Gemini AI] Model '${modelName}' không còn khả dụng hoặc đã bị khai tử (404/Unsupported).`);
+        console.warn(`[Gemini AI] Model '${modelName}' không còn khả dụng hoặc đã bị khai tử (${elapsed}ms). Xóa khỏi danh sách.`);
 
-        // Xóa ngay model chết khỏi bộ nhớ đệm
-        if (activeModelsCache) {
-          activeModelsCache = activeModelsCache.filter(m => m !== modelName);
-        }
+        // Xóa vĩnh viễn model chết khỏi bộ nhớ đệm
+        activeModelsCache = activeModelsCache.filter(m => m !== modelName);
 
-        // Gọi Google API lấy danh sách mới nếu chưa cập nhật trong lượt gọi này
+        // Gọi Google API lấy danh sách mới nếu chưa cập nhật
         if (!refreshedModelsOnce) {
           refreshedModelsOnce = true;
-          console.log(`[Gemini AI] Đang gọi Google API để tải danh sách các model mới nhất...`);
           const liveModels = await fetchLiveGeminiModels(apiKey, true);
-
-          // Bổ sung các model mới khám phá vào danh sách chờ thử
           const newModels = liveModels.filter(m => m !== modelName && !modelsToTry.includes(m));
           if (newModels.length > 0) {
             modelsToTry.push(...newModels);
-            console.log(`[Gemini AI] Đã thêm ${newModels.length} model mới từ Google vào hàng đợi fallback:`, newModels);
           }
         }
       }
-      // 2. TRƯỜNG HỢP QUÁ TẢI CAO ĐIỂM / RATE LIMIT / 429 / 503
-      else if (isOverloadedError(aiError)) {
-        console.warn(`[Gemini AI] Model '${modelName}' đang bận/quá tải cao điểm (429/503). Chuyển sang model dự phòng kế tiếp...`);
-        // Theo yêu cầu: nếu chỉ bị quá tải/cao điểm thì KHÔNG cần gọi lại Google API, chỉ chuyển model kế tiếp!
+      // 2. TRƯỜNG HỢP QUÁ TẢI CAO ĐIỂM / RATE LIMIT / 429 / 503 / TIMEOUT / FETCH FAILED
+      else if (isOverloadedOrTransientError(aiError)) {
+        console.warn(`[Gemini AI] Model '${modelName}' bận/quá tải/timeout sau ${elapsed}ms. Tạm chuyển model kế tiếp...`);
+
+        // Đánh dấu tạm khóa model này trong 3 phút để các request sau không bị nghẽn
+        temporarilyDisabledModels.set(modelName, Date.now() + DISABLE_DURATION_MS);
+
+        // Đẩy model bị lỗi xuống cuối danh sách cache
+        activeModelsCache = [...activeModelsCache.filter(m => m !== modelName), modelName];
       }
       // 3. CÁC LỖI KHÁC
       else {
-        console.error(`[Gemini AI] Model '${modelName}' gặp lỗi:`, aiError?.message || aiError);
+        console.error(`[Gemini AI] Model '${modelName}' gặp lỗi sau ${elapsed}ms:`, aiError?.message || aiError);
+        // Đẩy xuống cuối danh sách
+        activeModelsCache = [...activeModelsCache.filter(m => m !== modelName), modelName];
       }
     }
   }
 
   if (!aiSuccess) {
-    throw new Error('AI Error, all models failed');
+    throw new Error('AI Error: Toàn bộ model dự phòng đều không phản hồi');
   }
 
   if (isJson) {
