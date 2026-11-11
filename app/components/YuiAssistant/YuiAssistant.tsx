@@ -55,10 +55,49 @@ export default function YuiAssistant() {
     }
   ]);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [mobilePanelStyle, setMobilePanelStyle] = useState<React.CSSProperties | undefined>(undefined);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
   }, [msgs, open, busy]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (window.innerWidth > 768) {
+      inputRef.current?.focus();
+    }
+
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const syncViewport = () => {
+      if (window.innerWidth > 768) {
+        setMobilePanelStyle(undefined);
+        return;
+      }
+      const keyboardOpen = vv.height < window.innerHeight - 80;
+      if (keyboardOpen) {
+        setMobilePanelStyle({
+          top: `${Math.max(4, vv.offsetTop + 4)}px`,
+          bottom: 'auto',
+          height: `${Math.max(240, vv.height - 8)}px`,
+          maxHeight: 'none'
+        });
+        listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'auto' });
+      } else {
+        setMobilePanelStyle(undefined);
+      }
+    };
+
+    vv.addEventListener('resize', syncViewport);
+    vv.addEventListener('scroll', syncViewport);
+    return () => {
+      vv.removeEventListener('resize', syncViewport);
+      vv.removeEventListener('scroll', syncViewport);
+    };
+  }, [open]);
 
   const handleSendText = async (textToSend: string) => {
     const text = textToSend.trim();
@@ -278,7 +317,7 @@ export default function YuiAssistant() {
       )}
 
       {open && (
-        <div className={styles.panel}>
+        <div className={styles.panel} style={mobilePanelStyle}>
           {/* HEADER */}
           <div className={styles.head}>
             <div className={styles.avatar}>
@@ -292,7 +331,10 @@ export default function YuiAssistant() {
             </div>
             <button
               className={styles.close}
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                setMobilePanelStyle(undefined);
+              }}
               aria-label="Đóng bảng Yui"
             >
               <X size={18} />
@@ -443,11 +485,11 @@ export default function YuiAssistant() {
           {/* INPUT FORM */}
           <form className={styles.inputRow} onSubmit={send}>
             <input
+              ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               placeholder="Hỏi Yui bất cứ điều gì hoặc nhờ Yui làm hộ..."
               disabled={busy}
-              autoFocus
             />
             <button
               type="submit"

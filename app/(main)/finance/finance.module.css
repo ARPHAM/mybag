@@ -283,6 +283,17 @@
   box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
 
+.inventoryFabGroup {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+}
+
 .walletCard {
   background: rgba(10, 25, 45, 0.6);
   border: 1px solid rgba(var(--sao-primary-rgb), 0.2);
@@ -1144,7 +1155,7 @@
 
   .tabContent {
     padding-right: 2px;
-    padding-bottom: 65px;
+    padding-bottom: 74px;
   }
 
   .overviewGrid {
@@ -1275,6 +1286,13 @@
     right: auto;
     width: 46px;
     height: 46px;
+  }
+
+  .inventoryFabGroup {
+    bottom: 12px;
+    left: 12px;
+    right: auto;
+    gap: 10px;
   }
   
   .filterSection {

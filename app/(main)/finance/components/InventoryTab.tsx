@@ -110,7 +110,7 @@ export default function InventoryTab({
       </div>
 
       {/* FAB */}
-      <div style={{ position: 'absolute', bottom: 30, right: 30, zIndex: 100, display: 'flex', flexDirection: 'column', gap: 15, alignItems: 'center' }}>
+      <div className={styles.inventoryFabGroup}>
         {isFabExpanded && (
           <>
             <label className={styles.scanFabLabel} title="Chụp ảnh hóa đơn" style={{ marginBottom: 0 }}>

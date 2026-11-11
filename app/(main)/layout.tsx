@@ -11,7 +11,9 @@ import {
   Utensils,
   ShoppingCart,
   Settings,
-  Calendar
+  Calendar,
+  LayoutGrid,
+  X
 } from 'lucide-react';
 import { AlertProvider } from '../contexts/AlertContext';
 import { getUserProfile } from './api';
@@ -28,6 +30,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [mobileMorePathname, setMobileMorePathname] = useState<string | null>(null);
+  const mobileMoreOpen = mobileMorePathname === pathname;
 
   useEffect(() => {
     fetchUser();
@@ -59,6 +63,13 @@ export default function DashboardLayout({
     { id: 'shopping', path: '/shopping', icon: ShoppingCart, label: 'Mua sắm' },
     { id: 'settings', path: '/settings', icon: Settings, label: 'Cài đặt' },
   ];
+
+  const mobilePrimaryIds = new Set(['finance', 'tasks', 'calendar', 'menu']);
+  const mobilePrimaryItems = menuItems.filter((item) => mobilePrimaryIds.has(item.id));
+  const mobileSecondaryItems = menuItems.filter((item) => !mobilePrimaryIds.has(item.id));
+  const isItemActive = (item: (typeof menuItems)[number]) =>
+    pathname === item.path || (pathname === '/' && item.id === 'profile');
+  const isMobileSecondaryActive = mobileSecondaryItems.some(isItemActive);
 
   const [themeColor, setThemeColor] = useState('cyan');
 
@@ -165,6 +176,77 @@ export default function DashboardLayout({
             <YuiAssistant />
           </AlertProvider>
         </div>
+      </div>
+
+      {/* MOBILE BOTTOM NAVIGATION & SECONDARY DRAWER */}
+      <div className={styles.mobileNavWrapper}>
+        {mobileMoreOpen && (
+          <>
+            <div
+              className={styles.mobileDrawerBackdrop}
+              onClick={() => setMobileMorePathname(null)}
+              aria-hidden="true"
+            />
+            <div className={styles.mobileMoreDrawer} role="dialog" aria-label="Menu mở rộng">
+              <div className={styles.mobileMoreHeader}>
+                <span>SYSTEM MENU</span>
+                <button
+                  type="button"
+                  className={styles.mobileMoreClose}
+                  onClick={() => setMobileMorePathname(null)}
+                  aria-label="Đóng menu"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className={styles.mobileMoreGrid}>
+                {mobileSecondaryItems.map((item) => {
+                  const active = isItemActive(item);
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.path}
+                      className={`${styles.mobileMoreItem} ${active ? styles.mobileMoreItemActive : ''}`}
+                      onClick={() => setMobileMorePathname(null)}
+                    >
+                      <item.icon size={20} strokeWidth={2.2} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
+        <nav className={styles.mobileBottomNav} aria-label="Điều hướng chính">
+          {mobilePrimaryItems.map((item) => {
+            const active = isItemActive(item);
+            return (
+              <Link
+                key={item.id}
+                href={item.path}
+                className={`${styles.mobileNavItem} ${active ? styles.mobileNavItemActive : ''}`}
+              >
+                <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            className={`${styles.mobileNavItem} ${(mobileMoreOpen || isMobileSecondaryActive) ? styles.mobileNavItemActive : ''}`}
+            onClick={() => setMobileMorePathname((prev) => (prev === pathname ? null : pathname))}
+            aria-expanded={mobileMoreOpen}
+            aria-label="Mở thêm chức năng"
+          >
+            <div className={styles.mobileMoreIconWrap}>
+              {mobileMoreOpen ? <X size={20} strokeWidth={2.4} /> : <LayoutGrid size={20} strokeWidth={2.2} />}
+              {isMobileSecondaryActive && !mobileMoreOpen && <span className={styles.mobileMoreDot} />}
+            </div>
+            <span>Thêm</span>
+          </button>
+        </nav>
       </div>
     </div>
   );

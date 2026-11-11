@@ -11,6 +11,18 @@
   flex: 1;
   overflow-y: auto;
   padding-right: 10px;
+  padding-bottom: 80px;
+}
+
+.menuFab {
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  z-index: 100;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
 
 .header {
@@ -437,6 +449,23 @@
    MOBILE RESPONSIVE (MAX-WIDTH: 768px)
 ========================================= */
 @media (max-width: 768px) {
+  .menuContainer {
+    padding: 8px;
+  }
+
+  .scrollArea {
+    padding-right: 4px;
+    padding-bottom: 74px;
+  }
+
+  .menuFab {
+    bottom: 12px;
+    left: 12px;
+    right: auto;
+    width: 46px;
+    height: 46px;
+  }
+
   .header {
     flex-direction: row;
     align-items: center;

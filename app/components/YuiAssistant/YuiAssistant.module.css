@@ -303,8 +303,36 @@
 .dots i:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
 
-/* Tránh đè lên bottom nav trên mobile */
+/* Tối ưu mobile: tránh đè Bottom Nav, mở full/sheet khi chat & bám bàn phím */
 @media (max-width: 768px) {
-  .fab { bottom: 85px; right: 16px; }
-  .panel { bottom: 80px; right: 16px; height: min(540px, calc(100vh - 150px)); }
+  .fab {
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+    right: 14px;
+    width: 52px;
+    height: 52px;
+  }
+  .panel {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    height: auto;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    z-index: 1100;
+    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  }
+  .close {
+    padding: 8px;
+  }
+  .inputRow {
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) 10px;
+  }
+  .inputRow input {
+    font-size: 1rem;
+    padding: 10px 12px;
+  }
+  .inputRow button {
+    width: 44px;
+  }
 }

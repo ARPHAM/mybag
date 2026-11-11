@@ -132,11 +132,11 @@ export default function DebtsTab({ debts, formatMoney, onAdd, onEdit, onDebtActi
 
       <SaoButton
         variant="primary"
-        style={{ borderRadius: '50%', width: 50, height: 50, position: 'absolute', bottom: 30, right: 30, zIndex: 100, boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)' }}
+        className={styles.overviewFab}
         title="Thêm khoản nợ mới"
         onClick={onAdd}
       >
-        <Plus size={32} />
+        <Plus size={28} />
       </SaoButton>
     </div>
   );

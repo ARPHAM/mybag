@@ -92,11 +92,11 @@ export default function HistoryTab({ transactions, formatMoney, onAdd, onEdit, o
 
       <SaoButton
         variant="primary"
-        style={{ borderRadius: '50%', width: 50, height: 50, position: 'absolute', bottom: 30, right: 30, zIndex: 100, boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)' }}
+        className={styles.overviewFab}
         title="Ghi chép giao dịch"
         onClick={onAdd}
       >
-        <Plus size={32} />
+        <Plus size={28} />
       </SaoButton>
     </div>
   );
