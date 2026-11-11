@@ -10,6 +10,7 @@ import SaoLoading from '../../components/SaoLoading/SaoLoading';
 import SaoInput from '../../components/SaoInput/SaoInput';
 import SaoButton from '../../components/SaoButton/SaoButton';
 import { useSaoAlert } from '../../contexts/AlertContext';
+import { getVnDateStr } from '@/lib/vnTime';
 
 import { getWallets, getTransactions, getBudgets, getDebts, getInventory, createWallet, createTransaction, createBudget, createDebt, createInventory, updateWallet, updateTransaction, updateBudget, updateDebt, updateInventory, deleteWallet, deleteTransaction, deleteBudget, deleteDebt, deleteInventory } from './api';
 import styles from './finance.module.css';
@@ -103,7 +104,7 @@ export default function FinancePage() {
           id: t._id,
           type: t.type,
           amount: t.amount,
-          date: t.date.split('T')[0],
+          date: getVnDateStr(t.date),
           description: t.description,
           walletName: t.walletName,
           wallet_id: t.wallet_id,
@@ -129,11 +130,11 @@ export default function FinancePage() {
           status: d.status,
           totalAmount: d.totalAmount,
           remainingAmount: d.remainingAmount,
-          dueDate: d.dueDate ? d.dueDate.split('T')[0] : undefined,
-          completedDate: d.completedDate ? d.completedDate.split('T')[0] : undefined,
+          dueDate: d.dueDate ? getVnDateStr(d.dueDate) : undefined,
+          completedDate: d.completedDate ? getVnDateStr(d.completedDate) : undefined,
           history: d.history.map((h: any) => ({
             id: h._id,
-            date: h.date.split('T')[0],
+            date: getVnDateStr(h.date),
             amount: h.amount,
             type: h.type,
             walletName: h.walletName
@@ -150,8 +151,8 @@ export default function FinancePage() {
           quantity: i.quantity,
           originalQuantity: i.originalQuantity,
           unit: i.unit,
-          purchaseDate: i.purchaseDate ? i.purchaseDate.split('T')[0] : undefined,
-          expiryDate: i.expiryDate ? i.expiryDate.split('T')[0] : undefined,
+          purchaseDate: i.purchaseDate ? getVnDateStr(i.purchaseDate) : undefined,
+          expiryDate: i.expiryDate ? getVnDateStr(i.expiryDate) : undefined,
           isGift: i.isGift,
           totalValue: i.totalValue,
           originalValue: i.originalValue,
@@ -303,9 +304,9 @@ export default function FinancePage() {
       setWalletForm(item ? { name: item.name, type: item.type, color: item.color, balance: item.balance.toString() } : { name: '', type: 'bank', color: '#00f0ff', balance: '' });
     }
     if (type === 'transaction' || type === 'history') {
-      let formattedDate = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      let formattedDate = getVnDateStr();
       if (item && item.date) {
-        formattedDate = new Date(new Date(item.date).getTime() - new Date(item.date).getTimezoneOffset() * 60000).toISOString().split('T')[0];
+        formattedDate = getVnDateStr(item.date);
       }
       setTxForm(item ? {
         type: item.type, amount: item.amount.toString(), wallet_id: item.wallet_id || '', to_wallet_id: item.to_wallet_id || '', date: formattedDate, description: item.description, category: item.category || 'food'

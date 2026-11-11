@@ -9,11 +9,14 @@ import {
   Utensils,
   ArrowDownRight,
   ArrowUpRight,
+  ArrowRightLeft,
   Users,
   Check,
   CheckSquare,
   CheckCircle2,
   Calendar,
+  CalendarDays,
+  Clock,
   ShoppingCart,
   Package,
   AlertTriangle,
@@ -22,12 +25,13 @@ import {
   Scale,
   ChefHat
 } from 'lucide-react';
+import { formatVnIsoString, getYuiActionScheduleDisplay } from '@/lib/vnTime';
 import { parseYuiMessage, executeYuiActions } from './api';
 import styles from './YuiAssistant.module.css';
 
 type Msg =
   | { role: 'user'; text: string }
-  | { role: 'yui'; text: string; plan?: any; done?: boolean };
+  | { role: 'yui'; text: string; plan?: any; done?: boolean; createdAt?: string };
 
 const fmt = (n: number) => (Number(n) || 0).toLocaleString('vi-VN');
 
@@ -83,7 +87,7 @@ export default function YuiAssistant() {
         ]);
       } else {
         const replyText = plan.reply || plan.summary || 'Yui đã lên kế hoạch rồi nè, Papa xem qua rồi xác nhận giúp Yui nhé:';
-        setMsgs(m => [...m, { role: 'yui', text: replyText, plan }]);
+        setMsgs(m => [...m, { role: 'yui', text: replyText, plan, createdAt: formatVnIsoString(new Date()) }]);
       }
     } catch (err: any) {
       const errMsg = typeof err === 'string' ? err : err?.response?.data?.error || err?.message || 'Mất kết nối máy chủ';
@@ -167,6 +171,8 @@ export default function YuiAssistant() {
         return <span className={`${styles.badge} ${styles.badgeExpense}`}>Chi tiêu</span>;
       case 'income':
         return <span className={`${styles.badge} ${styles.badgeIncome}`}>Thu nhập</span>;
+      case 'transfer':
+        return <span className={`${styles.badge} ${styles.badgeTransfer}`}>Chuyển ví</span>;
       case 'debt_lent':
         return <span className={`${styles.badge} ${styles.badgeDebt}`}>Cho vay</span>;
       case 'debt_borrowed':
@@ -198,6 +204,8 @@ export default function YuiAssistant() {
         return <ArrowDownRight size={15} color="#ff4444" />;
       case 'income':
         return <ArrowUpRight size={15} color="#00ffaa" />;
+      case 'transfer':
+        return <ArrowRightLeft size={15} color="#00f0ff" />;
       case 'debt_lent':
       case 'debt_borrowed':
         return <Users size={15} color="#c084fc" />;
@@ -227,6 +235,12 @@ export default function YuiAssistant() {
       case 'expense':
       case 'income':
         return a.description || 'Giao dịch';
+      case 'transfer':
+        return a.description || (
+          a.walletName && (a.toWalletName || a.to_wallet_name)
+            ? `Chuyển: ${a.walletName} → ${a.toWalletName || a.to_wallet_name}`
+            : 'Chuyển khoản nội bộ'
+        );
       case 'debt_lent':
         return `Cho vay / Trả hộ: ${a.person || 'Khác'} - ${a.description || ''}`;
       case 'debt_borrowed':
@@ -315,7 +329,9 @@ export default function YuiAssistant() {
                       Yui cần Papa xác nhận ghi dữ liệu vào hệ thống:
                     </div>
 
-                    {m.plan.actions.map((a: any, j: number) => (
+                    {m.plan.actions.map((a: any, j: number) => {
+                      const schedule = getYuiActionScheduleDisplay(a, m.createdAt);
+                      return (
                       <div key={j} className={styles.planRow}>
                         <div className={styles.planRowHeader}>
                           <div className={styles.planTypeInfo}>
@@ -326,17 +342,37 @@ export default function YuiAssistant() {
                             </span>
                           </div>
                           {a.amount !== undefined && a.amount > 0 && (
-                            <span className={styles.planAmt}>
-                              {a.actionType === 'income' ? '+' : '-'}{fmt(a.amount)}đ
+                            <span className={`${styles.planAmt} ${a.actionType === 'transfer' ? styles.planAmtTransfer : ''}`}>
+                              {a.actionType === 'income' ? '+' : a.actionType === 'transfer' ? '' : '-'}{fmt(a.amount)}đ
                             </span>
                           )}
                         </div>
 
-                        {/* Hiển thị ví nguồn riêng cho từng hành động */}
-                        {a.walletName && (
-                          <div className={styles.planWalletTag}>
-                            <Wallet size={12} color="#00f0ff" />
-                            <span>Tài khoản/Ví: <strong>{a.walletName}</strong></span>
+                        {/* Hiển thị ngày giờ ghi DB & ví nguồn rõ ràng trước khi xác nhận */}
+                        {(schedule || a.walletName || a.toWalletName || a.to_wallet_name) && (
+                          <div className={styles.planMetaTags}>
+                            {schedule && (
+                              <div className={styles.planDateTag}>
+                                <CalendarDays size={12} color="#ffb6e6" />
+                                <span>{schedule.label}: <strong>{schedule.value}</strong></span>
+                              </div>
+                            )}
+                            {schedule?.expiry && (
+                              <div className={styles.planExpiryTag}>
+                                <Clock size={12} color="#ffaa00" />
+                                <span>HSD: <strong>{schedule.expiry}</strong></span>
+                              </div>
+                            )}
+                            {(a.walletName || a.toWalletName || a.to_wallet_name) && (
+                              <div className={styles.planWalletTag}>
+                                <Wallet size={12} color="#00f0ff" />
+                                {a.actionType === 'transfer' ? (
+                                  <span>Từ <strong>{a.walletName || '?'}</strong> → <strong>{a.toWalletName || a.to_wallet_name || '?'}</strong></span>
+                                ) : (
+                                  <span>Tài khoản/Ví: <strong>{a.walletName}</strong></span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -365,7 +401,8 @@ export default function YuiAssistant() {
                           </div>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
 
                     {!m.done ? (
                       <div className={styles.planBtns}>

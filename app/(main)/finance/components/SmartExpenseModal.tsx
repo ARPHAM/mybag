@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, CheckCircle2, AlertCircle, Wallet, ArrowDownRight, ArrowUpRight, Users } from 'lucide-react';
+import { Sparkles, ArrowRight, CheckCircle2, AlertCircle, Wallet, ArrowDownRight, ArrowUpRight, ArrowRightLeft, Users, CalendarDays } from 'lucide-react';
+import { formatVnIsoString, getYuiActionScheduleDisplay } from '@/lib/vnTime';
 import SaoModal from '../../../components/SaoModal/SaoModal';
 import SaoButton from '../../../components/SaoButton/SaoButton';
 import SaoInput from '../../../components/SaoInput/SaoInput';
@@ -25,6 +26,7 @@ export default function SmartExpenseModal({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [parsedResult, setParsedResult] = useState<any>(null);
+  const [analyzedAt, setAnalyzedAt] = useState<string>('');
 
   const { showAlert } = useSaoAlert();
 
@@ -38,6 +40,7 @@ export default function SmartExpenseModal({
       const res: any = await parseSmartExpense(inputText);
       if (res?.success && res?.data) {
         setParsedResult(res.data);
+        setAnalyzedAt(formatVnIsoString(new Date()));
       } else {
         showAlert("Không thể phân tích dữ liệu, vui lòng kiểm tra lại câu nhập");
       }
@@ -183,10 +186,13 @@ export default function SmartExpenseModal({
             {/* Actions breakdown list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {parsedResult.actions?.map((act: any, idx: number) => {
-                const isExp = act.actionType === 'expense';
+                const isExp = act.actionType === 'expense' || act.actionType === 'meal';
                 const isInc = act.actionType === 'income';
+                const isTransfer = act.actionType === 'transfer';
                 const isDebtLent = act.actionType === 'debt_lent';
                 const isDebtBorrow = act.actionType === 'debt_borrowed';
+                const schedule = getYuiActionScheduleDisplay(act, analyzedAt);
+                const destWalletName = act.toWalletName || act.to_wallet_name;
 
                 return (
                   <div
@@ -205,28 +211,37 @@ export default function SmartExpenseModal({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       {isExp && <ArrowDownRight size={18} color="#ff4444" />}
                       {isInc && <ArrowUpRight size={18} color="#00ffaa" />}
+                      {isTransfer && <ArrowRightLeft size={18} color="#00f0ff" />}
                       {(isDebtLent || isDebtBorrow) && <Users size={18} color="#c084fc" />}
 
                       <div>
                         <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.9rem' }}>
-                          {act.description}
+                          {act.food_name || act.description}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#a0c4ff' }}>
                           {isDebtLent && `Cho vay / Trả hộ: ${act.person || 'Người quen'}`}
                           {isDebtBorrow && `Đi vay: ${act.person || 'Chủ nợ'}`}
                           {isExp && `Danh mục: ${act.category || 'Ăn uống'}`}
                           {isInc && `Thu nhập`}
+                          {isTransfer && `Chuyển ví: ${act.walletName || '?'} → ${destWalletName || '?'}`}
+                          {!isTransfer && act.walletName && ` · Ví: ${act.walletName}`}
                         </div>
+                        {schedule && (
+                          <div style={{ fontSize: '0.74rem', color: '#ffd6f0', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                            <CalendarDays size={12} color="#ffb6e6" />
+                            <span>{schedule.label}: <strong>{schedule.value}</strong></span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div style={{
                       fontWeight: 'bold',
                       fontSize: '1rem',
-                      color: isExp || isDebtLent ? '#ff4444' : '#00ffaa',
+                      color: isTransfer ? '#00f0ff' : (isExp || isDebtLent ? '#ff4444' : '#00ffaa'),
                       whiteSpace: 'nowrap'
                     }}>
-                      {isExp || isDebtLent ? '-' : '+'}{formatMoney(act.amount)} VND
+                      {isTransfer ? '' : (isExp || isDebtLent ? '-' : '+')}{formatMoney(act.amount || 0)} VND
                     </div>
                   </div>
                 );

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import Wallet from '@/models/Wallet';
@@ -13,6 +14,13 @@ import WeightLog from '@/models/WeightLog';
 import Recipe from '@/models/Recipe';
 import { generateContentWithFallback } from '@/lib/ai';
 import { getExpandedCalendarEvents, formatVnDateTime, formatVnDateOnly, getVnDayOfWeek } from '@/lib/calendarHelper';
+import {
+  formatVnClockString,
+  formatVnIsoString,
+  getVnDateStr,
+  parseVnDateTime,
+  normalizeToVnIso
+} from '@/lib/vnTime';
 
 const EXP_REWARDS: Record<string, number> = {
   S: 1000,
@@ -313,7 +321,7 @@ export function detectFastScopesAndParams(text: string, now: Date = new Date()):
 
   // 4. Tài chính & Ví & Tiền nong
   const isFinanceAmount = /\b\d+\s*(k|tr|trieu|nghin|ngan|dong|d|vnd)\b/.test(nt);
-  const isFinanceKeyword = /\b(tien|vi|chi|tieu|thu|nap|rut|luong|giao dich|vay|no|muon|tra ho|doi no|ngan sach|han muc|so du|ngan hang|bank|atm|momo|zalopay|vcb|mb|techcombank|tcb|vietcombank|ck|chuyen khoan|tien mat|hoa don|bill|ton bao nhieu|het bao nhieu)\b/.test(nt);
+  const isFinanceKeyword = /\b(tien|vi|chi|tieu|thu|nap|rut|luong|giao dich|vay|no|muon|tra ho|doi no|ngan sach|han muc|so du|ngan hang|bank|atm|momo|zalopay|vcb|mb|techcombank|tcb|vietcombank|ck|chuyen|chuyen tien|chuyen vi|chuyen khoan|tien mat|hoa don|bill|ton bao nhieu|het bao nhieu)\b/.test(nt);
 
   if (isFinanceKeyword || isFinanceAmount) {
     scopes.add('finances');
@@ -439,17 +447,11 @@ export async function buildUserSystemContext(
   const needShopping = isAll || scopes.includes('shopping');
 
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-  // Tính mốc ngày hôm nay chuẩn xác theo múi giờ Việt Nam (Asia/Ho_Chi_Minh: UTC+7)
-  const vnFormatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  const todayVnStr = vnFormatter.format(now); // "YYYY-MM-DD"
+  // Tính mốc ngày & tháng hôm nay chuẩn xác theo múi giờ Việt Nam (Asia/Ho_Chi_Minh: UTC+7)
+  const todayVnStr = getVnDateStr(now); // "YYYY-MM-DD"
+  const [vnYear, vnMonth] = todayVnStr.split('-');
+  const currentMonthStr = `${vnYear}-${vnMonth}`;
+  const monthStart = new Date(`${currentMonthStr}-01T00:00:00+07:00`);
   const todayStart = new Date(`${todayVnStr}T00:00:00+07:00`);
   const todayEnd = new Date(`${todayVnStr}T23:59:59.999+07:00`);
 
@@ -586,7 +588,7 @@ export async function buildUserSystemContext(
       },
       chi_tiet_theo_yeu_cau: specificCategoryData || highlightedWallet,
       giao_dich_moi_nhat: (recentTx as any[]).map(t => ({
-        ngay: new Date(t.date).toISOString().split('T')[0],
+        ngay: getVnDateStr(t.date),
         loai: t.type,
         so_tien: t.amount,
         mo_ta: t.description,
@@ -617,7 +619,7 @@ export async function buildUserSystemContext(
       kho_do_sap_het_han: expiringInventory.slice(0, 5).map(i => ({
         ten: i.name,
         so_luong: `${i.quantity} ${i.unit}`,
-        han_su_dung: new Date(i.expiryDate).toISOString().split('T')[0]
+        han_su_dung: getVnDateStr(i.expiryDate)
       })),
       kho_do_hien_co: (inventoryItems as any[]).slice(0, 15).map(i => ({
         ten: i.name,
@@ -763,6 +765,66 @@ export async function buildUserSystemContext(
   return context;
 }
 
+type YuiActionRecord = Record<string, unknown> & { actionType?: string };
+
+/**
+ * Chuẩn hóa toàn bộ trường ngày/giờ trong mảng actions trả về từ AI về chuẩn ISO Việt Nam (+07:00),
+ * đồng thời điền giá trị mặc định nếu AI bỏ trống để UI xác nhận và DB luôn khớp 100%.
+ */
+export function normalizeYuiActions<T extends YuiActionRecord>(actions: T[], now: Date = new Date()): T[] {
+  if (!Array.isArray(actions)) return [];
+
+  return actions.map((rawAction) => {
+    if (!rawAction || typeof rawAction !== 'object') return rawAction;
+    const action: YuiActionRecord = { ...rawAction };
+    const type = action.actionType;
+
+    if (type === 'create_calendar_event') {
+      const start = parseVnDateTime(action.start_time, '09:00:00') ?? now;
+      let end = parseVnDateTime(action.end_time, '10:00:00');
+      if (!end || end.getTime() <= start.getTime()) {
+        end = new Date(start.getTime() + 60 * 60 * 1000);
+      }
+      action.start_time = formatVnIsoString(start);
+      action.end_time = formatVnIsoString(end);
+      return action as T;
+    }
+
+    if (type === 'create_task') {
+      const defaultDue = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      action.due_date = normalizeToVnIso(action.due_date, defaultDue, '23:59:00');
+      return action as T;
+    }
+
+    if (type === 'create_inventory') {
+      action.custom_time = normalizeToVnIso(action.custom_time, now, '12:00:00');
+      if (action.expiryDate) {
+        const normalizedExp = normalizeToVnIso(action.expiryDate, undefined, '12:00:00');
+        if (normalizedExp) action.expiryDate = normalizedExp;
+        else delete action.expiryDate;
+      }
+      return action as T;
+    }
+
+    if (
+      type === 'meal' ||
+      type === 'expense' ||
+      type === 'income' ||
+      type === 'transfer' ||
+      type === 'debt_lent' ||
+      type === 'debt_borrowed' ||
+      type === 'record_weight' ||
+      type === 'complete_task' ||
+      type === 'create_shopping_item' ||
+      type === 'create_recipe'
+    ) {
+      action.custom_time = normalizeToVnIso(action.custom_time, now, '12:00:00');
+    }
+
+    return action as T;
+  });
+}
+
 /**
  * Phân tích yêu cầu tự nhiên từ người dùng bằng kiến trúc 2 lượt (2-Turn Intent Routing & Scoped Execution):
  * - Lượt 1: Phân loại ý định, xác định đúng các scopes dữ liệu cần thiết (siêu nhẹ ~150 tokens, cực nhanh).
@@ -775,7 +837,9 @@ export async function parseYuiRequest(
 ) {
   await dbConnect();
   const now = new Date();
-  const nowStr = `${formatVnDateTime(now)} (ISO: ${now.toISOString()})`;
+  const todayVnStr = getVnDateStr(now);
+  const nowClockStr = formatVnClockString(now);
+  const nowStr = `${formatVnDateTime(now)} (${nowClockStr} giờ Việt Nam)`;
 
   // Định dạng lịch sử trò chuyện gần nhất (tối đa 6 lượt)
   let historySection = '';
@@ -927,6 +991,14 @@ QUY TẮC BẮT BUỘC VỀ VÍ / TÀI KHOẢN KHI CÓ NHIỀU NGUỒN (MULTI-WA
   - Hành động 2: amount: 20000, wallet_id: "<id ví Momo>", walletName: "Ví Momo"
   - TUYỆT ĐỐI KHÔNG GỘP CHUNG VÍ nếu người dùng đã chỉ định 2 nguồn khác nhau!
 
+QUY TẮC CHUYỂN KHOẢN GIỮA CÁC VÍ / TÀI KHOẢN NỘI BỘ (TRANSFER):
+- Khi Papa chuyển tiền, nạp ví hoặc rút tiền mặt từ tài khoản/ví này sang tài khoản/ví khác CỦA CHÍNH PAPA (VD: "chuyển 500k từ MB sang Momo", "nạp 300k từ VCB vào Momo", "rút 1tr từ MB về tiền mặt"):
+  * BẮT BUỘC dùng DUY NHẤT 1 hành động { "actionType": "transfer", ... }!
+  * TUYỆT ĐỐI KHÔNG tách thành 1 hành động "expense" + 1 hành động "income" (vì sẽ làm sai lệch báo cáo tổng thu/chi tháng!).
+  * So khớp từ "tai_chinh.danh_sach_vi" để điền:
+    - "wallet_id" và "walletName": ví NGUỒN (bị trừ tiền).
+    - "to_wallet_id" và "toWalletName": ví ĐÍCH (được cộng tiền).
+
 QUY TẮC CHUẨN HOÁ TÊN MÓN VÀ MÔ TẢ (CHỐNG LỖI TỪ OUTDATE):
 - Tuyệt đối LOẠI BỎ mọi từ chỉ thời gian tương đối khỏi "food_name", "title" và "description" như:
   "sáng nay", "trưa nay", "chiều nay", "tối nay", "hôm nay", "hôm qua", "vừa ăn", "vừa mới", "mới mua", "lúc nãy", "buổi sáng", "bữa sáng"...
@@ -934,13 +1006,21 @@ QUY TẮC CHUẨN HOÁ TÊN MÓN VÀ MÔ TẢ (CHỐNG LỖI TỪ OUTDATE):
   - User nói: "sáng nay ăn bánh mì 25k bằng mb" -> food_name: "Bánh mì", description: "Bánh mì" (KHÔNG ĐƯỢC để "Bánh mì sáng nay").
   - User nói: "trưa nay ăn bún chả 45k" -> food_name: "Bún chả", description: "Bún chả".
   - User nói: "uống sinh tố bơ tối qua" -> food_name: "Sinh tố bơ", description: "Sinh tố bơ".
-- Nếu câu nói có từ chỉ thời gian trong ngày ("sáng nay", "trưa nay", "chiều nay", "tối qua"...), hãy xác định thời điểm thực tế và lưu vào trường "custom_time" (chuỗi ISO 8601):
-  * "sáng nay" / "buổi sáng": khoảng 08:00 sáng hôm nay.
-  * "trưa nay" / "buổi trưa": khoảng 12:00 trưa hôm nay.
-  * "chiều nay" / "buổi chiều": khoảng 15:30 chiều hôm nay.
-  * "tối nay" / "buổi tối": khoảng 19:00 tối hôm nay.
-  * "hôm qua": lùi lại 1 ngày so với hiện tại.
-  * Mặc định là thời gian hiện tại nếu không nói rõ.
+- Nếu câu nói có từ chỉ thời gian trong ngày hoặc giờ cụ thể ("sáng nay", "trưa nay", "14h chiều nay", "tối qua"...), hãy xác định thời điểm thực tế theo GIỜ VIỆT NAM và lưu vào trường "custom_time" dưới dạng "YYYY-MM-DD HH:mm":
+  * "sáng nay" / "buổi sáng": ${todayVnStr} 08:00
+  * "trưa nay" / "buổi trưa": ${todayVnStr} 12:00
+  * "chiều nay" / "buổi chiều": ${todayVnStr} 15:30
+  * "tối nay" / "buổi tối": ${todayVnStr} 19:00
+  * "hôm qua": lùi lại 1 ngày so với ${todayVnStr} (nếu không nói giờ/buổi thì dùng 12:00 của ngày hôm qua).
+  * Nếu Papa nói rõ giờ (VD: "14h", "8h30 sáng", "20h15"): ghi ĐÚNG giờ 24h đó theo giờ Việt Nam (VD: "${todayVnStr} 14:00", "${todayVnStr} 08:30", "${todayVnStr} 20:15").
+  * Mặc định dùng đúng thời điểm hiện tại "${nowClockStr}" nếu Papa không nói rõ thời gian khác.
+
+QUY TẮC BẮT BUỘC VỀ MÚI GIỜ VIỆT NAM (CHỐNG LỆCH +7 GIỜ):
+- MỌI trường thời gian ("custom_time", "due_date", "start_time", "end_time", "expiryDate") BẮT BUỘC phải viết theo đúng giờ Việt Nam (24h) dưới dạng chuỗi "YYYY-MM-DD HH:mm" (riêng "expiryDate" nếu chỉ có ngày thì ghi "YYYY-MM-DD").
+- TUYỆT ĐỐI KHÔNG tự cộng hay trừ 7 tiếng, KHÔNG quy đổi sang UTC và KHÔNG thêm hậu tố "Z" hoặc ký hiệu múi giờ khác!
+- Papa nói giờ nào thì ghi đúng giờ Việt Nam đó (VD: "lịch họp 14h hôm nay" -> start_time: "${todayVnStr} 14:00", end_time: "${todayVnStr} 15:00").
+- Với "create_task": nếu Papa chỉ nói ngày mà không nêu giờ hạn chót -> đặt mặc định là "23:59" của ngày đó. Nếu không nêu ngày -> mặc định sau hiện tại 24 giờ.
+- Với "create_calendar_event": nếu Papa không nêu giờ kết thúc -> mặc định "end_time" sau "start_time" 1 tiếng.
 
 QUY TẮC ĐÁNH GIÁ DINH DƯỠNG & CALO (CHUẨN CHUYÊN GIA DINH DƯỠNG):
 - Bạn đóng vai trò một chuyên gia dinh dưỡng thực thụ (tương đồng với bộ máy phân tích macro chuyên sâu của MyBag).
@@ -984,27 +1064,29 @@ NHIỆM VỤ CỦA BẠN:
    - Phân tích và bóc tách thành danh sách các hành động trong "actions".
    - Các actionType hợp lệ:
      a) "meal": Món ăn/uống Papa tự nạp (VD: "vừa ăn phở bò 45k trả bằng Momo", "uống cốc sinh tố bơ").
-        - Fields: { actionType: "meal", food_name: string (ĐÃ LỌC BỎ từ chỉ thời gian), meal_tier: "HEAVY"|"LIGHT"|"DRINK", calo: number, protein: number, fat: number, carbs: number, sugar: number, amount: number (0 nếu miễn phí/tự nấu), wallet_id: string, walletName: string, description: string, ai_description: string, custom_time: ISO 8601 string }
+        - Fields: { actionType: "meal", food_name: string (ĐÃ LỌC BỎ từ chỉ thời gian), meal_tier: "HEAVY"|"LIGHT"|"DRINK", calo: number, protein: number, fat: number, carbs: number, sugar: number, amount: number (0 nếu miễn phí/tự nấu), wallet_id: string, walletName: string, description: string, ai_description: string, custom_time: "YYYY-MM-DD HH:mm" (giờ Việt Nam) }
      b) "expense": Chi tiêu thông thường không phải ăn uống tự ăn (VD: "mua xăng 50k bằng tiền mặt", "trả tiền điện 300k").
-        - Fields: { actionType: "expense", amount: number, category: "housing"|"transport"|"entertainment"|"shopping"|"health"|"other", description: string (ĐÃ LỌC BỎ từ chỉ thời gian), wallet_id: string, walletName: string, custom_time: ISO 8601 string }
+        - Fields: { actionType: "expense", amount: number, category: "housing"|"transport"|"entertainment"|"shopping"|"health"|"other", description: string (ĐÃ LỌC BỎ từ chỉ thời gian), wallet_id: string, walletName: string, custom_time: "YYYY-MM-DD HH:mm" (giờ Việt Nam) }
      c) "income": Tiền thu vào (VD: "nhận lương 15tr vào MB", "được thưởng 500k").
-        - Fields: { actionType: "income", amount: number, category: "salary"|"bonus"|"investment"|"gift"|"other", description: string, wallet_id: string, walletName: string, custom_time: ISO 8601 string }
+        - Fields: { actionType: "income", amount: number, category: "salary"|"bonus"|"investment"|"gift"|"other", description: string, wallet_id: string, walletName: string, custom_time: "YYYY-MM-DD HH:mm" (giờ Việt Nam) }
+     d0) "transfer": Chuyển tiền / nạp ví / rút tiền giữa 2 ví/tài khoản nội bộ của Papa (VD: "chuyển 500k từ MB sang Momo", "rút 1tr từ VCB về tiền mặt").
+        - Fields: { actionType: "transfer", amount: number, description: string (VD: "Chuyển khoản: MB Bank -> Momo" hoặc nội dung chuyển nếu có), wallet_id: string (id ví nguồn), walletName: string (tên ví nguồn), to_wallet_id: string (id ví đích), toWalletName: string (tên ví đích), custom_time: "YYYY-MM-DD HH:mm" (giờ Việt Nam) }
      d) "debt_lent": Cho vay / Trả tiền hộ ai đó (VD: "trả hộ anh Nam 50k tiền ăn trưa").
-        - Fields: { actionType: "debt_lent", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: ISO 8601 string }
+        - Fields: { actionType: "debt_lent", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: "YYYY-MM-DD HH:mm" (giờ Việt Nam) }
      e) "debt_borrowed": Đi vay tiền ai đó (VD: "vay bạn Hùng 200k").
-        - Fields: { actionType: "debt_borrowed", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: ISO 8601 string }
+        - Fields: { actionType: "debt_borrowed", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: "YYYY-MM-DD HH:mm" (giờ Việt Nam) }
      f) "create_task": Tạo Quest/Nhiệm vụ mới (VD: "tạo quest rank B nộp báo cáo trước 17h chiều mai").
-        - Fields: { actionType: "create_task", title: string, description: string, quest_rank: "S"|"A"|"B"|"C"|"D", due_date: ISO 8601 string (tính dựa vào thời gian hiện tại) }
+        - Fields: { actionType: "create_task", title: string, description: string, quest_rank: "S"|"A"|"B"|"C"|"D", due_date: "YYYY-MM-DD HH:mm" (giờ Việt Nam, tính dựa vào thời gian hiện tại) }
      g) "complete_task": Hoàn thành Quest đã có (VD: "đã xong quest dọn dẹp phòng").
         - Fields: { actionType: "complete_task", task_id: string (so khớp với id trong danh sách quest active), title: string }
      h) "create_calendar_event": Thêm sự kiện lịch trình (VD: "thêm lịch họp với sếp 14h chiều nay").
-        - Fields: { actionType: "create_calendar_event", title: string, description: string, start_time: ISO 8601 string, end_time: ISO 8601 string, color_code: "#00f0ff"|"#ffaa00"|"#ff4444"|"#b900ff" }
+        - Fields: { actionType: "create_calendar_event", title: string, description: string, start_time: "YYYY-MM-DD HH:mm" (giờ Việt Nam), end_time: "YYYY-MM-DD HH:mm" (giờ Việt Nam), color_code: "#00f0ff"|"#ffaa00"|"#ff4444"|"#b900ff" }
      i) "create_shopping_item": Thêm món cần mua vào danh sách shopping (VD: "thêm 2 hộp sữa tươi và 1 chai dầu ăn vào danh sách mua sắm").
         - Fields: { actionType: "create_shopping_item", name: string, quantity: number, unit: string, category: "food"|"household"|"other" }
      j) "create_inventory": Thêm đồ vào kho đồ / tủ lạnh (VD: "vừa mua 5 gói mì Hảo Hảo cất vào tủ").
-        - Fields: { actionType: "create_inventory", name: string, quantity: number, unit: string, category: string, expiryDate: ISO 8601 string (nếu có đề cập hạn dùng) }
+        - Fields: { actionType: "create_inventory", name: string, quantity: number, unit: string, category: string, custom_time: "YYYY-MM-DD HH:mm" (ngày giờ nhập kho, mặc định hiện tại), expiryDate: "YYYY-MM-DD" (nếu có đề cập hạn dùng) }
      k) "record_weight": Ghi nhận / Cập nhật cân nặng và chiều cao (VD: "cập nhật cân nặng hôm nay là 47kg", "cân nặng 52kg", "hôm nay nặng 48kg").
-        - Fields: { actionType: "record_weight", weight: number (số kg, vd: 47), height: number (chiều cao cm nếu có nhắc đến), custom_time: ISO 8601 string, description: "Cập nhật cân nặng" }
+        - Fields: { actionType: "record_weight", weight: number (số kg, vd: 47), height: number (chiều cao cm nếu có nhắc đến), custom_time: "YYYY-MM-DD HH:mm" (giờ Việt Nam), description: "Cập nhật cân nặng" }
      l) "create_recipe": Tạo hoặc lưu công thức nấu ăn mới vào Sổ tay Thực đơn của Papa (VD: "tạo công thức nấu ăn sườn xào chua ngọt phiên bản với cà chua", "lưu công thức canh kim chi").
         - Fields: { actionType: "create_recipe", name: string, ingredients: string[], instructions: string }
 
@@ -1017,7 +1099,11 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ không bọc thêm bất k�
 }`;
 
   const aiRaw = await generateContentWithFallback(prompt, undefined, true, 10000);
-  return extractJsonFromAiResponse(aiRaw);
+  const parsed = extractJsonFromAiResponse(aiRaw);
+  if (parsed && Array.isArray(parsed.actions)) {
+    parsed.actions = normalizeYuiActions(parsed.actions, now);
+  }
+  return parsed;
 }
 
 /**
@@ -1035,14 +1121,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
   for (const action of actions) {
     const actionType = action.actionType;
 
-    // Trích xuất ngày giờ tùy chỉnh (nếu có nói về "sáng nay", "hôm qua", v.v.)
-    let actionDate = now;
-    if (action.custom_time) {
-      const parsedTime = new Date(action.custom_time);
-      if (!isNaN(parsedTime.getTime())) {
-        actionDate = parsedTime;
-      }
-    }
+    // Trích xuất ngày giờ tùy chỉnh chuẩn múi giờ Việt Nam (+07:00)
+    const actionDate = parseVnDateTime(action.custom_time, '12:00:00') ?? now;
 
     // 1. MEAL
     if (actionType === 'meal') {
@@ -1188,6 +1268,86 @@ export async function executeYuiActions(userId: string, actions: any[]) {
       continue;
     }
 
+    // 3b. TRANSFER (Chuyển tiền giữa các ví nội bộ)
+    if (actionType === 'transfer') {
+      const amount = Number(action.amount) || 0;
+      if (amount <= 0) continue;
+
+      const resolveUserWallet = async (wId?: unknown, wName?: unknown) => {
+        if (typeof wId === 'string' && mongoose.Types.ObjectId.isValid(wId)) {
+          const byId = await Wallet.findOne({ _id: wId, user_id: userId });
+          if (byId) return byId;
+        }
+        if (typeof wName === 'string' && wName.trim()) {
+          const target = normalizeVietnamese(wName);
+          const allWallets = await Wallet.find({ user_id: userId });
+          const exact = allWallets.find((w) => normalizeVietnamese(w.name) === target);
+          if (exact) return exact;
+          const partial = allWallets.find(
+            (w) => normalizeVietnamese(w.name).includes(target) || target.includes(normalizeVietnamese(w.name))
+          );
+          if (partial) return partial;
+        }
+        return null;
+      };
+
+      const sourceWallet = await resolveUserWallet(action.wallet_id, action.walletName);
+      const destWallet = await resolveUserWallet(
+        action.to_wallet_id || action.toWalletId,
+        action.toWalletName || action.to_wallet_name
+      );
+
+      if (!sourceWallet || !destWallet) {
+        throw new Error('Không tìm thấy ví nguồn hoặc ví đích để thực hiện chuyển khoản');
+      }
+      if (sourceWallet._id.toString() === destWallet._id.toString()) {
+        throw new Error('Ví nguồn và ví đích phải khác nhau khi chuyển khoản');
+      }
+
+      const deductedSource = await Wallet.findOneAndUpdate(
+        { _id: sourceWallet._id, user_id: userId, balance: { $gte: amount } },
+        { $inc: { balance: -amount } },
+        { returnDocument: 'after' }
+      );
+      if (!deductedSource) {
+        throw new Error(`Số dư ví "${sourceWallet.name}" không đủ để chuyển ${amount.toLocaleString('vi-VN')}đ`);
+      }
+
+      const creditedDest = await Wallet.findOneAndUpdate(
+        { _id: destWallet._id, user_id: userId },
+        { $inc: { balance: amount } },
+        { returnDocument: 'after' }
+      );
+      if (!creditedDest) {
+        await Wallet.findByIdAndUpdate(sourceWallet._id, { $inc: { balance: amount } });
+        throw new Error('Ví đích không tồn tại, đã hoàn lại số dư ví nguồn');
+      }
+
+      const rawDesc = action.description || `Chuyển khoản: ${sourceWallet.name} -> ${destWallet.name}`;
+      const cleanDesc = capitalizeFirst(cleanTemporalWords(rawDesc)) || `Chuyển khoản: ${sourceWallet.name} -> ${destWallet.name}`;
+      const combinedWalletName = `${sourceWallet.name} -> ${destWallet.name}`;
+
+      const tx = await Transaction.create({
+        user_id: userId,
+        type: 'transfer',
+        amount,
+        date: actionDate,
+        description: cleanDesc,
+        wallet_id: sourceWallet._id,
+        to_wallet_id: destWallet._id,
+        walletName: combinedWalletName
+      });
+
+      executedResults.push({
+        type: 'transfer',
+        id: tx._id,
+        amount,
+        description: tx.description,
+        walletName: combinedWalletName
+      });
+      continue;
+    }
+
     // 4. DEBT LENT (Cho vay / Trả hộ)
     if (actionType === 'debt_lent') {
       const amount = Number(action.amount) || 0;
@@ -1293,14 +1453,15 @@ export async function executeYuiActions(userId: string, actions: any[]) {
       const rawTitle = action.title?.trim() || 'Nhiệm vụ mới';
       const cleanTitle = capitalizeFirst(cleanTemporalWords(rawTitle)) || 'Nhiệm vụ mới';
       const questRank = ['S', 'A', 'B', 'C', 'D'].includes(action.quest_rank) ? action.quest_rank : 'C';
-      const dueDate = action.due_date ? new Date(action.due_date) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const defaultDue = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const dueDate = parseVnDateTime(action.due_date, '23:59:00') ?? defaultDue;
 
       const task = await Task.create({
         user_id: userId,
         title: cleanTitle,
         description: action.description || '',
         quest_rank: questRank,
-        due_date: isNaN(dueDate.getTime()) ? new Date(Date.now() + 24 * 60 * 60 * 1000) : dueDate,
+        due_date: dueDate,
         status: 'PENDING',
       });
 
@@ -1330,7 +1491,7 @@ export async function executeYuiActions(userId: string, actions: any[]) {
 
       if (task && task.status !== 'COMPLETED') {
         task.status = 'COMPLETED';
-        task.completed_at = now;
+        task.completed_at = actionDate;
         await task.save();
 
         // Thưởng EXP & MP
@@ -1370,15 +1531,18 @@ export async function executeYuiActions(userId: string, actions: any[]) {
     if (actionType === 'create_calendar_event') {
       const rawTitle = action.title?.trim() || 'Sự kiện mới';
       const cleanTitle = capitalizeFirst(cleanTemporalWords(rawTitle)) || 'Sự kiện mới';
-      const startTime = action.start_time ? new Date(action.start_time) : now;
-      const endTime = action.end_time ? new Date(action.end_time) : new Date(startTime.getTime() + 60 * 60 * 1000);
+      const startTime = parseVnDateTime(action.start_time, '09:00:00') ?? now;
+      let endTime = parseVnDateTime(action.end_time, '10:00:00');
+      if (!endTime || endTime.getTime() <= startTime.getTime()) {
+        endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+      }
 
       const event = await CalendarEvent.create({
         user_id: userId,
         title: cleanTitle,
         description: action.description || '',
-        start_time: isNaN(startTime.getTime()) ? now : startTime,
-        end_time: isNaN(endTime.getTime()) ? new Date(startTime.getTime() + 60 * 60 * 1000) : endTime,
+        start_time: startTime,
+        end_time: endTime,
         color_code: action.color_code || '#00f0ff',
         is_recurring: false
       });
@@ -1426,7 +1590,7 @@ export async function executeYuiActions(userId: string, actions: any[]) {
       const quantity = Math.max(1, Number(action.quantity) || 1);
       const unit = action.unit?.trim() || 'món';
       const category = action.category?.trim() || 'food';
-      const expiryDate = action.expiryDate ? new Date(action.expiryDate) : undefined;
+      const expiryDate = parseVnDateTime(action.expiryDate, '12:00:00') ?? undefined;
 
       const item = await Inventory.create({
         user_id: userId,
@@ -1435,8 +1599,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         quantity,
         originalQuantity: quantity,
         unit,
-        purchaseDate: now,
-        expiryDate: expiryDate && !isNaN(expiryDate.getTime()) ? expiryDate : undefined,
+        purchaseDate: actionDate,
+        expiryDate,
         isGift: false
       });
 
@@ -1460,11 +1624,10 @@ export async function executeYuiActions(userId: string, actions: any[]) {
             user.height = Number(action.height);
           }
 
-          const recordDate = action.custom_time ? new Date(action.custom_time) : now;
-          const startOfDay = new Date(recordDate);
-          startOfDay.setHours(0, 0, 0, 0);
-          const endOfDay = new Date(recordDate);
-          endOfDay.setHours(23, 59, 59, 999);
+          const recordDate = actionDate;
+          const vnDateKey = getVnDateStr(recordDate);
+          const startOfDay = new Date(`${vnDateKey}T00:00:00+07:00`);
+          const endOfDay = new Date(`${vnDateKey}T23:59:59.999+07:00`);
 
           // Xoá log cũ cùng ngày để tránh trùng lặp
           await WeightLog.findOneAndDelete({

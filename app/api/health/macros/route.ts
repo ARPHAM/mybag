@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import { verifyToken } from '@/lib/auth';
+import { getVnDateStr } from '@/lib/vnTime';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,23 +17,23 @@ export async function GET(req: Request) {
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const todayVnStr = getVnDateStr(now);
+    const todayStartVn = new Date(`${todayVnStr}T00:00:00+07:00`);
+    const sevenDaysAgo = new Date(todayStartVn.getTime() - 6 * 86400000);
 
     const meals = await MealLog.find({
       user_id: decoded.userId,
       consumed_at: { $gte: sevenDaysAgo }
     }).sort({ consumed_at: 1 });
 
-    // Aggregate by date (YYYY-MM-DD)
+    // Aggregate by date (YYYY-MM-DD theo múi giờ Việt Nam)
     const aggregated: Record<string, any> = {};
 
     // Khởi tạo 7 ngày gần nhất để biểu đồ không bị trống ngày
     for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      const d = new Date(todayStartVn.getTime() - i * 86400000);
+      const dateStr = getVnDateStr(d);
       aggregated[dateStr] = {
         date: dateStr,
         calo: 0,
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
     }
 
     meals.forEach(meal => {
-      const dateStr = new Date(new Date(meal.consumed_at).getTime() - new Date(meal.consumed_at).getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      const dateStr = getVnDateStr(meal.consumed_at);
       if (aggregated[dateStr]) {
         aggregated[dateStr].calo += meal.calo || 0;
         aggregated[dateStr].protein += meal.protein || 0;
