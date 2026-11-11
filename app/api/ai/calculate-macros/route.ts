@@ -80,17 +80,28 @@ Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ
       result = JSON.parse(text);
     } catch (aiError) {
       console.error("AI Generation Error:", aiError);
-      meal.ai_status = 'failed';
-      await meal.save();
-      return NextResponse.json({ error: 'AI Error, all models failed', status: 'failed', mealLog: meal }, { status: 500 });
+      const failedMeal = await MealLog.findOneAndUpdate(
+        { _id: mealId, user_id: decoded.userId },
+        { $set: { ai_status: 'failed' } },
+        { returnDocument: 'after' }
+      );
+      return NextResponse.json({ error: 'AI Error, all models failed', status: 'failed', mealLog: failedMeal }, { status: 500 });
     }
 
-    if (result.food_name && (!meal.food_name || meal.food_name.includes('AI đang nhận diện') || meal.food_name === 'Bữa ăn từ ảnh')) {
-      meal.food_name = result.food_name;
-      if (meal.transaction_id) {
+    // Re-fetch bản ghi mới nhất để tránh ghi đè nếu người dùng vừa chỉnh sửa ngày/nguyên liệu trong lúc chờ AI
+    const latestMeal = await MealLog.findOne({ _id: mealId, user_id: decoded.userId });
+    if (!latestMeal) {
+      return NextResponse.json({ error: 'MealLog đã bị xóa' }, { status: 404 });
+    }
+
+    const updateSet: Record<string, any> = {};
+
+    if (result.food_name && (!latestMeal.food_name || latestMeal.food_name.includes('AI đang nhận diện') || latestMeal.food_name === 'Bữa ăn từ ảnh')) {
+      updateSet.food_name = result.food_name;
+      if (latestMeal.transaction_id) {
         try {
           const Transaction = (await import('@/models/Transaction')).default;
-          await Transaction.findByIdAndUpdate(meal.transaction_id, {
+          await Transaction.findByIdAndUpdate(latestMeal.transaction_id, {
             description: `[Ăn ngoài] ${result.food_name}`
           });
         } catch (txErr) {
@@ -98,44 +109,49 @@ Trả về kết quả dưới dạng JSON theo đúng định dạng sau (chỉ
         }
       }
     }
-    meal.calo = result.calo || 0;
-    meal.protein = result.protein || 0;
-    meal.fat = result.fat || 0;
-    meal.carbs = result.carbs || 0;
-    meal.sugar = result.sugar || 0;
-    meal.ai_description = result.description || '';
+
+    const calo = Number(result.calo) || 0;
+    updateSet.calo = calo;
+    updateSet.protein = Number(result.protein) || 0;
+    updateSet.fat = Number(result.fat) || 0;
+    updateSet.carbs = Number(result.carbs) || 0;
+    updateSet.sugar = Number(result.sugar) || 0;
+    updateSet.ai_description = result.description || '';
 
     // Delete image from S3 if present
-    if (meal.image_url && meal.image_url.includes('.amazonaws.com/')) {
+    if (latestMeal.image_url && latestMeal.image_url.includes('.amazonaws.com/')) {
       try {
-        const oldKey = meal.image_url.split('.amazonaws.com/')[1];
+        const oldKey = latestMeal.image_url.split('.amazonaws.com/')[1];
         await deleteS3Object(oldKey);
       } catch (err) {
         console.error("Error deleting image from S3:", err);
       }
     }
-    meal.image_url = undefined;
 
-    
     // Tính HP thực tế dựa trên Calo (Tỉ lệ mới: 1 Calo = 1 HP)
-    // Giúp người dùng dù ăn kiêng (VD 1200 Calo/ngày) vẫn đủ sống sót bù trừ lượng máu tụt 1200 HP/ngày
-    const trueHp = Math.floor(meal.calo * 1.0);
-    // Tính phần chênh lệch (Delta) so với lượng HP đã tạm ứng ngẫu nhiên lúc tạo bữa ăn
-    const hpDelta = trueHp - meal.hp_restored;
-    
-    meal.hp_restored = trueHp;
-    meal.ai_status = 'completed';
-    await meal.save();
+    const trueHp = Math.floor(calo * 1.0);
+    const hpDelta = trueHp - (latestMeal.hp_restored || 0);
+    updateSet.hp_restored = trueHp;
+    updateSet.ai_status = 'completed';
+
+    const updatedMeal = await MealLog.findOneAndUpdate(
+      { _id: mealId, user_id: decoded.userId },
+      {
+        $set: updateSet,
+        $unset: { image_url: 1 }
+      },
+      { returnDocument: 'after' }
+    );
 
     // Hoàn trả / Khấu trừ HP chênh lệch cho User
     const User = (await import('@/models/User')).default;
-    const user = await User.findById(meal.user_id);
+    const user = await User.findById(latestMeal.user_id);
     if (user) {
       user.current_hp = Math.min(user.max_hp, Math.max(0, user.current_hp + hpDelta));
       await user.save();
     }
 
-    return NextResponse.json({ message: 'Đã tính toán xong', mealLog: meal }, { status: 200 });
+    return NextResponse.json({ message: 'Đã tính toán xong', mealLog: updatedMeal }, { status: 200 });
 
   } catch (error) {
     console.error(error);

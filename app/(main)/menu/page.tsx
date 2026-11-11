@@ -14,7 +14,7 @@ import SaoImageUpload from '../../components/SaoImageUpload/SaoImageUpload';
 import { getRecipes, getMeals, getInventory, calculateMacros, createRecipe, createMeal, getWallets, updateMeal, deleteMeal } from './api';
 import styles from './menu.module.css';
 
-import { MenuTabId, Recipe, MealRecord, InventoryItem } from '@/lib/types';
+import { MenuTabId, Recipe, MealRecord, MealIngredientUsed, InventoryItem } from '@/lib/types';
 
 interface Wallet {
   _id: string;
@@ -22,8 +22,25 @@ interface Wallet {
   balance: number;
 }
 
+function toVnDateString(dateInput?: string | Date): string {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  if (isNaN(d.getTime())) {
+    return new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  }
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(d);
+  } catch {
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  }
+}
+
 export default function MenuPage() {
-  const { showAlert, showConfirm } = useSaoAlert();
+  const { showAlert } = useSaoAlert();
   const [activeTab, setActiveTab] = useState<MenuTabId>('recipes');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'cook' | 'recipe' | 'meal'>('cook');
@@ -40,27 +57,18 @@ export default function MenuPage() {
   const [formIngredients, setFormIngredients] = useState(''); 
   const [formInstructions, setFormInstructions] = useState('');
   const [formCookSource, setFormCookSource] = useState<'home' | 'eat_out'>('home');
-  const [formDate, setFormDate] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
+  const [formDate, setFormDate] = useState(toVnDateString());
   const [formActualIngredients, setFormActualIngredients] = useState(''); 
   const [formCost, setFormCost] = useState('');
   const [formWalletId, setFormWalletId] = useState('');
-  const [selectedIngredients, setSelectedIngredients] = useState<{invId: string, qty: number}[]>([]);
+  const [selectedIngredients, setSelectedIngredients] = useState<MealIngredientUsed[]>([]);
   const [editingMeal, setEditingMeal] = useState<MealRecord | null>(null);
   const [mealToDelete, setMealToDelete] = useState<string | null>(null);
   const [formImageUrl, setFormImageUrl] = useState<string>('');
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  };
-
   useEffect(() => {
-    fetchData();
-    const handleUpdate = () => fetchData(true);
+    fetchData(true);
+    const handleUpdate = () => fetchData(true, true);
     window.addEventListener('sao-menu-updated', handleUpdate);
     window.addEventListener('sao-inventory-updated', handleUpdate);
     return () => {
@@ -69,8 +77,8 @@ export default function MenuPage() {
     };
   }, []);
 
-  const fetchData = async (force = false) => {
-    setLoading(true);
+  const fetchData = async (force = false, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [resR, resM, resI, resW]: any = await Promise.all([
         getRecipes(force),
@@ -85,32 +93,162 @@ export default function MenuPage() {
     } catch (e) {
       console.error(e);
     }
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
+  /**
+   * Bóc tách ghi chú thủ công của người dùng, loại bỏ phần autoContext ("2quả Trứng. Bổ sung: ...")
+   * bị lưu lẫn vào ingredients_text ở các bản ghi cũ.
+   */
+  const extractCleanManualNote = (meal: MealRecord): string => {
+    const raw = meal.ingredients_text?.trim();
+    if (!raw) return '';
+    if (raw.includes('. Bổ sung: ')) {
+      const parts = raw.split('. Bổ sung: ');
+      return parts[parts.length - 1].trim();
+    }
+    if (meal.source === 'home' && meal.ingredients_used && meal.ingredients_used.length > 0) {
+      // Kiểm tra xem raw có phải chỉ là chuỗi liệt kê nguyên liệu tự động từ kho hay không
+      const autoTokens = meal.ingredients_used.map(ing => {
+        const invItem = inventory.find(i => i.id === ing.invId);
+        const name = ing.name || invItem?.name || '';
+        const unit = ing.unit || invItem?.unit || '';
+        return name ? `${ing.qty}${unit} ${name}` : '';
+      }).filter(Boolean);
+
+      if (autoTokens.length > 0) {
+        let remainder = raw;
+        for (const token of autoTokens) {
+          remainder = remainder.replace(token, '');
+        }
+        remainder = remainder.replace(/^[\s,.;]+|[\s,.;]+$/g, '');
+        if (!remainder) return '';
+      }
+    }
+    return raw;
+  };
+
+  /**
+   * Tính toán lượng tồn kho khả dụng và giá trị kho khả dụng cho từng nguyên liệu (invId).
+   * Khi đang sửa một bữa ăn (editingMeal), những nguyên liệu đã dùng trong bữa ăn đó (kể cả món hiện đã về 0 trong kho)
+   * sẽ được cộng hoàn trả tạm thời vào quỹ khả dụng của bữa ăn này để người dùng xem, giữ nguyên hoặc chỉnh sửa.
+   */
+  const getIngredientPoolInfo = (invId: string) => {
+    const invItem = inventory.find(i => i.id === invId);
+    const currentStock = invItem ? Number(invItem.quantity) || 0 : 0;
+    const currentVal = invItem ? Number(invItem.totalValue) || 0 : 0;
+
+    let oldHeldQty = 0;
+    let oldHeldCost = 0;
+    let snapshotName = invItem?.name;
+    let snapshotUnit = invItem?.unit;
+
+    if (editingMeal && editingMeal.source === 'home' && Array.isArray(editingMeal.ingredients_used)) {
+      const matchingOld = editingMeal.ingredients_used.filter(u => u.invId === invId);
+      for (const u of matchingOld) {
+        const q = Number(u.qty) || 0;
+        oldHeldQty = Number((oldHeldQty + q).toFixed(4));
+        if (u.name) snapshotName = u.name;
+        if (u.unit) snapshotUnit = u.unit;
+
+        if (typeof u.cost === 'number' && u.cost > 0) {
+          oldHeldCost += u.cost;
+        } else if (invItem?.originalValue && invItem?.originalQuantity && invItem.originalQuantity > 0) {
+          oldHeldCost += Math.round((invItem.originalValue / invItem.originalQuantity) * q);
+        } else if (editingMeal.ingredients_used.length === 1 && (editingMeal.cost || 0) > 0) {
+          oldHeldCost += editingMeal.cost || 0;
+        } else if (currentStock > 0 && currentVal > 0) {
+          oldHeldCost += Math.round((currentVal / currentStock) * q);
+        }
+      }
+    }
+
+    const effectivePoolQty = Number((currentStock + oldHeldQty).toFixed(4));
+    const origCap = invItem?.originalValue || 0;
+    const rawPoolVal = Math.round(currentVal + oldHeldCost);
+    const effectivePoolValue = origCap > 0 && effectivePoolQty <= (invItem?.originalQuantity || effectivePoolQty)
+      ? Math.min(origCap, rawPoolVal)
+      : rawPoolVal;
+
+    return {
+      invItem,
+      name: snapshotName || 'Nguyên liệu (đã xóa khỏi kho)',
+      unit: snapshotUnit || 'phần',
+      currentStock,
+      oldHeldQty,
+      oldHeldCost,
+      effectivePoolQty,
+      effectivePoolValue,
+      isDeletedFromInventory: !invItem
+    };
+  };
+
+  /**
+   * Ước tính chi phí khấu trừ kho cho một dòng nguyên liệu dựa trên quỹ khả dụng
+   */
+  const estimateIngredientCost = (invId: string, qty: number): number => {
+    const q = Number(qty) || 0;
+    if (!invId || q <= 0) return 0;
+    const pool = getIngredientPoolInfo(invId);
+    if (pool.effectivePoolQty <= 0 || pool.effectivePoolValue <= 0) return 0;
+    const actualQty = Math.min(pool.effectivePoolQty, q);
+    if (actualQty >= pool.effectivePoolQty - 1e-6) {
+      return Math.round(pool.effectivePoolValue);
+    }
+    return Math.min(
+      Math.round(pool.effectivePoolValue),
+      Math.round((pool.effectivePoolValue / pool.effectivePoolQty) * actualQty)
+    );
+  };
+
+  // Tổng thiệt hại kho dự kiến trên form hiện tại (gộp theo invId để chính xác tuyệt đối)
+  const estimatedHomeTotalCost = (() => {
+    if (formCookSource !== 'home' || selectedIngredients.length === 0) return 0;
+    const grouped = new Map<string, number>();
+    for (const ing of selectedIngredients) {
+      const q = Number(ing.qty) || 0;
+      if (ing.invId && q > 0) {
+        grouped.set(ing.invId, Number(((grouped.get(ing.invId) || 0) + q).toFixed(4)));
+      }
+    }
+    let total = 0;
+    for (const [invId, totalQty] of grouped.entries()) {
+      total += estimateIngredientCost(invId, totalQty);
+    }
+    return total;
+  })();
+
   const groupedMeals = meals.reduce((acc, meal) => {
-    const date = new Date(new Date(meal.consumed_at).getTime() - new Date(meal.consumed_at).getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    const date = toVnDateString(meal.consumed_at);
     if (!acc[date]) acc[date] = [];
     acc[date].push(meal);
     return acc;
   }, {} as Record<string, MealRecord[]>);
 
   const openCookModal = (recipe: Recipe) => {
+    setEditingMeal(null);
     setEditingRecipe(recipe);
     setFormName(recipe.name);
     setFormActualIngredients('');
     setModalType('cook');
     setFormCookSource('home');
-    setFormDate(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
+    setFormDate(toVnDateString());
     setFormCost('');
+    setFormWalletId('');
     setFormImageUrl('');
     
-    // Auto-match ingredients from inventory (only those with quantity > 0)
+    // Auto-match ingredients from inventory (only those with quantity > 0, no duplicates)
     const availableInventory = inventory.filter(i => i.quantity > 0);
-    const matched: {invId: string, qty: number}[] = [];
+    const matched: MealIngredientUsed[] = [];
+    const usedIds = new Set<string>();
     recipe.ingredients.forEach(ingName => {
-      const match = availableInventory.find(i => i.name.toLowerCase().includes(ingName.toLowerCase()) || ingName.toLowerCase().includes(i.name.toLowerCase()));
-      if (match) matched.push({ invId: match.id, qty: 1 });
+      const match = availableInventory.find(
+        i => !usedIds.has(i.id) && (i.name.toLowerCase().includes(ingName.toLowerCase()) || ingName.toLowerCase().includes(i.name.toLowerCase()))
+      );
+      if (match) {
+        usedIds.add(match.id);
+        matched.push({ invId: match.id, qty: Math.min(1, match.quantity), name: match.name, unit: match.unit });
+      }
     });
     setSelectedIngredients(matched);
     
@@ -118,9 +256,10 @@ export default function MenuPage() {
   };
 
   const openGlobalAddModal = () => {
+    setEditingMeal(null);
+    setEditingRecipe(null);
     if (activeTab === 'recipes') {
       setModalType('recipe');
-      setEditingRecipe(null);
       setFormName('');
       setFormIngredients('');
       setFormInstructions('');
@@ -130,27 +269,36 @@ export default function MenuPage() {
       setFormName('');
       setFormActualIngredients('');
       setFormCookSource('home');
-      setFormDate(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]);
+      setFormDate(toVnDateString());
       setFormCost('');
       setFormWalletId('');
       setSelectedIngredients([]);
-      setEditingMeal(null);
       setFormImageUrl('');
       setIsModalOpen(true);
     }
   };
 
   const openEditMealModal = (meal: MealRecord) => {
+    setEditingRecipe(null);
     setEditingMeal(meal);
     setModalType('meal');
     setFormName(meal.food_name);
     setFormCookSource(meal.source);
-    setFormDate(meal.consumed_at ? new Date(new Date(meal.consumed_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+    setFormDate(toVnDateString(meal.consumed_at));
     setFormCost(meal.cost ? meal.cost.toString() : '');
     setFormWalletId(meal.wallet_id || '');
-    setFormActualIngredients((meal as any).ingredients_text || '');
-    if (meal.source === 'home' && (meal as any).ingredients_used) {
-      setSelectedIngredients((meal as any).ingredients_used);
+    setFormActualIngredients(extractCleanManualNote(meal));
+    if (meal.source === 'home' && Array.isArray(meal.ingredients_used)) {
+      // Deep copy để không làm biến đổi state gốc khi đang thao tác trong modal
+      setSelectedIngredients(
+        meal.ingredients_used.map(ing => ({
+          invId: ing.invId,
+          qty: Number(ing.qty) || 0,
+          cost: ing.cost,
+          name: ing.name,
+          unit: ing.unit
+        }))
+      );
     } else {
       setSelectedIngredients([]);
     }
@@ -168,8 +316,10 @@ export default function MenuPage() {
       await deleteMeal(mealToDelete);
       setMeals(meals.filter(m => m._id !== mealToDelete));
       setMealToDelete(null);
-      fetchData(true);
+      fetchData(true, true);
       window.dispatchEvent(new Event('sao-user-updated'));
+      window.dispatchEvent(new Event('sao-finance-updated'));
+      window.dispatchEvent(new Event('sao-health-updated'));
     } catch (e) {
       showAlert("Lỗi xóa bữa ăn");
     }
@@ -183,10 +333,11 @@ export default function MenuPage() {
         ingredients_context: ingredients,
         image_data: imageBase64
       });
-      fetchData(true); // reload regardless to update status
+      fetchData(true, true); // reload silently to update AI status without full-page spinner flash
       window.dispatchEvent(new Event('sao-user-updated'));
+      window.dispatchEvent(new Event('sao-health-updated'));
     } catch (e) {
-      fetchData(true);
+      fetchData(true, true);
     }
   };
 
@@ -199,10 +350,26 @@ export default function MenuPage() {
         instructions: formInstructions ? formInstructions.trim() : undefined
       });
       setIsModalOpen(false);
-      fetchData(true);
+      fetchData(true, true);
     } catch (e) {
       showAlert("Lỗi lưu công thức");
     }
+  };
+
+  const buildAiContextString = (ings: MealIngredientUsed[], manualNote: string, source: 'home' | 'eat_out') => {
+    const cleanNote = manualNote.trim();
+    if (source !== 'home' || ings.length === 0) {
+      return cleanNote;
+    }
+    const textParts = ings.map(ing => {
+      const pool = getIngredientPoolInfo(ing.invId);
+      return ing.qty > 0 ? `${ing.qty} ${pool.unit} ${pool.name}` : '';
+    }).filter(Boolean);
+    const autoContext = textParts.join(', ');
+    if (autoContext && cleanNote) {
+      return `${autoContext}. Bổ sung: ${cleanNote}`;
+    }
+    return autoContext || cleanNote;
   };
 
   const handleSaveMeal = async (e: React.FormEvent) => {
@@ -213,21 +380,43 @@ export default function MenuPage() {
       showAlert("Vui lòng nhập tên món ăn hoặc tải ảnh bữa ăn lên!");
       return;
     }
-    
-    let ingredients_context = formActualIngredients;
+
+    // Kiểm tra hợp lệ nguyên liệu kho trước khi gửi
+    const mergedIngredients: MealIngredientUsed[] = [];
     if (formCookSource === 'home' && selectedIngredients.length > 0) {
-      const textParts = selectedIngredients.map(ing => {
-        const item = inventory.find(i => i.id === ing.invId);
-        return item ? `${ing.qty}${item.unit} ${item.name}` : '';
-      }).filter(Boolean);
-      const autoContext = textParts.join(', ');
-      
-      if (ingredients_context) {
-        ingredients_context = autoContext + ". Bổ sung: " + ingredients_context;
-      } else {
-        ingredients_context = autoContext;
+      const qtyByInvId = new Map<string, number>();
+      for (const ing of selectedIngredients) {
+        const q = Number(ing.qty);
+        if (!ing.invId) continue;
+        if (isNaN(q) || q <= 0) {
+          const pool = getIngredientPoolInfo(ing.invId);
+          showAlert(`Vui lòng nhập số lượng lớn hơn 0 cho nguyên liệu "${pool.name}" (hoặc bấm biểu tượng thùng rác để xóa dòng đó).`);
+          return;
+        }
+        qtyByInvId.set(ing.invId, Number(((qtyByInvId.get(ing.invId) || 0) + q).toFixed(4)));
+      }
+
+      for (const [invId, totalQty] of qtyByInvId.entries()) {
+        const pool = getIngredientPoolInfo(invId);
+        if (totalQty > pool.effectivePoolQty + 1e-6) {
+          showAlert(
+            `Nguyên liệu "${pool.name}" vượt quá số lượng khả dụng!\n` +
+            `• Tối đa có thể dùng: ${pool.effectivePoolQty} ${pool.unit} (Kho hiện còn: ${pool.currentStock} ${pool.unit}${pool.oldHeldQty > 0 ? `, bữa này đang giữ: ${pool.oldHeldQty} ${pool.unit}` : ''})\n` +
+            `• Bạn đang nhập: ${totalQty} ${pool.unit}`
+          );
+          return;
+        }
+        mergedIngredients.push({
+          invId,
+          qty: totalQty,
+          name: pool.name,
+          unit: pool.unit
+        });
       }
     }
+
+    const cleanManualNote = formActualIngredients.trim();
+    const aiIngredientsContext = buildAiContextString(mergedIngredients, cleanManualNote, formCookSource);
 
     try {
       let data: any;
@@ -236,8 +425,8 @@ export default function MenuPage() {
           food_name: resolvedFoodName,
           consumed_at: formDate,
           source: formCookSource,
-          ingredients_used: selectedIngredients,
-          ingredients_text: ingredients_context,
+          ingredients_used: formCookSource === 'home' ? mergedIngredients : [],
+          ingredients_text: cleanManualNote || undefined,
           cost: formCookSource === 'eat_out' ? Number(formCost) || 0 : undefined,
           wallet_id: formCookSource === 'eat_out' ? formWalletId : undefined,
           image_url: formImageUrl || undefined
@@ -249,8 +438,8 @@ export default function MenuPage() {
           consumed_at: formDate,
           source: formCookSource,
           recipe_id: editingRecipe ? editingRecipe._id : undefined,
-          ingredients_used: selectedIngredients,
-          ingredients_text: ingredients_context,
+          ingredients_used: formCookSource === 'home' ? mergedIngredients : [],
+          ingredients_text: cleanManualNote || undefined,
           cost: formCookSource === 'eat_out' ? Number(formCost) || 0 : undefined,
           wallet_id: formCookSource === 'eat_out' ? formWalletId : undefined,
           image_url: formImageUrl || undefined
@@ -260,13 +449,16 @@ export default function MenuPage() {
       
       setIsModalOpen(false);
       
-      // Send AI request (which will also call fetchData(true) to sync)
-      calculateAI(data.mealLog._id, resolvedFoodName, ingredients_context);
+      // Chỉ gọi AI khi tạo mới hoặc khi có thay đổi tên món / nguyên liệu / ghi chú / ảnh
+      const shouldRunAi = !editingMeal || data.needsAiRecalc !== false;
+      if (shouldRunAi) {
+        calculateAI(data.mealLog._id, resolvedFoodName, aiIngredientsContext);
+      }
       
-      // Update local state temporarily, or just let fetchData(true) handle it.
-      // We also do fetchData(true) directly here to guarantee instant UI update
-      fetchData(true);
+      fetchData(true, true);
       window.dispatchEvent(new Event('sao-user-updated'));
+      window.dispatchEvent(new Event('sao-finance-updated'));
+      window.dispatchEvent(new Event('sao-health-updated'));
     } catch (e: any) {
       showAlert(e.response?.data?.error || e.message || "Lỗi lưu bữa ăn");
     }
@@ -274,8 +466,9 @@ export default function MenuPage() {
 
   const handleRetryAI = (meal: MealRecord) => {
     setMeals(meals.map(m => m._id === meal._id ? { ...m, ai_status: 'pending' } : m));
-    // Since we don't save ingredients_context to db for history currently, we just send name.
-    calculateAI(meal._id, meal.food_name, ""); 
+    const cleanNote = extractCleanManualNote(meal);
+    const contextStr = buildAiContextString(meal.ingredients_used || [], cleanNote, meal.source);
+    calculateAI(meal._id, meal.food_name, contextStr); 
   };
 
   const renderModalContent = () => {
@@ -380,63 +573,165 @@ export default function MenuPage() {
 
           {formCookSource === 'home' && (
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Lấy từ Dự trữ Kho (Sẽ bị trừ khi lưu)</label>
+              <label className={styles.formLabel}>Lấy từ Dự trữ Kho (Sẽ bị trừ hoặc hoàn trả tương ứng khi lưu)</label>
               <div className={styles.ingredientCheckList}>
                 {selectedIngredients.map((ing, idx) => {
-                  const invItem = inventory.find(i => i.id === ing.invId);
+                  const pool = getIngredientPoolInfo(ing.invId);
+                  const rowEstimatedCost = estimateIngredientCost(ing.invId, ing.qty);
+                  const isOverLimit = Number(ing.qty) > pool.effectivePoolQty + 1e-6;
+
+                  // Xây dựng danh sách options gồm cả các món đã hết trong kho nhưng đang được dùng trong bữa ăn đang sửa
+                  const optionIds = new Set<string>();
+                  const selectOptions: { value: string; label: string }[] = [];
+
+                  inventory.forEach(item => {
+                    const p = getIngredientPoolInfo(item.id);
+                    if (p.effectivePoolQty > 0 || item.id === ing.invId) {
+                      optionIds.add(item.id);
+                      let label = `${item.name} (Còn: ${p.currentStock} ${item.unit})`;
+                      if (p.oldHeldQty > 0) {
+                        if (p.currentStock <= 0) {
+                          label = `${item.name} (Kho đã hết • Đang dùng: ${p.oldHeldQty} ${item.unit} → Tối đa: ${p.effectivePoolQty} ${item.unit})`;
+                        } else {
+                          label = `${item.name} (Kho: ${p.currentStock} + Đang dùng: ${p.oldHeldQty} → Tối đa: ${p.effectivePoolQty} ${item.unit})`;
+                        }
+                      }
+                      selectOptions.push({ value: item.id, label });
+                    }
+                  });
+
+                  // Phòng trường hợp món nguyên liệu cũ đã bị xóa khỏi kho sau 7 ngày hết hàng
+                  if (ing.invId && !optionIds.has(ing.invId)) {
+                    selectOptions.unshift({
+                      value: ing.invId,
+                      label: `${pool.name} (Đã xóa khỏi kho • Đang giữ: ${pool.effectivePoolQty} ${pool.unit})`
+                    });
+                  }
+
                   return (
-                    <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
-                      <div style={{ flex: 2 }}>
-                        <SaoSelect
-                          initialValue={ing.invId}
-                          options={inventory.filter(i => i.quantity > 0).map(i => ({ value: i.id, label: `${i.name} (Còn: ${i.quantity} ${i.unit})` }))}
-                          onChange={(val) => {
-                            const newArr = [...selectedIngredients];
-                            newArr[idx].invId = val;
-                            setSelectedIngredients(newArr);
-                          }}
-                        />
+                    <div key={`${ing.invId}-${idx}`} style={{ marginBottom: '10px', padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', border: isOverLimit ? '1px solid #ff4444' : '1px solid rgba(0, 240, 255, 0.15)' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div style={{ flex: 2 }}>
+                          <SaoSelect
+                            initialValue={ing.invId}
+                            options={selectOptions}
+                            onChange={(val) => {
+                              const targetPool = getIngredientPoolInfo(val);
+                              const newArr = selectedIngredients.map((item, i) =>
+                                i === idx
+                                  ? {
+                                      ...item,
+                                      invId: val,
+                                      name: targetPool.name,
+                                      unit: targetPool.unit,
+                                      qty: Math.min(Number(item.qty) || 1, Math.max(1, targetPool.effectivePoolQty))
+                                    }
+                                  : item
+                              );
+                              setSelectedIngredients(newArr);
+                            }}
+                          />
+                        </div>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <SaoInput 
+                            type="number" 
+                            step="any"
+                            min="0.01"
+                            max={pool.effectivePoolQty > 0 ? pool.effectivePoolQty : undefined}
+                            value={ing.qty} 
+                            onChange={(e) => {
+                              const valNum = Number(e.target.value);
+                              const newArr = selectedIngredients.map((item, i) =>
+                                i === idx ? { ...item, qty: valNum } : item
+                              );
+                              setSelectedIngredients(newArr);
+                            }}
+                            style={{ padding: '8px' }}
+                          />
+                          <span style={{ color: '#a0c4ff', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{pool.unit}</span>
+                        </div>
+                        <SaoButton 
+                          type="button" 
+                          onClick={() => setSelectedIngredients(selectedIngredients.filter((_, i) => i !== idx))}
+                          style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer', padding: '4px' }}
+                        >
+                          <Trash2 size={18} />
+                        </SaoButton>
                       </div>
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <SaoInput 
-                          type="number" 
-                          step="any"
-                           
-                          value={ing.qty} 
-                          onChange={(e) => {
-                            const newArr = [...selectedIngredients];
-                            newArr[idx].qty = Number(e.target.value);
-                            setSelectedIngredients(newArr);
-                          }}
-                          style={{ padding: '8px' }}
-                        />
-                        <span style={{ color: '#a0c4ff', fontSize: '0.9rem' }}>{invItem?.unit || '?'}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginTop: '4px', padding: '0 2px', color: isOverLimit ? '#ff4444' : '#94a3b8' }}>
+                        <span>
+                          {isOverLimit
+                            ? `⚠️ Vượt quá giới hạn khả dụng (Tối đa: ${pool.effectivePoolQty} ${pool.unit})`
+                            : `Khả dụng tối đa: ${pool.effectivePoolQty} ${pool.unit}${pool.oldHeldQty > 0 && pool.currentStock === 0 ? ' (Món đã dùng hết trong kho)' : ''}`}
+                        </span>
+                        {rowEstimatedCost > 0 && (
+                          <span style={{ color: '#00f0ff', fontWeight: 500 }}>
+                            Thiệt hại kho: ≈ {rowEstimatedCost.toLocaleString('vi-VN')} đ
+                          </span>
+                        )}
                       </div>
-                      <SaoButton 
-                        type="button" 
-                        onClick={() => setSelectedIngredients(selectedIngredients.filter((_, i) => i !== idx))}
-                        style={{ background: 'transparent', border: 'none', color: '#ff4444', cursor: 'pointer' }}
-                      >
-                        <Trash2 size={18} />
-                      </SaoButton>
                     </div>
                   );
                 })}
                 <SaoButton variant="primary" 
                   type="button"
-                  
                   style={{ background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', border: '1px dashed #00f0ff', marginTop: '5px' }}
                   onClick={() => {
-                    const availableItems = inventory.filter(i => i.quantity > 0);
-                    if (availableItems.length > 0) {
-                      setSelectedIngredients([...selectedIngredients, { invId: availableItems[0].id, qty: 1 }]);
-                    } else {
-                      showAlert("Kho của bạn không có nguyên liệu nào còn hàng!");
+                    // Tìm các nguyên liệu có quỹ khả dụng > 0 (bao gồm cả món hết trong kho nhưng thuộc bữa đang sửa)
+                    const allCandidates = inventory.filter(i => getIngredientPoolInfo(i.id).effectivePoolQty > 0);
+                    if (allCandidates.length === 0) {
+                      showAlert("Kho của bạn hiện không có nguyên liệu nào còn hàng!");
+                      return;
                     }
+                    // Ưu tiên chọn nguyên liệu chưa có trong danh sách đang chọn
+                    const selectedIds = new Set(selectedIngredients.map(s => s.invId));
+                    const unselectedCandidate = allCandidates.find(i => !selectedIds.has(i.id));
+                    const chosen = unselectedCandidate || allCandidates.find(i => {
+                      const usedQty = selectedIngredients
+                        .filter(s => s.invId === i.id)
+                        .reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
+                      return getIngredientPoolInfo(i.id).effectivePoolQty - usedQty > 1e-6;
+                    });
+
+                    if (!chosen) {
+                      showAlert("Tất cả nguyên liệu còn hàng trong kho đã được chọn hết số lượng khả dụng!");
+                      return;
+                    }
+                    const pool = getIngredientPoolInfo(chosen.id);
+                    const alreadyUsed = selectedIngredients
+                      .filter(s => s.invId === chosen.id)
+                      .reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
+                    const remaining = Math.max(0.1, Number((pool.effectivePoolQty - alreadyUsed).toFixed(4)));
+                    setSelectedIngredients([
+                      ...selectedIngredients,
+                      {
+                        invId: chosen.id,
+                        qty: Math.min(1, remaining),
+                        name: chosen.name,
+                        unit: chosen.unit
+                      }
+                    ]);
                   }}
                 >
                   <Plus size={16} style={{ display: 'inline', marginRight: 5 }} /> Thêm nguyên liệu từ Kho
                 </SaoButton>
+
+                {(selectedIngredients.length > 0 || (editingMeal && editingMeal.source === 'home' && (editingMeal.cost || 0) > 0)) && (
+                  <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(0, 240, 255, 0.08)', border: '1px solid rgba(0, 240, 255, 0.25)', fontSize: '0.88rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff', fontWeight: 600 }}>
+                      <span>Tổng thiệt hại kho tính toán:</span>
+                      <span style={{ color: '#00f0ff', fontSize: '1rem' }}>{estimatedHomeTotalCost.toLocaleString('vi-VN')} VND</span>
+                    </div>
+                    {editingMeal && editingMeal.source === 'home' && (editingMeal.cost || 0) !== estimatedHomeTotalCost && (
+                      <div style={{ fontSize: '0.78rem', color: '#ffaa00', marginTop: '4px' }}>
+                        Chênh lệch so với trước khi sửa: {(editingMeal.cost || 0).toLocaleString('vi-VN')} VND → {estimatedHomeTotalCost.toLocaleString('vi-VN')} VND
+                        {estimatedHomeTotalCost < (editingMeal.cost || 0)
+                          ? ` (Hoàn lại kho ${( (editingMeal.cost || 0) - estimatedHomeTotalCost ).toLocaleString('vi-VN')} VND)`
+                          : ` (Trừ thêm kho ${( estimatedHomeTotalCost - (editingMeal.cost || 0) ).toLocaleString('vi-VN')} VND)`}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -464,7 +759,7 @@ export default function MenuPage() {
           )}
 
           <SaoButton variant="primary" type="submit" >
-            <CheckCircle2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {modalType === 'cook' ? 'Ghi nhận Nấu Món Này' : 'Lưu Bữa Ăn'} (Gửi AI)
+            <CheckCircle2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {modalType === 'cook' ? 'Ghi nhận Nấu Món Này' : (editingMeal ? 'Lưu Sửa Đổi Bữa Ăn' : 'Lưu Bữa Ăn')}
           </SaoButton>
         </form>
       );
@@ -536,7 +831,9 @@ export default function MenuPage() {
             <div key={date} className={styles.timelineDay}>
               <div className={styles.timelineDate}>{date}</div>
               <div className={styles.mealCards}>
-                {dayMeals.map(meal => (
+                {dayMeals.map(meal => {
+                  const cleanNote = extractCleanManualNote(meal);
+                  return (
                   <div key={meal._id} className={styles.mealCard}>
                     <div className={styles.mealIcon}>
                       {meal.source === 'eat_out' ? <ShoppingBag size={20} /> : <ChefHat size={20} />}
@@ -545,10 +842,10 @@ export default function MenuPage() {
                       <div className="flex justify-between items-start">
                         <div className={styles.mealName}>{meal.food_name}</div>
                         <div className="flex gap-2">
-                          <button onClick={() => openEditMealModal(meal)} style={{ background: 'none', border: 'none', color: '#00f0ff', cursor: 'pointer', padding: '4px' }}>
+                          <button onClick={() => openEditMealModal(meal)} title="Chỉnh sửa bữa ăn" style={{ background: 'none', border: 'none', color: '#00f0ff', cursor: 'pointer', padding: '4px' }}>
                             <Edit3 size={16} />
                           </button>
-                          <button onClick={() => confirmDeleteMeal(meal._id)} style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', padding: '4px' }}>
+                          <button onClick={() => confirmDeleteMeal(meal._id)} title="Xóa bữa ăn" style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', padding: '4px' }}>
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -556,9 +853,46 @@ export default function MenuPage() {
                       <div className={styles.mealTimeType}>
                         <span>{meal.source === 'eat_out' ? 'Ăn ngoài' : 'Nấu tại nhà'}</span>
                         {meal.cost !== undefined && meal.cost > 0 && (
-                          <span style={{ color: '#00f0ff' }} suppressHydrationWarning> • Chi phí: {meal.cost.toLocaleString('vi-VN')} VND</span>
+                          <span style={{ color: '#00f0ff' }} suppressHydrationWarning>
+                            {' '}• {meal.source === 'home' ? 'Thiệt hại kho' : 'Chi phí'}: {meal.cost.toLocaleString('vi-VN')} VND
+                          </span>
                         )}
                       </div>
+
+                      {meal.source === 'home' && meal.ingredients_used && meal.ingredients_used.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                          {meal.ingredients_used.map((ing, i) => {
+                            const invItem = inventory.find(item => item.id === ing.invId);
+                            const name = ing.name || invItem?.name || 'Nguyên liệu kho';
+                            const unit = ing.unit || invItem?.unit || '';
+                            const isDepletedNow = invItem ? invItem.quantity <= 0 : false;
+                            return (
+                              <span
+                                key={`${ing.invId}-${i}`}
+                                style={{
+                                  fontSize: '0.75rem',
+                                  padding: '2px 8px',
+                                  borderRadius: '10px',
+                                  background: isDepletedNow ? 'rgba(255, 170, 0, 0.12)' : 'rgba(0, 240, 255, 0.1)',
+                                  border: isDepletedNow ? '1px solid rgba(255, 170, 0, 0.35)' : '1px solid rgba(0, 240, 255, 0.25)',
+                                  color: isDepletedNow ? '#ffcc66' : '#a0c4ff'
+                                }}
+                                title={isDepletedNow ? 'Món này trong kho hiện đã dùng hết (0)' : undefined}
+                              >
+                                {ing.qty} {unit} {name}
+                                {ing.cost && ing.cost > 0 ? ` (-${ing.cost.toLocaleString('vi-VN')}đ)` : ''}
+                                {isDepletedNow ? ' • Kho hết' : ''}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {cleanNote && (
+                        <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '5px' }}>
+                          📝 Ghi chú: {cleanNote}
+                        </div>
+                      )}
                       
                       {meal.ai_status === 'completed' && (
                         <div style={{ display: 'flex', gap: '8px', fontSize: '0.8rem', color: '#a0c4ff', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -592,9 +926,26 @@ export default function MenuPage() {
                           </SaoButton>
                         </div>
                       )}
+
+                      {meal.edit_note && (
+                        <div
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#00ffaa',
+                            background: 'rgba(0, 255, 170, 0.07)',
+                            borderLeft: '2px solid #00ffaa',
+                            padding: '4px 8px',
+                            borderRadius: '0 4px 4px 0',
+                            marginTop: '6px'
+                          }}
+                        >
+                          ✏️ {meal.edit_note}
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -626,7 +977,7 @@ export default function MenuPage() {
         title={
           modalType === 'cook' ? 'Chi tiết Nấu ăn' :
           modalType === 'recipe' ? (editingRecipe ? 'Sửa Công thức' : 'Thêm Công thức') :
-          'Ghi nhận Bữa ăn'
+          (editingMeal ? 'Chỉnh sửa Lịch sử Bữa ăn' : 'Ghi nhận Bữa ăn')
         }
       >
         {renderModalContent()}

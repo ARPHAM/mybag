@@ -21,9 +21,33 @@ export default function SaoDatePicker({ value, defaultValue, onChange, required,
   const [internalValue, setInternalValue] = useState(value || defaultValue || '');
   const actualValue = value !== undefined ? value : internalValue;
 
+  const parseDateString = (str: string): Date => {
+    if (!str) return new Date();
+    const parts = str.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return new Date(y, m, d);
+      }
+    }
+    const parsed = new Date(str);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
   // Parse initial date or use today
-  const initialDate = actualValue ? new Date(actualValue) : new Date();
+  const initialDate = parseDateString(actualValue);
   const [currentMonth, setCurrentMonth] = useState(new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
+
+  // Sync internalValue and currentMonth when controlled value prop changes
+  useEffect(() => {
+    if (value !== undefined) {
+      setInternalValue(value);
+      const dt = parseDateString(value);
+      setCurrentMonth(new Date(dt.getFullYear(), dt.getMonth(), 1));
+    }
+  }, [value]);
 
   // Handle outside click
   useEffect(() => {

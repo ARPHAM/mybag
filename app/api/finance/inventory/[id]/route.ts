@@ -26,7 +26,28 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // Handle simple quantity update (from +/- buttons)
     if (justUpdateQty) {
       if (quantity === undefined || quantity < 0) return NextResponse.json({ error: 'Số lượng không hợp lệ' }, { status: 400 });
+      const oldQty = item.quantity;
+      if (quantity === 0) {
+        item.totalValue = 0;
+      } else if (oldQty > 0 && item.totalValue && item.totalValue > 0) {
+        const unitPrice = item.totalValue / oldQty;
+        item.totalValue = Math.max(0, Math.round(unitPrice * quantity));
+      } else if (oldQty === 0 && quantity > 0) {
+        // Nếu tăng lại từ 0, khôi phục đơn giá từ originalValue hoặc giao dịch gốc
+        let baseValue = item.originalValue || 0;
+        if (!baseValue && item.transaction_id) {
+          const tx = await Transaction.findById(item.transaction_id);
+          if (tx) baseValue = tx.amount;
+        }
+        if (baseValue > 0 && item.originalQuantity > 0) {
+          const unitPrice = baseValue / item.originalQuantity;
+          item.totalValue = Math.round(unitPrice * quantity);
+        }
+      }
       item.quantity = quantity;
+      if (quantity > item.originalQuantity) {
+        item.originalQuantity = quantity;
+      }
       await item.save();
       return NextResponse.json(item);
     }
@@ -125,6 +146,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     item.expiryDate = expiryDate ? new Date(`${expiryDate.split('T')[0]}T12:00:00.000Z`) : undefined;
     item.isGift = isGift;
     item.totalValue = totalValue;
+    item.originalValue = totalValue;
     item.wallet_id = (!isGift && totalValue > 0) ? wallet_id : undefined;
     item.walletName = newWalletName;
     item.transaction_id = newTransactionId;

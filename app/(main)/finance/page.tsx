@@ -154,6 +154,7 @@ export default function FinancePage() {
           expiryDate: i.expiryDate ? i.expiryDate.split('T')[0] : undefined,
           isGift: i.isGift,
           totalValue: i.totalValue,
+          originalValue: i.originalValue,
           wallet_id: i.wallet_id,
           walletName: i.walletName
         })));
@@ -182,11 +183,20 @@ export default function FinancePage() {
     const item = inventory.find(i => i.id === id);
     if (!item) return;
 
-    const newQty = Math.max(0, item.quantity + delta);
+    const newQty = Math.max(0, Number((item.quantity + delta).toFixed(4)));
     setInventory(inventory.map(i => i.id === id ? { ...i, quantity: newQty } : i));
 
     try {
-      await updateInventory(id, { justUpdateQty: true, quantity: newQty });
+      const updated: any = await updateInventory(id, { justUpdateQty: true, quantity: newQty });
+      if (updated) {
+        setInventory(prev => prev.map(i => i.id === id ? {
+          ...i,
+          quantity: updated.quantity,
+          totalValue: updated.totalValue,
+          originalQuantity: updated.originalQuantity
+        } : i));
+      }
+      window.dispatchEvent(new Event('sao-inventory-updated'));
     } catch (err) {
       console.error('Lỗi khi cập nhật số lượng', err);
       fetchData(true);

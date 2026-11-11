@@ -11,6 +11,7 @@ export interface IInventory extends mongoose.Document {
   expiryDate?: Date;
   isGift: boolean;
   totalValue?: number;
+  originalValue?: number;
   wallet_id?: mongoose.Types.ObjectId;
   walletName?: string;
   transaction_id?: mongoose.Types.ObjectId;
@@ -29,6 +30,7 @@ const InventorySchema = new mongoose.Schema<IInventory>({
   expiryDate: { type: Date },
   isGift: { type: Boolean, default: false },
   totalValue: { type: Number },
+  originalValue: { type: Number },
   wallet_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Wallet' },
   walletName: { type: String },
   transaction_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }

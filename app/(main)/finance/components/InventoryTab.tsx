@@ -65,9 +65,14 @@ export default function InventoryTab({
                       )}
                     </span>
                   </div>
+                  {item.quantity <= 0 && (
+                    <div style={{ color: '#ff4444', fontSize: '0.82rem', fontWeight: 'bold', marginBottom: '4px' }}>
+                      ⚠️ Đã dùng hết (Sẽ tự dọn sau 7 ngày nếu không hoàn tác/bổ sung)
+                    </div>
+                  )}
                   {(item.totalValue !== undefined && item.totalValue > 0) && (
                     <div style={{ color: '#fff', fontSize: '0.85rem', marginBottom: '4px' }}>
-                      {item.isGift ? 'Ước tính giá:' : 'Tổng giá trị:'} {formatMoney(item.totalValue)}
+                      {item.isGift ? 'Ước tính giá:' : 'Tổng giá trị còn lại:'} {formatMoney(item.totalValue)}
                       {item.quantity > 0 && (
                         <span style={{ color: '#a0c4ff' }}> (≈ {formatMoney(Math.round(item.totalValue / item.quantity))} đ/{item.unit})</span>
                       )}
@@ -86,8 +91,8 @@ export default function InventoryTab({
                   variant="ghost"
                   className={styles.qtyBtn}
                   onClick={() => onUpdateQty(item.id, -1)}
-                  disabled={item.quantity <= 1}
-                  style={{ opacity: item.quantity <= 1 ? 0.5 : 1, cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer', padding: 0 }}
+                  disabled={item.quantity <= 0}
+                  style={{ opacity: item.quantity <= 0 ? 0.5 : 1, cursor: item.quantity <= 0 ? 'not-allowed' : 'pointer', padding: 0 }}
                 >
                   <Minus size={16} />
                 </SaoButton>

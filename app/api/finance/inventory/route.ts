@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     const items = await Inventory.find({ user_id: decoded.userId }).sort({ createdAt: -1 });
     return NextResponse.json(items, {
       headers: {
-        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120', // Cache 1 phút
+        'Cache-Control': 'private, no-cache, no-store, must-revalidate',
       }
     });
   } catch (error) {
@@ -96,6 +96,7 @@ export async function POST(req: Request) {
       expiryDate: expiryDate ? new Date(`${expiryDate.split('T')[0]}T12:00:00.000Z`) : undefined,
       isGift,
       totalValue,
+      originalValue: totalValue,
       wallet_id: (!isGift && totalValue > 0) ? wallet_id : undefined,
       walletName,
       transaction_id: transactionId

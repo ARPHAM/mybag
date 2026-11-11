@@ -7,6 +7,14 @@ export interface Recipe {
   instructions?: string;
 }
 
+export interface MealIngredientUsed {
+  invId: string;
+  qty: number;
+  cost?: number;
+  name?: string;
+  unit?: string;
+}
+
 export interface MealRecord {
   _id: string;
   consumed_at: string;
@@ -23,4 +31,8 @@ export interface MealRecord {
   image_url?: string;
   cost?: number;
   wallet_id?: string;
+  ingredients_used?: MealIngredientUsed[];
+  ingredients_text?: string;
+  edit_note?: string;
+  updated_at?: string;
 }

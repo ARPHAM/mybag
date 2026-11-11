@@ -7,6 +7,40 @@ import '@/models/Recipe'; // Tránh lỗi MissingSchemaError
 import '@/models/User'; // Tránh lỗi MissingSchemaError cho User
 import { verifyToken } from '@/lib/auth';
 
+function getTodayVnDateStr(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+}
+
+function resolveConsumedAtDate(consumed_at?: string): Date {
+  if (!consumed_at) return new Date();
+  const trimmed = String(consumed_at).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const todayVn = getTodayVnDateStr();
+    if (trimmed === todayVn) {
+      return new Date();
+    }
+    return new Date(`${trimmed}T12:00:00+07:00`);
+  }
+  const parsed = new Date(trimmed);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function cleanManualIngredientsNote(raw?: string): string | undefined {
+  if (!raw || typeof raw !== 'string') return undefined;
+  let cleaned = raw.trim();
+  if (!cleaned) return undefined;
+  if (cleaned.includes('. Bổ sung: ')) {
+    const parts = cleaned.split('. Bổ sung: ');
+    cleaned = parts[parts.length - 1].trim();
+  }
+  return cleaned || undefined;
+}
+
 export async function GET(req: Request) {
   try {
     await dbConnect();
@@ -25,7 +59,7 @@ export async function GET(req: Request) {
     const meals = await MealLog.find({ user_id: decoded.userId }).populate('recipe_id').sort({ consumed_at: -1 });
     return NextResponse.json(meals, {
       headers: {
-        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30', // Cache 15s
+        'Cache-Control': 'private, no-cache, no-store, must-revalidate',
       }
     });
   } catch (error) {
@@ -56,26 +90,75 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Thiếu tên món ăn' }, { status: 400 });
     }
 
+    const resolvedDate = resolveConsumedAtDate(consumed_at);
     let calculatedCost = 0;
-    let transaction_id = null;
+    let transaction_id: any = undefined;
+    const processedIngredientsUsed: {
+      invId: string;
+      qty: number;
+      cost: number;
+      name: string;
+      unit: string;
+    }[] = [];
 
     if (source === 'home' && ingredients_used && Array.isArray(ingredients_used)) {
-      // Deduct inventory if any ingredients were used
+      // Gộp các dòng trùng invId và lọc qty > 0
+      const mergedMap = new Map<string, number>();
       for (const ing of ingredients_used) {
-        if (ing.invId && ing.qty > 0) {
-          const item = await Inventory.findOne({ _id: ing.invId, user_id: decoded.userId });
-          if (item) {
-            // Deduct total value proportionally, rounding down
-            if (item.totalValue && item.quantity > 0) {
-              const valuePerUnit = item.totalValue / item.quantity;
-              const valueToDeduct = Math.floor(valuePerUnit * ing.qty);
-              item.totalValue = Math.max(0, item.totalValue - valueToDeduct);
-              calculatedCost += valueToDeduct;
-            }
-            item.quantity = Math.max(0, item.quantity - ing.qty);
-            await item.save();
-          }
+        const qtyNum = Number(ing?.qty);
+        if (ing?.invId && !isNaN(qtyNum) && qtyNum > 0) {
+          mergedMap.set(ing.invId, Number(((mergedMap.get(ing.invId) || 0) + qtyNum).toFixed(4)));
         }
+      }
+
+      // Bước 1: Kiểm tra tồn kho hợp lệ trước khi trừ
+      const itemsToDeduct: { item: any; qty: number }[] = [];
+      for (const [invId, qty] of mergedMap.entries()) {
+        const item = await Inventory.findOne({ _id: invId, user_id: decoded.userId });
+        if (!item) {
+          return NextResponse.json({ error: 'Một nguyên liệu được chọn không còn tồn tại trong kho' }, { status: 400 });
+        }
+        if (item.quantity <= 0) {
+          return NextResponse.json({ error: `Nguyên liệu "${item.name}" trong kho đã dùng hết!` }, { status: 400 });
+        }
+        if (qty > item.quantity + 1e-6) {
+          return NextResponse.json(
+            { error: `Nguyên liệu "${item.name}" trong kho chỉ còn ${item.quantity} ${item.unit} (không đủ ${qty} ${item.unit})` },
+            { status: 400 }
+          );
+        }
+        itemsToDeduct.push({ item, qty: Math.min(item.quantity, qty) });
+      }
+
+      // Bước 2: Khấu trừ số lượng và giá trị kho chính xác
+      for (const { item, qty } of itemsToDeduct) {
+        if (!item.originalValue && item.totalValue && item.totalValue > 0 && item.quantity === item.originalQuantity) {
+          item.originalValue = item.totalValue;
+        }
+
+        let valueToDeduct = 0;
+        if (item.totalValue && item.totalValue > 0 && item.quantity > 0) {
+          if (qty >= item.quantity - 1e-6) {
+            // Dùng hết sạch phần còn lại -> khấu trừ toàn bộ giá trị còn lại (tránh sai số làm tròn)
+            valueToDeduct = Math.round(item.totalValue);
+          } else {
+            const valuePerUnit = item.totalValue / item.quantity;
+            valueToDeduct = Math.min(Math.round(item.totalValue), Math.round(valuePerUnit * qty));
+          }
+          item.totalValue = Math.max(0, Math.round(item.totalValue - valueToDeduct));
+          calculatedCost += valueToDeduct;
+        }
+
+        item.quantity = Math.max(0, Number((item.quantity - qty).toFixed(4)));
+        await item.save();
+
+        processedIngredientsUsed.push({
+          invId: item._id.toString(),
+          qty,
+          cost: valueToDeduct,
+          name: item.name,
+          unit: item.unit
+        });
       }
     } else if (source === 'eat_out' && cost > 0 && wallet_id) {
       const Wallet = (await import('@/models/Wallet')).default;
@@ -94,7 +177,7 @@ export async function POST(req: Request) {
         user_id: decoded.userId,
         type: 'expense',
         amount: cost,
-        date: consumed_at ? new Date(consumed_at) : new Date(),
+        date: resolvedDate,
         description: `[Ăn ngoài] ${food_name}`,
         category: 'food',
         wallet_id: wallet._id,
@@ -112,14 +195,14 @@ export async function POST(req: Request) {
       food_name,
       meal_tier,
       hp_restored,
-      consumed_at: consumed_at ? new Date(consumed_at) : new Date(),
+      consumed_at: resolvedDate,
       ai_status: 'pending',
-      recipe_id: recipe_id || null,
+      recipe_id: recipe_id || undefined,
       source: source || 'home',
-      ingredients_text: ingredients_text || undefined,
+      ingredients_text: cleanManualIngredientsNote(ingredients_text),
       image_url: image_url || undefined,
-      cost: source === 'home' ? calculatedCost : (cost || 0),
-      ingredients_used: source === 'home' ? ingredients_used : undefined,
+      cost: source === 'home' ? calculatedCost : (Number(cost) || 0),
+      ingredients_used: source === 'home' ? processedIngredientsUsed : undefined,
       transaction_id: transaction_id,
       wallet_id: source === 'eat_out' ? wallet_id : undefined
     });

@@ -8,6 +8,7 @@ export interface InventoryItem {
   expiryDate?: string;
   category?: 'food' | 'spices' | 'utilities' | string;
   totalValue?: number;
+  originalValue?: number;
   isGift?: boolean;
   wallet_id?: string;
   walletName?: string;

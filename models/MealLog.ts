@@ -20,7 +20,15 @@ export interface IMealLog extends mongoose.Document {
   ingredients_text?: string;
   transaction_id?: mongoose.Types.ObjectId;
   wallet_id?: mongoose.Types.ObjectId;
-  ingredients_used?: { invId: string, qty: number }[];
+  ingredients_used?: {
+    invId: string;
+    qty: number;
+    cost?: number;
+    name?: string;
+    unit?: string;
+  }[];
+  edit_note?: string;
+  updated_at?: Date;
 }
 
 const MealLogSchema = new mongoose.Schema<IMealLog>({
@@ -58,10 +66,18 @@ const MealLogSchema = new mongoose.Schema<IMealLog>({
   wallet_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Wallet' },
   ingredients_used: [{
     invId: { type: String },
-    qty: { type: Number }
-  }]
+    qty: { type: Number },
+    cost: { type: Number },
+    name: { type: String },
+    unit: { type: String }
+  }],
+  edit_note: { type: String },
+  updated_at: { type: Date }
 });
 
 MealLogSchema.index({ user_id: 1, consumed_at: -1 });
 
-export default mongoose.models.MealLog || mongoose.model<IMealLog>('MealLog', MealLogSchema);
+if (mongoose.models.MealLog) {
+  delete mongoose.models.MealLog;
+}
+export default mongoose.model<IMealLog>('MealLog', MealLogSchema);
