@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     // Handle payment if it's not a gift and has cost
     if (!isGift && totalValue && totalValue > 0) {
       if (!wallet_id) return NextResponse.json({ error: 'Cần chọn ví thanh toán' }, { status: 400 });
-      
+
       // Atomic query: chỉ trừ tiền nếu số dư >= totalValue (tránh race condition)
       const wallet = await Wallet.findOneAndUpdate(
         { _id: wallet_id, user_id: decoded.userId, balance: { $gte: totalValue } },

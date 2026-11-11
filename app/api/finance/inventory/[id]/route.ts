@@ -89,7 +89,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       // 2. Apply new transaction if it's not a gift and has cost
       if (!isGift && totalValue !== undefined && totalValue !== null) {
         if (!wallet_id) return NextResponse.json({ error: 'Cần chọn ví thanh toán' }, { status: 400 });
-        
+
         // Số tiền giao dịch mới = Tiền gốc ban đầu + (Giá trị tổng mới - Giá trị tổng hiện tại)
         const diff = totalValue - oldTotalValue;
         const newTxAmount = oldTxAmount + diff;
@@ -174,7 +174,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     const { id } = await params;
     const item = await Inventory.findOne({ _id: id, user_id: decoded.userId });
-    
+
     if (!item) return NextResponse.json({ error: 'Không tìm thấy đồ dự trữ' }, { status: 404 });
 
     // Hoàn tiền nếu xóa món đồ:

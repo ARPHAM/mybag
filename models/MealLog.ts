@@ -34,10 +34,10 @@ export interface IMealLog extends mongoose.Document {
 const MealLogSchema = new mongoose.Schema<IMealLog>({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   food_name: { type: String, required: true },
-  meal_tier: { 
-    type: String, 
-    enum: ['HEAVY', 'LIGHT', 'DRINK'], 
-    required: true 
+  meal_tier: {
+    type: String,
+    enum: ['HEAVY', 'LIGHT', 'DRINK'],
+    required: true
   },
   hp_restored: { type: Number, required: true },
   consumed_at: { type: Date, required: true, default: Date.now, expires: 2592000 }, // Auto delete after 30 days
@@ -47,17 +47,17 @@ const MealLogSchema = new mongoose.Schema<IMealLog>({
   carbs: { type: Number },
   sugar: { type: Number },
   cost: { type: Number },
-  ai_status: { 
-    type: String, 
-    enum: ['pending', 'completed', 'failed'], 
-    default: 'pending' 
+  ai_status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
   },
   image_url: { type: String },
   ai_description: { type: String },
   recipe_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' },
-  source: { 
-    type: String, 
-    enum: ['home', 'eat_out'], 
+  source: {
+    type: String,
+    enum: ['home', 'eat_out'],
     required: true,
     default: 'home'
   },
@@ -67,10 +67,10 @@ const MealLogSchema = new mongoose.Schema<IMealLog>({
   ingredients_used: [{
     invId: { type: String },
     qty: { type: Number },
-    cost: { type: Number },
-    name: { type: String },
-    unit: { type: String }
-  }],
+  cost: { type: Number },
+  name: { type: String },
+  unit: { type: String }
+}],
   edit_note: { type: String },
   updated_at: { type: Date }
 });

@@ -135,415 +135,417 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         await Wallet.findByIdAndUpdate(tx.wallet_id, { $inc: { balance: tx.amount } });
         await Transaction.findByIdAndDelete(tx._id);
       }
-    } else if (meal.source === 'home' && meal.ingredients_used && meal.ingredients_used.length > 0) {
-      for (const oldIng of meal.ingredients_used) {
-        const oldQty = Number(oldIng.qty) || 0;
-        if (!oldIng.invId || oldQty <= 0) continue;
+      } else if (meal.source === 'home' && meal.ingredients_used && meal.ingredients_used.length > 0) {
+        for (const oldIng of meal.ingredients_used) {
+          const oldQty = Number(oldIng.qty) || 0;
+          if (!oldIng.invId || oldQty <= 0) continue;
 
-        const item = await Inventory.findOne({ _id: oldIng.invId, user_id: decoded.userId });
-        const { costToRestore, origTotalValue } = await recoverOldIngredientCost(oldIng, meal, item);
+          const item = await Inventory.findOne({ _id: oldIng.invId, user_id: decoded.userId });
+          const { costToRestore, origTotalValue } = await recoverOldIngredientCost(oldIng, meal, item);
 
-        if (item) {
-          item.quantity = Number((item.quantity + oldQty).toFixed(4));
-          if (item.quantity > item.originalQuantity) {
-            item.originalQuantity = item.quantity;
+          if (item) {
+            item.quantity = Number((item.quantity + oldQty).toFixed(4));
+            if (item.quantity > item.originalQuantity) {
+              item.originalQuantity = item.quantity;
+            }
+            if (origTotalValue > 0 && !item.originalValue) {
+              item.originalValue = origTotalValue;
+            }
+            if (costToRestore > 0) {
+              const restoredVal = Math.round((item.totalValue || 0) + costToRestore);
+              item.totalValue = origTotalValue > 0 ? Math.min(origTotalValue, restoredVal) : restoredVal;
+            }
+            await item.save();
+          } else if (oldIng.name) {
+            // Nếu món trong kho đã bị xóa sau khi hết hàng, khôi phục lại vào kho
+            await Inventory.create({
+              _id: oldIng.invId,
+              user_id: decoded.userId,
+              name: oldIng.name,
+              category: 'food',
+              quantity: oldQty,
+              originalQuantity: oldQty,
+              unit: oldIng.unit || 'phần',
+              purchaseDate: new Date(),
+              isGift: costToRestore <= 0,
+              totalValue: costToRestore > 0 ? costToRestore : undefined,
+              originalValue: costToRestore > 0 ? costToRestore : undefined
+            });
           }
-          if (origTotalValue > 0 && !item.originalValue) {
-            item.originalValue = origTotalValue;
-          }
-          if (costToRestore > 0) {
-            const restoredVal = Math.round((item.totalValue || 0) + costToRestore);
-            item.totalValue = origTotalValue > 0 ? Math.min(origTotalValue, restoredVal) : restoredVal;
-          }
-          await item.save();
-        } else if (oldIng.name) {
-          // Nếu món trong kho đã bị xóa sau khi hết hàng, khôi phục lại vào kho
-          await Inventory.create({
-            _id: oldIng.invId,
-            user_id: decoded.userId,
-            name: oldIng.name,
-            category: 'food',
-            quantity: oldQty,
-            originalQuantity: oldQty,
-            unit: oldIng.unit || 'phần',
-            purchaseDate: new Date(),
-            isGift: costToRestore <= 0,
-            totalValue: costToRestore > 0 ? costToRestore : undefined,
-            originalValue: costToRestore > 0 ? costToRestore : undefined
-          });
         }
       }
-    }
 
-    // Khấu trừ lại HP đã hồi từ bữa ăn bị xóa
-    if (meal.hp_restored && meal.hp_restored > 0) {
-      const user = await User.findById(decoded.userId);
-      if (user) {
-        user.current_hp = Math.max(0, Math.min(user.max_hp, user.current_hp - meal.hp_restored));
-        await user.save();
+      // Khấu trừ lại HP đã hồi từ bữa ăn bị xóa
+      if (meal.hp_restored && meal.hp_restored > 0) {
+        const user = await User.findById(decoded.userId);
+        if (user) {
+          user.current_hp = Math.max(0, Math.min(user.max_hp, user.current_hp - meal.hp_restored));
+          await user.save();
+        }
       }
+
+      await MealLog.findByIdAndDelete(id);
+
+      return NextResponse.json({ message: 'Đã xóa bữa ăn và hoàn trả nguyên liệu/chi phí' });
+    } catch (error) {
+      console.error(error);
+      return NextResponse.json({ error: 'Server Error' }, { status: 500 });
     }
-
-    await MealLog.findByIdAndDelete(id);
-
-    return NextResponse.json({ message: 'Đã xóa bữa ăn và hoàn trả nguyên liệu/chi phí' });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }
-}
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
-    await dbConnect();
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
+    try {
+      const { id } = await params;
+      await dbConnect();
+      const cookieStore = await cookies();
+      const token = cookieStore.get('auth_token')?.value;
 
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const decoded = await verifyToken(token);
-    if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
+      if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const decoded = await verifyToken(token);
+      if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
-    const meal = await MealLog.findOne({ _id: id, user_id: decoded.userId });
-    if (!meal) return NextResponse.json({ error: 'Meal not found' }, { status: 404 });
+      const meal = await MealLog.findOne({ _id: id, user_id: decoded.userId });
+      if (!meal) return NextResponse.json({ error: 'Meal not found' }, { status: 404 });
 
-    const body = await req.json();
-    const { food_name, consumed_at, recipe_id, source, ingredients_used, cost, ingredients_text, wallet_id, image_url } = body;
+      const body = await req.json();
+      const { food_name, consumed_at, recipe_id, source, ingredients_used, cost, ingredients_text, wallet_id, image_url } = body;
 
-    if (!food_name || !String(food_name).trim()) {
-      return NextResponse.json({ error: 'Thiếu tên món ăn' }, { status: 400 });
-    }
-
-    // Lưu trạng thái cũ trước khi sửa để đối chiếu và ghi chú thích sửa đổi
-    const oldFoodName = meal.food_name;
-    const oldSource = meal.source;
-    const oldCost = meal.cost || 0;
-    const oldDateStr = toVnDateStr(meal.consumed_at);
-    const oldCleanNote = cleanManualIngredientsNote(meal.ingredients_text, meal.ingredients_used) || '';
-
-    // Xây dựng bản đồ nguyên liệu cũ của bữa ăn (nếu bữa cũ là nấu tại nhà)
-    const oldUsageMap = new Map<string, { qty: number; cost: number; name?: string; unit?: string }>();
-    if (meal.source === 'home' && Array.isArray(meal.ingredients_used)) {
-      for (const oldIng of meal.ingredients_used) {
-        const q = Number(oldIng?.qty) || 0;
-        if (oldIng?.invId && q > 0) {
-          const item = await Inventory.findOne({ _id: oldIng.invId, user_id: decoded.userId });
-          const { costToRestore } = await recoverOldIngredientCost(oldIng, meal, item);
-          const prev = oldUsageMap.get(oldIng.invId);
-          oldUsageMap.set(oldIng.invId, {
-            qty: Number(((prev?.qty || 0) + q).toFixed(4)),
-            cost: (prev?.cost || 0) + costToRestore,
-            name: (oldIng as any).name || item?.name || prev?.name,
-            unit: (oldIng as any).unit || item?.unit || prev?.unit
-          });
-        }
-      }
-    }
-
-    // Gộp danh sách nguyên liệu mới được chọn
-    const newUsageMap = new Map<string, number>();
-    if (source === 'home' && Array.isArray(ingredients_used)) {
-      for (const ing of ingredients_used) {
-        const q = Number(ing?.qty);
-        if (ing?.invId && !isNaN(q) && q > 0) {
-          newUsageMap.set(ing.invId, Number(((newUsageMap.get(ing.invId) || 0) + q).toFixed(4)));
-        }
-      }
-    }
-
-    // --- VALIDATION PHASE ---
-    // 1. Kiểm tra số lượng khả dụng trong kho (Tồn hiện tại + Số lượng bữa ăn này đang giữ)
-    if (source === 'home' && newUsageMap.size > 0) {
-      for (const [invId, requestedQty] of newUsageMap.entries()) {
-        const item = await Inventory.findOne({ _id: invId, user_id: decoded.userId });
-        const oldHeld = oldUsageMap.get(invId);
-        const currentStock = item ? item.quantity : 0;
-        const maxAvailable = Number((currentStock + (oldHeld?.qty || 0)).toFixed(4));
-
-        if (!item && !oldHeld) {
-          return NextResponse.json({ error: 'Nguyên liệu được chọn không tồn tại trong kho' }, { status: 400 });
-        }
-        if (requestedQty > maxAvailable + 1e-6) {
-          const itemName = item?.name || oldHeld?.name || 'Nguyên liệu';
-          const itemUnit = item?.unit || oldHeld?.unit || '';
-          return NextResponse.json(
-            {
-              error: `Nguyên liệu "${itemName}" chỉ có tối đa ${maxAvailable} ${itemUnit} khả dụng (Kho hiện còn: ${currentStock} ${itemUnit}, bữa này đang giữ: ${oldHeld?.qty || 0} ${itemUnit})`
-            },
-            { status: 400 }
-          );
-        }
-      }
-    }
-
-    // 2. Kiểm tra ví nếu là ăn ngoài
-    let txToRevert = null;
-    if (meal.source === 'eat_out' && meal.transaction_id) {
-      txToRevert = await Transaction.findById(meal.transaction_id);
-    }
-
-    const effectiveWalletId = wallet_id || (txToRevert ? txToRevert.wallet_id?.toString() : undefined);
-    const numericCost = Number(cost) || 0;
-
-    if (source === 'eat_out' && numericCost > 0) {
-      if (!effectiveWalletId) {
-        return NextResponse.json({ error: 'Vui lòng chọn ví thanh toán cho bữa ăn ngoài' }, { status: 400 });
-      }
-      const newWallet = await Wallet.findOne({ _id: effectiveWalletId, user_id: decoded.userId });
-      if (!newWallet) return NextResponse.json({ error: 'Ví thanh toán không tồn tại' }, { status: 400 });
-
-      let availableBalance = newWallet.balance;
-      if (txToRevert && txToRevert.wallet_id?.toString() === effectiveWalletId) {
-        availableBalance += txToRevert.amount;
+      if (!food_name || !String(food_name).trim()) {
+        return NextResponse.json({ error: 'Thiếu tên món ăn' }, { status: 400 });
       }
 
-      if (availableBalance < numericCost) {
-        return NextResponse.json({ error: 'Số dư ví không đủ' }, { status: 400 });
-      }
-    }
+      // Lưu trạng thái cũ trước khi sửa để đối chiếu và ghi chú thích sửa đổi
+      const oldFoodName = meal.food_name;
+      const oldSource = meal.source;
+      const oldCost = meal.cost || 0;
+      const oldDateStr = toVnDateStr(meal.consumed_at);
+      const oldCleanNote = cleanManualIngredientsNote(meal.ingredients_text, meal.ingredients_used) || '';
 
-    // --- EXECUTION PHASE ---
-    // 1. REVERT OLD CHANGES (Hoàn trả nguyên liệu + giá trị kho hoặc hoàn tiền ví cũ)
-    if (txToRevert) {
-      await Wallet.findByIdAndUpdate(txToRevert.wallet_id, { $inc: { balance: txToRevert.amount } });
-      await Transaction.findByIdAndDelete(txToRevert._id);
-    } else if (meal.source === 'home' && oldUsageMap.size > 0) {
-      for (const [invId, oldHeld] of oldUsageMap.entries()) {
-        const item = await Inventory.findOne({ _id: invId, user_id: decoded.userId });
-        if (item) {
-          let origTotalValue = item.originalValue || 0;
-          if (!origTotalValue && item.transaction_id) {
-            const tx = await Transaction.findById(item.transaction_id);
-            if (tx && tx.amount > 0) origTotalValue = tx.amount;
+      // Xây dựng bản đồ nguyên liệu cũ của bữa ăn (nếu bữa cũ là nấu tại nhà)
+      const oldUsageMap = new Map<string, { qty: number; cost: number; name?: string; unit?: string }>();
+      if (meal.source === 'home' && Array.isArray(meal.ingredients_used)) {
+        for (const oldIng of meal.ingredients_used) {
+          const q = Number(oldIng?.qty) || 0;
+          if (oldIng?.invId && q > 0) {
+            const item = await Inventory.findOne({ _id: oldIng.invId, user_id: decoded.userId });
+            const { costToRestore } = await recoverOldIngredientCost(oldIng, meal, item);
+            const prev = oldUsageMap.get(oldIng.invId);
+            oldUsageMap.set(oldIng.invId, {
+              qty: Number(((prev?.qty || 0) + q).toFixed(4)),
+              cost: (prev?.cost || 0) + costToRestore,
+              name: (oldIng as any).name || item?.name || prev?.name,
+              unit: (oldIng as any).unit || item?.unit || prev?.unit
+            });
           }
-          if (origTotalValue > 0 && !item.originalValue) {
-            item.originalValue = origTotalValue;
-          }
-
-          item.quantity = Number((item.quantity + oldHeld.qty).toFixed(4));
-          if (item.quantity > item.originalQuantity) {
-            item.originalQuantity = item.quantity;
-          }
-
-          if (oldHeld.cost > 0) {
-            const restoredVal = Math.round((item.totalValue || 0) + oldHeld.cost);
-            item.totalValue = origTotalValue > 0 ? Math.min(origTotalValue, restoredVal) : restoredVal;
-          }
-          await item.save();
-        } else if (oldHeld.name && oldHeld.qty > 0) {
-          // Món trong kho đã bị xóa trước đó -> Tạo lại vào kho để hoàn trả hoặc tính toán bước 2
-          await Inventory.create({
-            _id: invId,
-            user_id: decoded.userId,
-            name: oldHeld.name,
-            category: 'food',
-            quantity: oldHeld.qty,
-            originalQuantity: oldHeld.qty,
-            unit: oldHeld.unit || 'phần',
-            purchaseDate: new Date(),
-            isGift: oldHeld.cost <= 0,
-            totalValue: oldHeld.cost > 0 ? oldHeld.cost : undefined,
-            originalValue: oldHeld.cost > 0 ? oldHeld.cost : undefined
-          });
         }
       }
-    }
 
-    // 2. XÁC ĐỊNH NGÀY DÙNG BỮA MỚI (consumed_at)
-    let resolvedConsumedAt = meal.consumed_at;
-    let newDateStr = oldDateStr;
-    if (consumed_at) {
-      const trimmedDate = String(consumed_at).trim();
-      const candidateDateStr = /^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)
-        ? trimmedDate
-        : toVnDateStr(trimmedDate);
-      newDateStr = candidateDateStr;
-      if (candidateDateStr !== oldDateStr) {
-        // Giữ nguyên giờ:phút của bữa ăn cũ trên ngày mới (theo múi giờ VN), hoặc đặt 12:00 trưa
-        const oldTimeParts = new Intl.DateTimeFormat('en-GB', {
-          timeZone: 'Asia/Ho_Chi_Minh',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        }).format(meal.consumed_at);
-        const timeSuffix = /^\d{2}:\d{2}:\d{2}$/.test(oldTimeParts) && oldTimeParts !== '07:00:00'
-          ? oldTimeParts
-          : '12:00:00';
-        resolvedConsumedAt = new Date(`${candidateDateStr}T${timeSuffix}+07:00`);
+      // Gộp danh sách nguyên liệu mới được chọn
+      const newUsageMap = new Map<string, number>();
+      if (source === 'home' && Array.isArray(ingredients_used)) {
+        for (const ing of ingredients_used) {
+          const q = Number(ing?.qty);
+          if (ing?.invId && !isNaN(q) && q > 0) {
+            newUsageMap.set(ing.invId, Number(((newUsageMap.get(ing.invId) || 0) + q).toFixed(4)));
+          }
+        }
       }
-    }
 
-    // 3. APPLY NEW CHANGES (Khấu trừ nguyên liệu mới và tính lại tổng thiệt hại kho)
-    let calculatedCost = 0;
-    let new_transaction_id: any = undefined;
-    const processedIngredientsUsed: {
-      invId: string;
-      qty: number;
-      cost: number;
-      name: string;
-      unit: string;
-    }[] = [];
+      // --- VALIDATION PHASE ---
+      // 1. Kiểm tra số lượng khả dụng trong kho (Tồn hiện tại + Số lượng bữa ăn này đang giữ)
+      if (source === 'home' && newUsageMap.size > 0) {
+        for (const [invId, requestedQty] of newUsageMap.entries()) {
+          const item = await Inventory.findOne({ _id: invId, user_id: decoded.userId });
+          const oldHeld = oldUsageMap.get(invId);
+          const currentStock = item ? item.quantity : 0;
+          const maxAvailable = Number((currentStock + (oldHeld?.qty || 0)).toFixed(4));
 
-    if (source === 'home' && newUsageMap.size > 0) {
-      for (const [invId, requestedQty] of newUsageMap.entries()) {
-        const item = await Inventory.findOne({ _id: invId, user_id: decoded.userId });
-        if (item) {
-          const actualQty = Math.min(item.quantity, requestedQty);
-          let valueToDeduct = 0;
+          if (!item && !oldHeld) {
+            return NextResponse.json({ error: 'Nguyên liệu được chọn không tồn tại trong kho' }, { status: 400 });
+          }
+          if (requestedQty > maxAvailable + 1e-6) {
+            const itemName = item?.name || oldHeld?.name || 'Nguyên liệu';
+            const itemUnit = item?.unit || oldHeld?.unit || '';
+            return NextResponse.json(
+              {
+                error: `Nguyên liệu "${itemName}" chỉ có tối đa ${maxAvailable} ${itemUnit} khả dụng (Kho hiện còn: ${currentStock} ${itemUnit}, bữa này đang giữ: ${oldHeld?.qty || 0} ${itemUnit})`
+              },
+              { status: 400 }
+            );
+          }
+        }
+      }
 
-          if (item.totalValue && item.totalValue > 0 && item.quantity > 0) {
-            if (actualQty >= item.quantity - 1e-6) {
-              // Dùng hết sạch phần còn lại -> khấu trừ toàn bộ giá trị còn lại
-              valueToDeduct = Math.round(item.totalValue);
-            } else {
-              const valuePerUnit = item.totalValue / item.quantity;
-              valueToDeduct = Math.min(Math.round(item.totalValue), Math.round(valuePerUnit * actualQty));
+      // 2. Kiểm tra ví nếu là ăn ngoài
+      let txToRevert = null;
+      if (meal.source === 'eat_out' && meal.transaction_id) {
+        txToRevert = await Transaction.findById(meal.transaction_id);
+      }
+
+        const effectiveWalletId = wallet_id || (txToRevert ? txToRevert.wallet_id?.toString() : undefined);
+        const numericCost = Number(cost) || 0;
+
+        if (source === 'eat_out' && numericCost > 0) {
+          if (!effectiveWalletId) {
+            return NextResponse.json({ error: 'Vui lòng chọn ví thanh toán cho bữa ăn ngoài' }, { status: 400 });
+          }
+          const newWallet = await Wallet.findOne({ _id: effectiveWalletId, user_id: decoded.userId });
+          if (!newWallet) return NextResponse.json({ error: 'Ví thanh toán không tồn tại' }, { status: 400 });
+
+
+          let availableBalance = newWallet.balance;
+            if (txToRevert && txToRevert.wallet_id?.toString() === effectiveWalletId) {
+              availableBalance += txToRevert.amount;
             }
-            item.totalValue = Math.max(0, Math.round(item.totalValue - valueToDeduct));
-            calculatedCost += valueToDeduct;
-          }
 
-          item.quantity = Math.max(0, Number((item.quantity - actualQty).toFixed(4)));
-          await item.save();
+              if (availableBalance < numericCost) {
+                return NextResponse.json({ error: 'Số dư ví không đủ' }, { status: 400 });
+              }
+            }
 
-          processedIngredientsUsed.push({
-            invId: item._id.toString(),
-            qty: actualQty,
-            cost: valueToDeduct,
-            name: item.name,
-            unit: item.unit
-          });
-        }
-      }
-    } else if (source === 'eat_out' && numericCost > 0 && effectiveWalletId) {
-      const wallet = await Wallet.findOneAndUpdate(
-        { _id: effectiveWalletId, user_id: decoded.userId },
-        { $inc: { balance: -numericCost } },
-        { returnDocument: 'after' }
-      );
+            // --- EXECUTION PHASE ---
+            // 1. REVERT OLD CHANGES (Hoàn trả nguyên liệu + giá trị kho hoặc hoàn tiền ví cũ)
+            if (txToRevert) {
+              await Wallet.findByIdAndUpdate(txToRevert.wallet_id, { $inc: { balance: txToRevert.amount } });
+              await Transaction.findByIdAndDelete(txToRevert._id);
+              } else if (meal.source === 'home' && oldUsageMap.size > 0) {
+                for (const [invId, oldHeld] of oldUsageMap.entries()) {
+                  const item = await Inventory.findOne({ _id: invId, user_id: decoded.userId });
+                  if (item) {
+                    let origTotalValue = item.originalValue || 0;
+                    if (!origTotalValue && item.transaction_id) {
+                      const tx = await Transaction.findById(item.transaction_id);
+                      if (tx && tx.amount > 0) origTotalValue = tx.amount;
+                    }
+                    if (origTotalValue > 0 && !item.originalValue) {
+                      item.originalValue = origTotalValue;
+                    }
 
-      if (!wallet) return NextResponse.json({ error: 'Không thể trừ tiền từ ví này' }, { status: 400 });
+                    item.quantity = Number((item.quantity + oldHeld.qty).toFixed(4));
+                    if (item.quantity > item.originalQuantity) {
+                      item.originalQuantity = item.quantity;
+                    }
 
-      const newTx = await Transaction.create({
-        user_id: decoded.userId,
-        type: 'expense',
-        amount: numericCost,
-        date: resolvedConsumedAt,
-        description: `[Ăn ngoài] ${food_name}`,
-        category: 'food',
-        wallet_id: wallet._id,
-        walletName: wallet.name
-      });
-      new_transaction_id = newTx._id;
-    }
+                    if (oldHeld.cost > 0) {
+                      const restoredVal = Math.round((item.totalValue || 0) + oldHeld.cost);
+                      item.totalValue = origTotalValue > 0 ? Math.min(origTotalValue, restoredVal) : restoredVal;
+                    }
+                    await item.save();
+                  } else if (oldHeld.name && oldHeld.qty > 0) {
+                    // Món trong kho đã bị xóa trước đó -> Tạo lại vào kho để hoàn trả hoặc tính toán bước 2
+                    await Inventory.create({
+                      _id: invId,
+                      user_id: decoded.userId,
+                      name: oldHeld.name,
+                      category: 'food',
+                      quantity: oldHeld.qty,
+                      originalQuantity: oldHeld.qty,
+                      unit: oldHeld.unit || 'phần',
+                      purchaseDate: new Date(),
+                      isGift: oldHeld.cost <= 0,
+                      totalValue: oldHeld.cost > 0 ? oldHeld.cost : undefined,
+                      originalValue: oldHeld.cost > 0 ? oldHeld.cost : undefined
+                    });
+                  }
+                }
+              }
 
-    const newFinalCost = source === 'home' ? calculatedCost : numericCost;
-    const newCleanNote = cleanManualIngredientsNote(ingredients_text, processedIngredientsUsed);
+              // 2. XÁC ĐỊNH NGÀY DÙNG BỮA MỚI (consumed_at)
+              let resolvedConsumedAt = meal.consumed_at;
+              let newDateStr = oldDateStr;
+              if (consumed_at) {
+                const trimmedDate = String(consumed_at).trim();
+                const candidateDateStr = /^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)
+                  ? trimmedDate
+                  : toVnDateStr(trimmedDate);
+                newDateStr = candidateDateStr;
+                if (candidateDateStr !== oldDateStr) {
+                  // Giữ nguyên giờ:phút của bữa ăn cũ trên ngày mới (theo múi giờ VN), hoặc đặt 12:00 trưa
+                  const oldTimeParts = new Intl.DateTimeFormat('en-GB', {
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                  }).format(meal.consumed_at);
+                  const timeSuffix = /^\d{2}:\d{2}:\d{2}$/.test(oldTimeParts) && oldTimeParts !== '07:00:00'
+                    ? oldTimeParts
+                    : '12:00:00';
+                  resolvedConsumedAt = new Date(`${candidateDateStr}T${timeSuffix}+07:00`);
+                }
+              }
 
-    // 4. KIỂM TRA THAY ĐỔI & TẠO CHÚ THÍCH SỬA ĐỔI (edit_note)
-    const changes: string[] = [];
-    const trimmedNewFoodName = String(food_name).trim();
+              // 3. APPLY NEW CHANGES (Khấu trừ nguyên liệu mới và tính lại tổng thiệt hại kho)
+              let calculatedCost = 0;
+              let new_transaction_id: any = undefined;
+              const processedIngredientsUsed: {
+                invId: string;
+                qty: number;
+                cost: number;
+                name: string;
+                unit: string;
+              }[] = [];
 
-    if (trimmedNewFoodName !== oldFoodName) {
-      changes.push(`Món: "${oldFoodName}" → "${trimmedNewFoodName}"`);
-    }
-    if (newDateStr !== oldDateStr) {
-      changes.push(`Ngày: ${formatDdMmYyyy(oldDateStr)} → ${formatDdMmYyyy(newDateStr)}`);
-    }
-    if ((source || 'home') !== oldSource) {
-      changes.push(
-        `Hình thức: ${oldSource === 'home' ? 'Nấu tại nhà' : 'Ăn ngoài'} → ${(source || 'home') === 'home' ? 'Nấu tại nhà' : 'Ăn ngoài'}`
-      );
-    }
+                        if (source === 'home' && newUsageMap.size > 0) {
+                          for (const [invId, requestedQty] of newUsageMap.entries()) {
+                            const item = await Inventory.findOne({ _id: invId, user_id: decoded.userId });
+                            if (item) {
+                              const actualQty = Math.min(item.quantity, requestedQty);
+                              let valueToDeduct = 0;
 
-    // So sánh chi tiết thành phần nguyên liệu kho
-    let ingredientsChanged = false;
-    if (oldSource === 'home' || (source || 'home') === 'home') {
-      const ingDiffs: string[] = [];
-      const allInvIds = new Set<string>([...oldUsageMap.keys(), ...newUsageMap.keys()]);
+                              if (item.totalValue && item.totalValue > 0 && item.quantity > 0) {
+                                if (actualQty >= item.quantity - 1e-6) {
+                                  // Dùng hết sạch phần còn lại -> khấu trừ toàn bộ giá trị còn lại
+                                  valueToDeduct = Math.round(item.totalValue);
+                                } else {
+                                  const valuePerUnit = item.totalValue / item.quantity;
+                                  valueToDeduct = Math.min(Math.round(item.totalValue), Math.round(valuePerUnit * actualQty));
+                                }
+                                item.totalValue = Math.max(0, Math.round(item.totalValue - valueToDeduct));
+                                calculatedCost += valueToDeduct;
+                              }
 
-      for (const invId of allInvIds) {
-        const oldEntry = oldUsageMap.get(invId);
-        const newEntry = processedIngredientsUsed.find(p => p.invId === invId);
-        const oQty = oldEntry?.qty || 0;
-        const nQty = newEntry?.qty || 0;
-        const labelName = newEntry?.name || oldEntry?.name || 'Nguyên liệu';
-        const labelUnit = newEntry?.unit || oldEntry?.unit || '';
+                              item.quantity = Math.max(0, Number((item.quantity - actualQty).toFixed(4)));
+                              await item.save();
 
-        if (Math.abs(oQty - nQty) > 1e-6) {
-          ingredientsChanged = true;
-          if (oQty === 0 && nQty > 0) {
-            ingDiffs.push(`+${nQty} ${labelUnit} ${labelName}`.trim());
-          } else if (oQty > 0 && nQty === 0) {
-            ingDiffs.push(`bỏ ${oQty} ${labelUnit} ${labelName}`.trim());
-          } else {
-            ingDiffs.push(`${labelName}: ${oQty} → ${nQty} ${labelUnit}`.trim());
-          }
-        }
-      }
+                              processedIngredientsUsed.push({
+                                invId: item._id.toString(),
+                                qty: actualQty,
+                                cost: valueToDeduct,
+                                name: item.name,
+                                unit: item.unit
+                              });
+                            }
+                          }
+                        } else if (source === 'eat_out' && numericCost > 0 && effectiveWalletId) {
+                          const wallet = await Wallet.findOneAndUpdate(
+                            { _id: effectiveWalletId, user_id: decoded.userId },
+                            { $inc: { balance: -numericCost } },
+                            { returnDocument: 'after' }
+                          );
 
-      if (ingDiffs.length > 0) {
-        changes.push(`Nguyên liệu kho (${ingDiffs.join(', ')})`);
-      }
-    }
 
-    if (oldCost !== newFinalCost) {
-      const costLabel = (source || 'home') === 'home' ? 'Thiệt hại kho' : 'Chi phí';
-      changes.push(`${costLabel}: ${oldCost.toLocaleString('vi-VN')}đ → ${newFinalCost.toLocaleString('vi-VN')}đ`);
-    }
+                          if (!wallet) return NextResponse.json({ error: 'Không thể trừ tiền từ ví này' }, { status: 400 });
 
-    if ((newCleanNote || '') !== oldCleanNote) {
-      ingredientsChanged = true;
-      changes.push(newCleanNote ? `Ghi chú: "${newCleanNote}"` : 'Đã xóa ghi chú thêm');
-    }
+                          const newTx = await Transaction.create({
+                            user_id: decoded.userId,
+                            type: 'expense',
+                            amount: numericCost,
+                            date: resolvedConsumedAt,
+                            description: `[Ăn ngoài] ${food_name}`,
+                            category: 'food',
+                            wallet_id: wallet._id,
+                            walletName: wallet.name
+                          });
+                          new_transaction_id = newTx._id;
+                        }
 
-    const nowVnStr = new Intl.DateTimeFormat('vi-VN', {
-      timeZone: 'Asia/Ho_Chi_Minh',
-      hour: '2-digit',
-      minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit'
-    }).format(new Date());
+                        const newFinalCost = source === 'home' ? calculatedCost : numericCost;
+                        const newCleanNote = cleanManualIngredientsNote(ingredients_text, processedIngredientsUsed);
 
-    if (changes.length > 0) {
-      meal.edit_note = `Đã chỉnh sửa (${nowVnStr}): ${changes.join(' • ')}`;
-      meal.updated_at = new Date();
-    }
+                        // 4. KIỂM TRA THAY ĐỔI & TẠO CHÚ THÍCH SỬA ĐỔI (edit_note)
+                        const changes: string[] = [];
+                        const trimmedNewFoodName = String(food_name).trim();
 
-    // Chỉ tính toán lại AI khi tên món, thành phần nguyên liệu, ghi chú hoặc ảnh thay đổi
-    const needsAiRecalc =
-      trimmedNewFoodName !== oldFoodName ||
-      ingredientsChanged ||
-      Boolean(image_url) ||
-      meal.ai_status !== 'completed';
+                        if (trimmedNewFoodName !== oldFoodName) {
+                          changes.push(`Món: "${oldFoodName}" → "${trimmedNewFoodName}"`);
+                        }
+                        if (newDateStr !== oldDateStr) {
+                          changes.push(`Ngày: ${formatDdMmYyyy(oldDateStr)} → ${formatDdMmYyyy(newDateStr)}`);
+                        }
+                        if ((source || 'home') !== oldSource) {
+                          changes.push(
+                            `Hình thức: ${oldSource === 'home' ? 'Nấu tại nhà' : 'Ăn ngoài'} → ${(source || 'home') === 'home' ? 'Nấu tại nhà' : 'Ăn ngoài'}`
+                          );
+                        }
 
-    // 5. UPDATE MEALLOG
-    meal.food_name = trimmedNewFoodName;
-    meal.consumed_at = resolvedConsumedAt;
-    meal.recipe_id = recipe_id || meal.recipe_id || undefined;
-    meal.source = source || 'home';
-    meal.ingredients_text = newCleanNote;
-    if (image_url !== undefined) {
-      meal.image_url = image_url || undefined;
-    }
-    meal.cost = newFinalCost;
-    meal.ingredients_used = (source || 'home') === 'home' ? processedIngredientsUsed : undefined;
-    meal.transaction_id = new_transaction_id;
-    meal.wallet_id = (source || 'home') === 'eat_out' ? effectiveWalletId : undefined;
-    if (needsAiRecalc) {
-      meal.ai_status = 'pending';
-    }
+                        // So sánh chi tiết thành phần nguyên liệu kho
+                        let ingredientsChanged = false;
+                        if (oldSource === 'home' || (source || 'home') === 'home') {
+                          const ingDiffs: string[] = [];
+                          const allInvIds = new Set<string>([...oldUsageMap.keys(), ...newUsageMap.keys()]);
 
-    await meal.save();
+                          for (const invId of allInvIds) {
+                            const oldEntry = oldUsageMap.get(invId);
+                            const newEntry = processedIngredientsUsed.find(p => p.invId === invId);
+                            const oQty = oldEntry?.qty || 0;
+                            const nQty = newEntry?.qty || 0;
+                            const labelName = newEntry?.name || oldEntry?.name || 'Nguyên liệu';
+                            const labelUnit = newEntry?.unit || oldEntry?.unit || '';
 
-    return NextResponse.json({
-      message: 'Đã cập nhật bữa ăn!',
-      mealLog: meal,
-      needsAiRecalc
-    });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Server Error' }, { status: 500 });
-  }
-}
+                            if (Math.abs(oQty - nQty) > 1e-6) {
+                              ingredientsChanged = true;
+                              if (oQty === 0 && nQty > 0) {
+                                ingDiffs.push(`+${nQty} ${labelUnit} ${labelName}`.trim());
+                              } else if (oQty > 0 && nQty === 0) {
+                                ingDiffs.push(`bỏ ${oQty} ${labelUnit} ${labelName}`.trim());
+                              } else {
+                                ingDiffs.push(`${labelName}: ${oQty} → ${nQty} ${labelUnit}`.trim());
+                              }
+                            }
+                          }
+
+                          if (ingDiffs.length > 0) {
+                            changes.push(`Nguyên liệu kho (${ingDiffs.join(', ')})`);
+                          }
+                        }
+
+                        if (oldCost !== newFinalCost) {
+                          const costLabel = (source || 'home') === 'home' ? 'Thiệt hại kho' : 'Chi phí';
+                          changes.push(`${costLabel}: ${oldCost.toLocaleString('vi-VN')}đ → ${newFinalCost.toLocaleString('vi-VN')}đ`);
+                        }
+
+                        if ((newCleanNote || '') !== oldCleanNote) {
+                          ingredientsChanged = true;
+                          changes.push(newCleanNote ? `Ghi chú: "${newCleanNote}"` : 'Đã xóa ghi chú thêm');
+                        }
+
+                        const nowVnStr = new Intl.DateTimeFormat('vi-VN', {
+                          timeZone: 'Asia/Ho_Chi_Minh',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          day: '2-digit',
+                          month: '2-digit'
+                        }).format(new Date());
+
+                        if (changes.length > 0) {
+                          meal.edit_note = `Đã chỉnh sửa (${nowVnStr}): ${changes.join(' • ')}`;
+                          meal.updated_at = new Date();
+                        }
+
+                        // Chỉ tính toán lại AI khi tên món, thành phần nguyên liệu, ghi chú hoặc ảnh thay đổi
+                        const needsAiRecalc =
+                          trimmedNewFoodName !== oldFoodName ||
+                          ingredientsChanged ||
+                          Boolean(image_url) ||
+                          meal.ai_status !== 'completed';
+
+                        // 5. UPDATE MEALLOG
+                        meal.food_name = trimmedNewFoodName;
+                        meal.consumed_at = resolvedConsumedAt;
+                        meal.recipe_id = recipe_id || meal.recipe_id || undefined;
+                        meal.source = source || 'home';
+                        meal.ingredients_text = newCleanNote;
+                        if (image_url !== undefined) {
+                          meal.image_url = image_url || undefined;
+                        }
+                        meal.cost = newFinalCost;
+                        meal.ingredients_used = (source || 'home') === 'home' ? processedIngredientsUsed : undefined;
+                        meal.transaction_id = new_transaction_id;
+                        meal.wallet_id = (source || 'home') === 'eat_out' ? effectiveWalletId : undefined;
+                        if (needsAiRecalc) {
+                          meal.ai_status = 'pending';
+                        }
+
+                        await meal.save();
+
+                        return NextResponse.json({
+                          message: 'Đã cập nhật bữa ăn!',
+                          mealLog: meal,
+                          needsAiRecalc
+                        });
+                      } catch (error) {
+                        console.error(error);
+                        return NextResponse.json({ error: 'Server Error' }, { status: 500 });
+                      }
+                    }
