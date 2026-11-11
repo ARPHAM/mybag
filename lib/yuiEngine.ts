@@ -151,6 +151,118 @@ export function normalizeVietnamese(text: string): string {
     .trim();
 }
 
+export function stripIngredientQuantityPrefix(raw: string): string {
+  const nt = normalizeVietnamese(raw)
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return nt
+    .replace(/^(?:khoang|tam|hon|gan|it|vai|nua|mot)?\s*\d+(?:[.,/]\d+)?\s*(?:g|gr|gram|kg|ml|l|lit|qua|trai|cu|tep|nhanh|muong|thia|chen|bat|goi|hop|chai|lon|bich|mieng|lat|bo|cay|con|phan|vien|ong)?\b\s*/i, '')
+    .replace(/^(?:khoang|tam|hon|gan|it|vai|nua|mot)\s+(?:g|gr|gram|kg|ml|l|lit|qua|trai|cu|tep|nhanh|muong|thia|chen|bat|goi|hop|chai|lon|bich|mieng|lat|bo|cay|con|phan|vien|ong)?\b\s*/i, '')
+    .trim();
+}
+
+function hasWholePhraseMatch(haystackNorm: string, needleNorm: string): boolean {
+  if (!haystackNorm || !needleNorm || needleNorm.length < 2) return false;
+  const escaped = needleNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|\\s)${escaped}(?:$|\\s)`).test(haystackNorm);
+}
+
+export function classifyRecipesAgainstInventory(
+  recipes: Array<{ name: string; ingredients?: string[] }>,
+  inventoryItems: Array<{ name: string; quantity?: number }>
+) {
+  const activeInvNames = inventoryItems
+    .filter((i) => (i.quantity ?? 1) > 0)
+    .map((i) => normalizeVietnamese(i.name))
+    .filter(Boolean);
+
+  const nearReady: Array<{
+    ten: string;
+    ty_le_da_co: string;
+    da_co_trong_kho: string[];
+    con_thieu: string[];
+    score: number;
+  }> = [];
+
+  const unrelatedOrIncomplete: Array<{
+    ten: string;
+    ty_le_da_co: string;
+  }> = [];
+
+  const allAnalyzed: Array<{
+    ten: string;
+    ty_le_da_co: string;
+    da_co_trong_kho: string[];
+    con_thieu: string[];
+    score: number;
+  }> = [];
+
+  for (const r of recipes) {
+    const ings = Array.isArray(r.ingredients) ? r.ingredients.filter(Boolean) : [];
+    const total = ings.length;
+    if (total === 0) {
+      unrelatedOrIncomplete.push({ ten: r.name, ty_le_da_co: '0/0' });
+      allAnalyzed.push({ ten: r.name, ty_le_da_co: '0/0', da_co_trong_kho: [], con_thieu: [], score: 0 });
+      continue;
+    }
+
+    const matched: string[] = [];
+    const missing: string[] = [];
+
+    for (const ing of ings) {
+      const cleanIng = stripIngredientQuantityPrefix(ing);
+      const isInStock = activeInvNames.some(
+        (invNorm) => cleanIng === invNorm || hasWholePhraseMatch(cleanIng, invNorm) || hasWholePhraseMatch(invNorm, cleanIng)
+      );
+      if (isInStock) matched.push(ing);
+      else missing.push(ing);
+    }
+
+    const ratio = matched.length / total;
+    const entry = {
+      ten: r.name,
+      ty_le_da_co: `${matched.length}/${total}`,
+      da_co_trong_kho: matched,
+      con_thieu: missing,
+      score: ratio
+    };
+    allAnalyzed.push(entry);
+
+    const isNearReady =
+      matched.length >= 1 &&
+      (ratio >= 0.5 || (matched.length >= 2 && missing.length <= 2) || (total <= 2 && matched.length >= 1));
+
+    if (isNearReady) {
+      nearReady.push(entry);
+    } else {
+      unrelatedOrIncomplete.push({
+        ten: r.name,
+        ty_le_da_co: `${matched.length}/${total}`
+      });
+    }
+  }
+
+  nearReady.sort((a, b) => b.score - a.score);
+  allAnalyzed.sort((a, b) => b.score - a.score);
+
+  return {
+    nearReady: nearReady.map(({ ten, ty_le_da_co, da_co_trong_kho, con_thieu }) => ({
+      ten,
+      ty_le_da_co,
+      da_co_trong_kho,
+      con_thieu
+    })),
+    allAnalyzed: allAnalyzed.map(({ ten, ty_le_da_co, da_co_trong_kho, con_thieu }) => ({
+      ten,
+      ty_le_da_co,
+      da_co_trong_kho,
+      con_thieu
+    })),
+    unrelatedOrIncomplete
+  };
+}
+
 /**
  * Bóc tách và tính toán khoảng thời gian theo các biểu thức tự nhiên trong tiếng Việt:
  * Tính toán chuẩn xác theo múi giờ Việt Nam (UTC+7, Asia/Ho_Chi_Minh).
@@ -269,6 +381,8 @@ export interface YuiQueryParams {
   inventory_recipes?: {
     recipe_name?: string;     // e.g. "sườn xào"
     need_recipe_instructions?: boolean;
+    explicit_recipe_request?: boolean;
+    is_shopping_advice?: boolean;
     inventory_keyword?: string;
     only_expiring?: boolean;
   };
@@ -387,21 +501,31 @@ export function detectFastScopesAndParams(text: string, now: Date = new Date()):
 
   // 6. Kho đồ tủ lạnh & Công thức nấu ăn
   const isStorage = /\b(tu lanh|kho|nguyen lieu|thuc pham|gia vi|ton kho|het han|bao quan|cat vao tu|cat tu|nhap kho|trong tu|tu do|dung het|xai het|bo di|vut|hong|thiu|cap nhat kho|sua kho)\b/.test(nt);
-  const isCooking = /\b(cong thuc|nau|tu nau|che bien|cach lam|huong dan|lam mon|mon gi|nau gi|thuc don|menu)\b/.test(nt);
+  const isExplicitRecipeWords = /\b(cong thuc|so tay|thuc don|menu|da luu|trong cong thuc|cach lam|cach nau|huong dan)\b/.test(nt);
+  const isCooking = isExplicitRecipeWords || /\b(nau|tu nau|che bien|lam mon|mon gi|nau gi)\b/.test(nt);
+  const isShoppingAdviceQuery = /\b(mua sam|di cho|sieu thi|can mua|goi y mua|nen mua|tu van mua|mua gi|mua them)\b/.test(nt);
 
-  if (isStorage || isCooking) {
+  if (isStorage || isCooking || isShoppingAdviceQuery) {
     scopes.add('inventory_recipes');
-    params.inventory_recipes = {};
+    params.inventory_recipes = {
+      ...(isExplicitRecipeWords ? { explicit_recipe_request: true } : {}),
+      ...(isShoppingAdviceQuery ? { is_shopping_advice: true } : {})
+    };
 
     if (/\b(het han|sap het han)\b/.test(nt)) {
       params.inventory_recipes.only_expiring = true;
     }
 
-    if (/\b(cach lam|cach nau|huong dan|cong thuc)\b/.test(nt)) {
+    if (isExplicitRecipeWords) {
       params.inventory_recipes.need_recipe_instructions = true;
-      const dishMatch = text.match(/(?:cách nấu|cách làm|công thức|hướng dẫn nấu|hướng dẫn làm)\s+(?:món\s+)?([A-Za-zÀ-ỹ0-9\s]{2,25})/i);
+      const dishMatch = text.match(/(?:cách nấu|cách làm|công thức|hướng dẫn nấu|hướng dẫn làm|cho món)\s+(?:món\s+)?([A-Za-zÀ-ỹ0-9,\s]{2,40})/i);
       if (dishMatch) {
-        params.inventory_recipes.recipe_name = dishMatch[1].trim();
+        const cleanedDish = dishMatch[1]
+          .replace(/\s+(?:trong|ở|của|đã|vào|cho)\b[\s\S]*$/i, '')
+          .trim();
+        if (cleanedDish) {
+          params.inventory_recipes.recipe_name = cleanedDish;
+        }
       }
     }
   }
@@ -411,11 +535,14 @@ export function detectFastScopesAndParams(text: string, now: Date = new Date()):
     scopes.add('weight_health');
   }
 
-  // 8. Danh sách mua sắm & Checkout vào kho
-  if (/\b(mua sam|shopping|di cho|sieu thi|danh sach mua|can mua|mua xong|da mua|tick|gach|xong mon)\b/.test(nt)) {
+  // 8. Danh sách mua sắm & Gợi ý / Checkout vào kho
+  if (/\b(mua sam|shopping|di cho|sieu thi|danh sach mua|can mua|mua xong|da mua|tick|gach|xong mon|goi y mua|nen mua|tu van mua|mua gi|mua them)\b/.test(nt)) {
     scopes.add('shopping');
-    if (/\b(mua xong|da mua|di cho|sieu thi|cat tu|cat vao tu|nhap kho)\b/.test(nt)) {
+    if (/\b(mua xong|da mua|di cho|sieu thi|cat tu|cat vao tu|nhap kho|goi y mua|nen mua|tu van mua|mua gi|mua them)\b/.test(nt)) {
       scopes.add('inventory_recipes');
+    }
+    if (/\b(goi y mua|nen mua|tu van mua|mua gi)\b/.test(nt)) {
+      scopes.add('meals_nutrition');
     }
   }
 
@@ -647,16 +774,44 @@ export async function getYuiProactiveBriefing(userId: string) {
     });
   }
 
-  // 5. Lịch hẹn sắp tới trong hôm nay
-  const activeTodayEvents = (upcomingTodayEvents as any[]).filter((e) => new Date(e.end_time) >= now);
-  if (activeTodayEvents.length > 0) {
-    const nextEv = activeTodayEvents[0];
+  // 5. Phân tách rõ lịch ĐANG DIỄN RA vs lịch SẮP TỚI trong hôm nay
+  const nowMs = now.getTime();
+  const inProgressToday = (upcomingTodayEvents as any[]).filter((e) => {
+    const startMs = new Date(e.start_time).getTime();
+    const endMs = new Date(e.end_time).getTime();
+    return startMs <= nowMs && endMs >= nowMs;
+  });
+  const futureToday = (upcomingTodayEvents as any[]).filter((e) => new Date(e.start_time).getTime() > nowMs);
+
+  const formatRemainingTime = (endTime: Date | string) => {
+    const minsLeft = Math.max(1, Math.ceil((new Date(endTime).getTime() - nowMs) / 60000));
+    if (minsLeft < 60) return `còn ${minsLeft} phút`;
+    const hours = Math.floor(minsLeft / 60);
+    const remMins = minsLeft % 60;
+    return remMins > 0 ? `còn ${hours}h ${remMins}p` : `còn ${hours} tiếng`;
+  };
+
+  if (futureToday.length > 0) {
+    const nextEv = futureToday[0];
+    const ongoingSuffix = inProgressToday.length > 0
+      ? ` · Đang diễn ra: ${inProgressToday[0].title} đến ${formatVnDisplayTime(inProgressToday[0].end_time)}`
+      : '';
     alerts.push({
       id: `cal-${nextEv._id.toString()}`,
       severity: 'info',
       category: 'calendar',
-      title: `Hôm nay còn ${activeTodayEvents.length} lịch hẹn`,
-      detail: `Sắp tới: ${nextEv.title} lúc ${formatVnDisplayTime(nextEv.start_time)}`,
+      title: `Hôm nay còn ${futureToday.length} lịch hẹn sắp tới`,
+      detail: `Sắp tới: ${nextEv.title} (${formatVnDisplayTime(nextEv.start_time)} - ${formatVnDisplayTime(nextEv.end_time)})${ongoingSuffix}`,
+      suggestedPrompt: 'Lịch trình hôm nay và sắp tới của Papa có gì?'
+    });
+  } else if (inProgressToday.length > 0) {
+    const curEv = inProgressToday[0];
+    alerts.push({
+      id: `cal-${curEv._id.toString()}`,
+      severity: 'info',
+      category: 'calendar',
+      title: `Đang trong lịch: ${curEv.title}${inProgressToday.length > 1 ? ` (+${inProgressToday.length - 1})` : ''}`,
+      detail: `${formatVnDisplayTime(curEv.start_time)} - ${formatVnDisplayTime(curEv.end_time)} (${formatRemainingTime(curEv.end_time)} nữa kết thúc)`,
       suggestedPrompt: 'Lịch trình hôm nay và sắp tới của Papa có gì?'
     });
   }
@@ -693,7 +848,6 @@ export async function buildUserSystemContext(
 
   const now = new Date();
   const {
-    todayVnStr,
     currentMonthStr,
     prevMonthStr,
     monthStart,
@@ -734,6 +888,17 @@ export async function buildUserSystemContext(
   const safeRecipePattern = params?.inventory_recipes?.recipe_name
     ? params.inventory_recipes.recipe_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     : '';
+  const isExplicitRecipeRequest = Boolean(
+    params?.inventory_recipes?.explicit_recipe_request ||
+    params?.inventory_recipes?.need_recipe_instructions ||
+    safeRecipePattern
+  );
+  const isShoppingSuggestionMode = Boolean(
+    params?.inventory_recipes?.is_shopping_advice ||
+    (scopes.includes('shopping') && !isExplicitRecipeRequest)
+  );
+  // Bỏ hẳn công thức đã lưu khỏi ngữ cảnh tư vấn mua sắm trừ khi Papa nhắc đích danh công thức đã lưu
+  const shouldLoadRecipes = needInventory && (!isShoppingSuggestionMode || isExplicitRecipeRequest);
 
   // 4. Tải CÓ CHỌN LỌC & ĐÚNG MỤC TIÊU các tài nguyên hệ thống
   const [
@@ -770,8 +935,8 @@ export async function buildUserSystemContext(
     (needWeight || needMeals) ? WeightLog.findOne({ user_id: userId }).sort({ date: -1 }).lean() : Promise.resolve(null),
     (needWeight || needMeals) ? HealthAnalysis.findOne({ user_id: userId }).sort({ analyzed_at: -1 }).lean() : Promise.resolve(null),
     needShopping ? ShoppingItem.find({ user_id: userId, checked: false }).limit(25).lean() : Promise.resolve([]),
-    needInventory ? Recipe.find({ user_id: userId }).select('name ingredients').limit(15).lean() : Promise.resolve([]),
-    needInventory && safeRecipePattern
+    shouldLoadRecipes ? Recipe.find({ user_id: userId }).select('name ingredients').limit(20).lean() : Promise.resolve([]),
+    shouldLoadRecipes && safeRecipePattern
       ? Recipe.findOne({ user_id: userId, name: new RegExp(safeRecipePattern, 'i') }).lean()
       : Promise.resolve(null),
   ]);
@@ -948,6 +1113,32 @@ export async function buildUserSystemContext(
       item.expiryDate && new Date(item.expiryDate) <= threeDaysLater
     );
 
+    let recipeSection: Record<string, unknown> = {};
+    if (shouldLoadRecipes) {
+      const { nearReady, allAnalyzed } = classifyRecipesAgainstInventory(
+        recipes as any[],
+        inventoryItems as any[]
+      );
+
+      if (isExplicitRecipeRequest) {
+        recipeSection = {
+          cong_thuc_da_luu_theo_kho: allAnalyzed,
+          ...(requestedRecipe ? {
+            cong_thuc_chi_tiet_yeu_cau: {
+              ten: (requestedRecipe as any).name,
+              nguyen_lieu: (requestedRecipe as any).ingredients || [],
+              huong_dan_nau: (requestedRecipe as any).instructions || 'Chưa có các bước nấu chi tiết'
+            }
+          } : {})
+        };
+      } else if (nearReady.length > 0) {
+        // Khi chỉ hỏi nấu từ kho (không hỏi mua sắm), chỉ tham khảo thêm các công thức đã gần đủ đồ
+        recipeSection = {
+          cong_thuc_tham_khao_gan_du_trong_kho: nearReady
+        };
+      }
+    }
+
     context.kho_do_va_cong_thuc = {
       kho_do_sap_het_han: expiringInventory.slice(0, 5).map(i => ({
         id: i._id.toString(),
@@ -964,17 +1155,7 @@ export async function buildUserSystemContext(
         gia_tri_con_lai: i.totalValue || 0,
         han_su_dung: i.expiryDate ? getVnDateStr(i.expiryDate) : null
       })),
-      // Danh sách công thức tóm tắt gọn gàng (lược bỏ instructions để tiết kiệm token)
-      cong_thuc_nau_an_da_luu: (recipes as any[]).map(r => ({
-        ten: r.name,
-        nguyen_lieu_chinh: (r.ingredients || []).slice(0, 4)
-      })),
-      // Khi Papa hỏi chi tiết cách nấu một món cụ thể
-      cong_thuc_chi_tiet_yeu_cau: requestedRecipe ? {
-        ten: (requestedRecipe as any).name,
-        nguyen_lieu: (requestedRecipe as any).ingredients || [],
-        huong_dan_nau: (requestedRecipe as any).instructions || 'Chưa có các bước nấu chi tiết'
-      } : undefined
+      ...recipeSection
     };
   }
 
@@ -1009,18 +1190,25 @@ export async function buildUserSystemContext(
 
   // Lịch trình (Xử lý truy vấn động theo ngày cụ thể hoặc tổng quan)
   if (needCalendar) {
-    const formatEventForYui = (e: any) => ({
-      id: e._id.toString(),
-      parent_event_id: e.parent_event_id ? e.parent_event_id.toString() : null,
-      tieu_de: e.title,
-      thu_va_ngay: formatVnDateOnly(e.start_time),
-      thoi_gian: `${formatVnDisplayTime(e.start_time)} - ${formatVnDisplayTime(e.end_time)}`,
-      start_iso: formatVnIsoString(e.start_time),
-      end_iso: formatVnIsoString(e.end_time),
-      ghi_chu: e.description || '',
-      la_lich_lap: !!(e.is_recurring || e.is_virtual || e.parent_event_id),
-      loai_lap: e.recurrence_type || null
-    });
+    const nowMs = now.getTime();
+    const formatEventForYui = (e: any) => {
+      const sMs = new Date(e.start_time).getTime();
+      const eMs = new Date(e.end_time).getTime();
+      const trangThaiThoiGian = eMs < nowMs ? 'da_ket_thuc' : (sMs <= nowMs ? 'dang_dien_ra' : 'sap_toi');
+      return {
+        id: e._id.toString(),
+        parent_event_id: e.parent_event_id ? e.parent_event_id.toString() : null,
+        tieu_de: e.title,
+        thu_va_ngay: formatVnDateOnly(e.start_time),
+        thoi_gian: `${formatVnDisplayTime(e.start_time)} - ${formatVnDisplayTime(e.end_time)}`,
+        trang_thai_thoi_gian: trangThaiThoiGian,
+        start_iso: formatVnIsoString(e.start_time),
+        end_iso: formatVnIsoString(e.end_time),
+        ghi_chu: e.description || '',
+        la_lich_lap: !!(e.is_recurring || e.is_virtual || e.parent_event_id),
+        loai_lap: e.recurrence_type || null
+      };
+    };
 
     if (hasSpecificCalendar) {
       // TRƯỜNG HỢP 1: Tra cứu đúng ngày cụ thể được chỉ định (vd: Chủ Nhật tuần này, Ngày mai, Thứ Sáu...)
@@ -1105,6 +1293,7 @@ export async function buildUserSystemContext(
     let homeCount = 0;
     let eatOutCount = 0;
     const activeDaySet = new Set<string>();
+    const mealFreqMap = new Map<string, { mon: string; so_lan: number; tu_nau: number; an_ngoai: number; ngay_gan_nhat: string }>();
     last7DaysMeals.forEach((m) => {
       weekCalo += m.calo || 0;
       weekProtein += m.protein || 0;
@@ -1113,9 +1302,28 @@ export async function buildUserSystemContext(
       weekSugar += m.sugar || 0;
       if (m.source === 'home') homeCount++;
       else eatOutCount++;
-      activeDaySet.add(getVnDateStr(m.consumed_at));
+      const dStr = getVnDateStr(m.consumed_at);
+      activeDaySet.add(dStr);
+
+      const rawName = String(m.food_name || 'Món ăn').trim();
+      const key = normalizeVietnamese(rawName) || rawName.toLowerCase();
+      const prev = mealFreqMap.get(key) || {
+        mon: rawName,
+        so_lan: 0,
+        tu_nau: 0,
+        an_ngoai: 0,
+        ngay_gan_nhat: dStr
+      };
+      prev.so_lan += 1;
+      if (m.source === 'home') prev.tu_nau += 1;
+      else prev.an_ngoai += 1;
+      if (dStr > prev.ngay_gan_nhat) prev.ngay_gan_nhat = dStr;
+      mealFreqMap.set(key, prev);
     });
     const activeDaysCount = Math.max(1, activeDaySet.size);
+    const cacMonDaAn7Ngay = Array.from(mealFreqMap.values())
+      .sort((a, b) => b.so_lan - a.so_lan || b.ngay_gan_nhat.localeCompare(a.ngay_gan_nhat))
+      .slice(0, 20);
 
     context.suc_khoe_va_bua_an = {
       khoang_thoi_gian: hasSpecificMeals ? (params.meals!.target_date_label || 'Ngày yêu cầu') : 'Hôm nay',
@@ -1141,7 +1349,8 @@ export async function buildUserSystemContext(
           fat_g: Math.round(weekFat / activeDaysCount),
           carbs_g: Math.round(weekCarbs / activeDaysCount),
           sugar_g: Math.round(weekSugar / activeDaysCount)
-        }
+        },
+        cac_mon_da_an_7_ngay: cacMonDaAn7Ngay
       },
       ...(latestHealthAnalysis ? {
         nhan_xet_chuyen_gia_gan_nhat: {
@@ -1389,10 +1598,10 @@ CÁC MẢNG NGHIỆP VỤ (SCOPES) HỢP LỆ:
 - "calendar": Lịch trình, cuộc hẹn, tạo/dời/hủy sự kiện, lịch lặp, nghỉ 1 buổi. Chỉ điền target_date_label khi Papa hỏi XEM lịch ngày cụ thể; KHÔNG khóa target_date_label khi Papa muốn dời/sửa/hủy lịch.
 - "tasks": Nhiệm vụ, Quest SAO (tạo, hoàn thành, hoàn tác, đổi deadline, chuyển trạng thái, xóa).
 - "finances": Tiền nong, số dư ví, thu/chi, chuyển ví, vay/trả nợ, đặt/sửa hạn mức ngân sách, sửa/xóa giao dịch.
-- "inventory_recipes": Tủ lạnh, kho thực phẩm, dùng/vứt đồ trong kho, đồ sắp hết hạn, công thức nấu ăn.
+- "inventory_recipes": Tủ lạnh, kho thực phẩm, dùng/vứt đồ trong kho, đồ sắp hết hạn, công thức nấu ăn. Chỉ đặt "explicit_recipe_request": true khi Papa NHẮC RÕ công thức/sổ tay/cách nấu món đã lưu; khi Papa chỉ hỏi gợi ý mua sắm -> đặt "is_shopping_advice": true.
 - "meals_nutrition": Ghi nhận món ăn/uống (ăn ngoài hoặc tự nấu trừ kho), calo nạp trong ngày, macro dinh dưỡng.
 - "weight_health": Cập nhật hoặc xem cân nặng, chiều cao, chỉ số sức khỏe.
-- "shopping": Danh sách mua sắm cần mua hoặc đánh dấu mua xong nhập kho.
+- "shopping": Danh sách mua sắm cần mua, gợi ý mua sắm hoặc đánh dấu mua xong nhập kho.
 - "general_chat": Chào hỏi, tâm sự thông thường.
 
 ${historySection}
@@ -1407,7 +1616,7 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ theo định dạng:
   "scopes": ["calendar", ...],
   "params": {
     "calendar": { "target_date_label": "Chủ Nhật tuần này" },
-    "inventory_recipes": { "recipe_name": "sườn xào", "need_recipe_instructions": true },
+    "inventory_recipes": { "recipe_name": "sườn xào", "need_recipe_instructions": true, "explicit_recipe_request": true },
     "finances": { "wallet_keyword": "momo", "category": "food" },
     "meals": { "target_date_label": "Hôm qua" },
     "tasks": { "status": "OVERDUE" }
@@ -1506,6 +1715,18 @@ QUY TẮC BẢO TOÀN NGỮ CẢNH HỘI THOẠI (CONTEXT LINKING):
     -> Phải hiểu ngay "những nguyên liệu này" chính là các nguyên liệu Yui vừa liệt kê và đang có trong kho đồ ('kho_do_hien_co')!
     -> Hãy tư vấn 2-3 món ăn hấp dẫn, dễ nấu từ các nguyên liệu có sẵn đó, gợi ý cách làm ngắn gọn và ước lượng calo cho Papa.
     -> Đặt "actions": [] vì đây là câu hỏi tư vấn ("xem hộ"), toàn bộ câu trả lời chi tiết, đáng yêu đặt trong trường "reply".
+
+QUY TẮC TƯ VẤN MUA SẮM & ĐỊNH HƯỚNG MÓN ĂN (LINH HOẠT THEO KHO & THÓI QUEN):
+- NGUYÊN TẮC CỐT LÕI: Sổ tay công thức nấu ăn đã lưu CHỈ là tài liệu tham khảo khi nấu ăn, KHÔNG PHẢI danh sách món ưu tiên và KHÔNG tự động chi phối gợi ý mua sắm!
+- TRƯỜNG HỢP 1 — Khi Papa hỏi gợi ý mua sắm / đi chợ thông thường (không nhắc tới công thức đã lưu):
+  * Phân tích "kho_do_va_cong_thuc.kho_do_hien_co" (kèm đồ sắp hết hạn) + "danh_sach_mua_sam_can_mua" (tránh gợi ý trùng món đã có/đang chờ mua).
+  * Phân tích "suc_khoe_va_bua_an.xu_huong_7_ngay_qua" ("cac_mon_da_an_7_ngay" và trung bình macro): nhận xét khẩu vị tuần qua và nhóm dinh dưỡng còn thiếu/lệch (vd thiếu rau xanh, đạm, chất xơ, trái cây...).
+  * GỢI Ý MỞ ĐỂ PAPA CHỌN: Ngoài việc đề xuất nguyên liệu thiết yếu bổ sung cân bằng dinh dưỡng, hãy gợi ý ngắn gọn **một vài ý tưởng món ăn linh hoạt** (gồm cả món tận dụng đồ đang có trong kho lẫn món mới đổi vị ngoài kho) kèm gợi ý nguyên liệu cần mua nếu Papa thích món đó, rồi hỏi Papa muốn chọn hướng nào hoặc món nào để thêm vào danh sách mua sắm.
+  * Khi Papa mới hỏi GỢI Ý ("gợi ý", "nên mua gì", "tư vấn") -> đặt "actions": [] (trừ khi Papa bảo thêm thẳng).
+- TRƯỜNG HỢP 2 — CHỈ KHI Papa nhắc đích danh công thức đã lưu (VD: "mua thêm nguyên liệu còn thiếu cho món A, B trong công thức đã lưu"):
+  * Lúc đó mới đối chiếu trường "cong_thuc_da_luu_theo_kho" trong dữ liệu để chỉ ra đúng phần "con_thieu" của riêng món A, B được hỏi (so với đồ đã có trong kho) và lên action "create_shopping_item" nếu Papa yêu cầu thêm.
+- TRƯỜNG HỢP 3 — Khi Papa hỏi "Nấu được món gì từ kho?":
+  * Tự do đề xuất đa dạng các món hợp lý chế biến từ "kho_do_hien_co" (kể cả món gợi ý tự nhiên ngoài sổ tay và món sẵn có trong "cong_thuc_tham_khao_gan_du_trong_kho" nếu phù hợp), không gò bó ép theo công thức đã lưu.
 
 QUY TẮC TẠO & LƯU CÔNG THỨC NẤU ĂN (RECIPE CREATION):
 - Khi Papa nhờ Yui tạo công thức nấu ăn, lên công thức món, hướng dẫn nấu hoặc lưu công thức (VD: "tạo công thức nấu ăn sườn xào chua ngọt phiên bản với cà chua", "lên công thức làm món X", "cho tôi công thức Y"):
