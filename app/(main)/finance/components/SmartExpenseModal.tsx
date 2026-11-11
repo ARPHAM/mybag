@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, CheckCircle2, AlertCircle, Wallet, ArrowDownRight, ArrowUpRight, ArrowRightLeft, Users, CalendarDays } from 'lucide-react';
+import { Sparkles, CheckCircle2, Wallet, ArrowDownRight, ArrowUpRight, ArrowRightLeft, Users, CalendarDays, HandCoins, CreditCard, Pencil, Trash2, ShoppingBag, Package } from 'lucide-react';
 import { formatVnIsoString, getYuiActionScheduleDisplay } from '@/lib/vnTime';
 import SaoModal from '../../../components/SaoModal/SaoModal';
 import SaoButton from '../../../components/SaoButton/SaoButton';
@@ -60,6 +60,13 @@ export default function SmartExpenseModal({
       const res: any = await executeSmartExpense(parsedResult.actions);
       if (res?.success) {
         showAlert(`🎉 ${res.message || 'Thực hiện thành công!'}`);
+        window.dispatchEvent(new CustomEvent('sao-user-updated'));
+        window.dispatchEvent(new CustomEvent('sao-shopping-updated'));
+        window.dispatchEvent(new CustomEvent('sao-inventory-updated'));
+        window.dispatchEvent(new CustomEvent('sao-health-updated'));
+        window.dispatchEvent(new CustomEvent('sao-tasks-updated'));
+        window.dispatchEvent(new CustomEvent('sao-calendar-updated'));
+        window.dispatchEvent(new CustomEvent('sao-menu-updated'));
         handleClose();
         onSuccess();
       }
@@ -186,13 +193,50 @@ export default function SmartExpenseModal({
             {/* Actions breakdown list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {parsedResult.actions?.map((act: any, idx: number) => {
-                const isExp = act.actionType === 'expense' || act.actionType === 'meal';
-                const isInc = act.actionType === 'income';
-                const isTransfer = act.actionType === 'transfer';
-                const isDebtLent = act.actionType === 'debt_lent';
-                const isDebtBorrow = act.actionType === 'debt_borrowed';
+                const t = act.actionType;
+                const isExp = t === 'expense' || t === 'meal' || t === 'purchase_shopping';
+                const isInc = t === 'income';
+                const isTransfer = t === 'transfer';
+                const isDebtLent = t === 'debt_lent';
+                const isDebtBorrow = t === 'debt_borrowed';
+                const isPayDebt = t === 'pay_debt';
+                const isPayDebtIn = isPayDebt && act.debt_type === 'lent';
+                const isBudget = t === 'upsert_budget';
+                const isUpdateTx = t === 'update_transaction';
+                const isDeleteTx = t === 'delete_transaction';
+                const isInv = t === 'create_inventory' || t === 'update_inventory';
                 const schedule = getYuiActionScheduleDisplay(act, analyzedAt);
                 const destWalletName = act.toWalletName || act.to_wallet_name;
+
+                const titleText = (() => {
+                  if (t === 'pay_debt') return `${isPayDebtIn ? 'Thu nợ từ' : 'Trả nợ cho'} ${act.person || 'đối tượng'}`;
+                  if (t === 'upsert_budget') return `Hạn mức: ${act.name || act.category}`;
+                  if (t === 'update_transaction') return `Sửa GD: ${act.description || 'Giao dịch'}`;
+                  if (t === 'delete_transaction') return `Xóa GD: ${act.description || 'Giao dịch'}`;
+                  if (t === 'purchase_shopping') return `Đã mua: ${act.name} (${act.quantity || 1} ${act.unit || 'món'})`;
+                  if (t === 'update_inventory' || t === 'create_inventory') return `Kho đồ: ${act.name}`;
+                  return act.food_name || act.description || act.title || 'Hành động';
+                })();
+
+                const subText = (() => {
+                  if (isDebtLent) return `Cho vay / Trả hộ: ${act.person || 'Người quen'}${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
+                  if (isDebtBorrow) return `Đi vay: ${act.person || 'Chủ nợ'}${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
+                  if (isPayDebt) return `${isPayDebtIn ? 'Nhận tiền trả nợ' : 'Trả tiền nợ'}${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
+                  if (isBudget) return `Danh mục: ${act.category}`;
+                  if (isUpdateTx) return `Cập nhật giao dịch${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
+                  if (isDeleteTx) return 'Xóa giao dịch & hoàn ví';
+                  if (t === 'purchase_shopping') return `${act.add_to_inventory === false ? 'Tick danh sách' : 'Tick shopping + Nhập kho'}${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
+                  if (isInv) return 'Cập nhật kho dự trữ';
+                  if (isTransfer) return `Chuyển ví: ${act.walletName || '?'} → ${destWalletName || '?'}`;
+                  if (isExp) return `Danh mục: ${act.category || 'Ăn uống'}${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
+                  if (isInc) return `Thu nhập${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
+                  return act.walletName ? `Ví: ${act.walletName}` : 'Hành động AI';
+                })();
+
+                const displayValue = isBudget ? (act.limit ?? 0) : (act.amount || 0);
+                const showAmount = isBudget ? act.limit !== undefined : displayValue > 0;
+                const isPositive = isInc || isDebtBorrow || isPayDebtIn;
+                const isNeutral = isTransfer || isBudget || isUpdateTx || isDeleteTx;
 
                 return (
                   <div
@@ -209,22 +253,23 @@ export default function SmartExpenseModal({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      {isExp && <ArrowDownRight size={18} color="#ff4444" />}
+                      {isExp && t !== 'purchase_shopping' && <ArrowDownRight size={18} color="#ff4444" />}
+                      {t === 'purchase_shopping' && <ShoppingBag size={18} color="#4ade80" />}
                       {isInc && <ArrowUpRight size={18} color="#00ffaa" />}
                       {isTransfer && <ArrowRightLeft size={18} color="#00f0ff" />}
                       {(isDebtLent || isDebtBorrow) && <Users size={18} color="#c084fc" />}
+                      {isPayDebt && <HandCoins size={18} color="#c084fc" />}
+                      {isBudget && <CreditCard size={18} color="#38bdf8" />}
+                      {isUpdateTx && <Pencil size={18} color="#fbbf24" />}
+                      {isDeleteTx && <Trash2 size={18} color="#ff6666" />}
+                      {isInv && <Package size={18} color="#fb923c" />}
 
                       <div>
                         <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.9rem' }}>
-                          {act.food_name || act.description}
+                          {titleText}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#a0c4ff' }}>
-                          {isDebtLent && `Cho vay / Trả hộ: ${act.person || 'Người quen'}`}
-                          {isDebtBorrow && `Đi vay: ${act.person || 'Chủ nợ'}`}
-                          {isExp && `Danh mục: ${act.category || 'Ăn uống'}`}
-                          {isInc && `Thu nhập`}
-                          {isTransfer && `Chuyển ví: ${act.walletName || '?'} → ${destWalletName || '?'}`}
-                          {!isTransfer && act.walletName && ` · Ví: ${act.walletName}`}
+                          {subText}
                         </div>
                         {schedule && (
                           <div style={{ fontSize: '0.74rem', color: '#ffd6f0', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
@@ -235,14 +280,16 @@ export default function SmartExpenseModal({
                       </div>
                     </div>
 
-                    <div style={{
-                      fontWeight: 'bold',
-                      fontSize: '1rem',
-                      color: isTransfer ? '#00f0ff' : (isExp || isDebtLent ? '#ff4444' : '#00ffaa'),
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {isTransfer ? '' : (isExp || isDebtLent ? '-' : '+')}{formatMoney(act.amount || 0)} VND
-                    </div>
+                    {showAmount && (
+                      <div style={{
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        color: isNeutral ? '#00f0ff' : (isPositive ? '#00ffaa' : '#ff4444'),
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {isNeutral ? '' : (isPositive ? '+' : '-')}{formatMoney(displayValue)} VND
+                      </div>
+                    )}
                   </div>
                 );
               })}

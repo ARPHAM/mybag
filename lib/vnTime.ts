@@ -167,6 +167,24 @@ export function normalizeToVnIso(
   return formatVnIsoString(parsed);
 }
 
+/**
+ * Chuyển giá trị thời gian về chuỗi "YYYY-MM-DDTHH:mm" theo giờ Việt Nam (+07:00)
+ * để binding vào <input type="datetime-local"> không phụ thuộc TZ trình duyệt.
+ */
+export function toVnDatetimeLocalValue(input: unknown, fallback: Date = new Date()): string {
+  const parsed = parseVnDateTime(input, '12:00:00') ?? fallback;
+  const p = getVnParts(parsed);
+  return `${p.year}-${pad2(p.month)}-${pad2(p.day)}T${pad2(p.hours)}:${pad2(p.minutes)}`;
+}
+
+/**
+ * Chuyển chuỗi từ <input type="datetime-local"> ("YYYY-MM-DDTHH:mm") sang chuẩn ISO giờ Việt Nam (+07:00).
+ */
+export function fromVnDatetimeLocalValue(val: string): string | undefined {
+  if (!val || !val.trim()) return undefined;
+  return normalizeToVnIso(val.trim(), undefined, '12:00:00');
+}
+
 export interface YuiActionScheduleInput {
   actionType?: string;
   custom_time?: unknown;
@@ -174,6 +192,9 @@ export interface YuiActionScheduleInput {
   end_time?: unknown;
   due_date?: unknown;
   expiryDate?: unknown;
+  exception_date?: unknown;
+  recurrence_end?: unknown;
+  month?: unknown;
 }
 
 export interface YuiActionScheduleDisplay {
@@ -208,6 +229,50 @@ export function getYuiActionScheduleDisplay(
       };
     }
 
+    case 'update_calendar_event': {
+      if (action.start_time) {
+        const start = parseVnDateTime(action.start_time, '09:00:00') ?? fallback;
+        const end = action.end_time ? parseVnDateTime(action.end_time, '10:00:00') : null;
+        if (end && end.getTime() > start.getTime()) {
+          const sameDay = getVnDateStr(start) === getVnDateStr(end);
+          return {
+            label: 'Lịch mới',
+            value: sameDay
+              ? `${formatVnDisplayDate(start)} · ${formatVnDisplayTime(start)} - ${formatVnDisplayTime(end)}`
+              : `${formatVnDisplayDateShort(start)} ${formatVnDisplayTime(start)} → ${formatVnDisplayDateShort(end)} ${formatVnDisplayTime(end)}`
+          };
+        }
+        return {
+          label: 'Lịch mới',
+          value: formatVnDisplayDateTime(start)
+        };
+      }
+      if (action.exception_date) {
+        const ex = parseVnDateTime(action.exception_date, '09:00:00');
+        if (ex) {
+          return {
+            label: 'Buổi áp dụng',
+            value: formatVnDisplayDateTime(ex)
+          };
+        }
+      }
+      return null;
+    }
+
+    case 'delete_calendar_event': {
+      const target = action.exception_date || action.start_time;
+      if (target) {
+        const dt = parseVnDateTime(target, '09:00:00');
+        if (dt) {
+          return {
+            label: 'Buổi hủy',
+            value: formatVnDisplayDateTime(dt)
+          };
+        }
+      }
+      return null;
+    }
+
     case 'create_task': {
       const defaultDue = new Date(fallback.getTime() + 24 * 60 * 60 * 1000);
       const due = parseVnDateTime(action.due_date, '23:59:00') ?? defaultDue;
@@ -217,12 +282,45 @@ export function getYuiActionScheduleDisplay(
       };
     }
 
-    case 'create_inventory': {
+    case 'update_task': {
+      if (action.due_date) {
+        const due = parseVnDateTime(action.due_date, '23:59:00');
+        if (due) {
+          return {
+            label: 'Hạn mới',
+            value: formatVnDisplayDateTime(due)
+          };
+        }
+      }
+      if (action.custom_time) {
+        const dt = parseVnDateTime(action.custom_time, '12:00:00');
+        if (dt) {
+          return {
+            label: 'Thời gian',
+            value: formatVnDisplayDateTime(dt)
+          };
+        }
+      }
+      return null;
+    }
+
+    case 'create_inventory':
+    case 'purchase_shopping': {
       const purchase = parseVnDateTime(action.custom_time, '12:00:00') ?? fallback;
       const expiry = action.expiryDate ? parseVnDateTime(action.expiryDate, '12:00:00') : null;
       return {
-        label: 'Ngày nhập',
+        label: action.actionType === 'purchase_shopping' ? 'Ngày mua' : 'Ngày nhập',
         value: formatVnDisplayDateTime(purchase),
+        ...(expiry ? { expiry: formatVnDisplayDateShort(expiry) } : {})
+      };
+    }
+
+    case 'update_inventory': {
+      const dt = parseVnDateTime(action.custom_time, '12:00:00') ?? fallback;
+      const expiry = action.expiryDate ? parseVnDateTime(action.expiryDate, '12:00:00') : null;
+      return {
+        label: 'Cập nhật',
+        value: formatVnDisplayDateTime(dt),
         ...(expiry ? { expiry: formatVnDisplayDateShort(expiry) } : {})
       };
     }
@@ -235,14 +333,47 @@ export function getYuiActionScheduleDisplay(
       };
     }
 
+    case 'upsert_budget': {
+      const monthStr = typeof action.month === 'string' && /^\d{4}-\d{2}$/.test(action.month)
+        ? action.month
+        : getVnDateStr(fallback).slice(0, 7);
+      const [y, m] = monthStr.split('-');
+      return {
+        label: 'Tháng',
+        value: `${m}/${y}`
+      };
+    }
+
+    case 'update_transaction': {
+      if (!action.custom_time) return null;
+      const dt = parseVnDateTime(action.custom_time, '12:00:00');
+      if (!dt) return null;
+      return {
+        label: 'Thời gian mới',
+        value: formatVnDisplayDateTime(dt)
+      };
+    }
+
     case 'meal':
     case 'expense':
     case 'income':
     case 'transfer':
     case 'debt_lent':
     case 'debt_borrowed':
+    case 'pay_debt':
     case 'record_weight': {
       const dt = parseVnDateTime(action.custom_time, '12:00:00') ?? fallback;
+      return {
+        label: 'Thời gian',
+        value: formatVnDisplayDateTime(dt)
+      };
+    }
+
+    case 'delete_task':
+    case 'delete_transaction': {
+      if (!action.custom_time) return null;
+      const dt = parseVnDateTime(action.custom_time, '12:00:00');
+      if (!dt) return null;
       return {
         label: 'Thời gian',
         value: formatVnDisplayDateTime(dt)

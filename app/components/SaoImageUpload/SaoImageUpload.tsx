@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { UploadCloud, Check, AlertTriangle, Loader2, Camera, Image as ImageIcon } from "lucide-react";
+import { compressImageFile } from "@/lib/imageClient";
 import SaoButton from "../SaoButton/SaoButton";
 
 interface SaoImageUploadProps {
@@ -15,85 +16,6 @@ export default function SaoImageUpload({ onUploadSuccess, label = "Tải ảnh l
   const [errorMessage, setErrorMessage] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-
-  const compressImage = (file: File): Promise<{ blob: Blob; base64: string; filename: string; contentType: string }> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (!dataUrl) {
-          reject(new Error("Không thể đọc file ảnh"));
-          return;
-        }
-
-        const img = new Image();
-        img.onload = () => {
-          try {
-            const MAX_SIZE = 1280;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height && width > MAX_SIZE) {
-              height = Math.round((height * MAX_SIZE) / width);
-              width = MAX_SIZE;
-            } else if (height > MAX_SIZE) {
-              width = Math.round((width * MAX_SIZE) / height);
-              height = MAX_SIZE;
-            }
-
-            const canvas = document.createElement("canvas");
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-              resolve({
-                blob: file,
-                base64: dataUrl,
-                filename: file.name || "photo.jpg",
-                contentType: file.type || "image/jpeg",
-              });
-              return;
-            }
-
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedBase64 = canvas.toDataURL("image/jpeg", 0.82);
-            canvas.toBlob(
-              (blob) => {
-                const baseName = (file.name || "photo").replace(/\.[^/.]+$/, "");
-                resolve({
-                  blob: blob || file,
-                  base64: compressedBase64,
-                  filename: `${baseName}.jpg`,
-                  contentType: "image/jpeg",
-                });
-              },
-              "image/jpeg",
-              0.82
-            );
-          } catch {
-            resolve({
-              blob: file,
-              base64: dataUrl,
-              filename: file.name || "photo.jpg",
-              contentType: file.type || "image/jpeg",
-            });
-          }
-        };
-        img.onerror = () => {
-          // Fallback if browser cannot render format to canvas
-          resolve({
-            blob: file,
-            base64: dataUrl,
-            filename: file.name || "photo.jpg",
-            contentType: file.type || "image/jpeg",
-          });
-        };
-        img.src = dataUrl;
-      };
-      reader.onerror = () => reject(new Error("Lỗi đọc file"));
-      reader.readAsDataURL(file);
-    });
-  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
@@ -112,7 +34,7 @@ export default function SaoImageUpload({ onUploadSuccess, label = "Tải ảnh l
     setErrorMessage("");
 
     try {
-      const prepared = await compressImage(file);
+      const prepared = await compressImageFile(file);
       let uploadedUrl = "";
 
       try {
