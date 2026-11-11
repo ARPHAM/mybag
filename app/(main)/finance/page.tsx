@@ -898,51 +898,57 @@ export default function FinancePage() {
 
       return (
         <form onSubmit={handleSaveScannedBill}>
-          <div className={styles.scannedItemsTable} style={{ overflowX: 'auto', paddingBottom: 10 }}>
-            <div className={styles.tableHeader} style={{ minWidth: 600 }}>
-              <div style={{ flex: 2, minWidth: 120 }}>Tên món đồ</div>
-              <div style={{ flex: 1, minWidth: 100 }}>SL</div>
-              <div style={{ flex: 1, minWidth: 90 }}>Giá tiền</div>
-              <div style={{ flex: 1, minWidth: 120 }}>Loại</div>
-              <div style={{ width: 60, minWidth: 60, textAlign: 'center' }}>Tùy chọn</div>
+          <div className={styles.scannedItemsTable}>
+            <div className={styles.tableHeader}>
+              <div className={styles.colName}>Tên món đồ</div>
+              <div className={styles.colQty}>SL</div>
+              <div className={styles.colPrice}>Giá tiền</div>
+              <div className={styles.colCategory}>Loại</div>
+              <div className={styles.colActions}>Tùy chọn</div>
             </div>
             {scannedBillItems.map((item, index) => (
-              <div key={item.id} className={`${styles.tableRow} ${!item.keep ? styles.deletedRow : ''}`} style={{ minWidth: 600 }}>
-                <div style={{ flex: 2 }}>
+              <div key={item.id} className={`${styles.tableRow} ${!item.keep ? styles.deletedRow : ''}`}>
+                <div className={styles.colName}>
+                  <span className={styles.mobileCellLabel}>Tên món đồ</span>
                   <SaoInput type="text" value={item.name} onChange={e => {
                     const newItems = [...scannedBillItems];
                     newItems[index].name = e.target.value;
                     setScannedBillItems(newItems);
                   }} disabled={!item.keep} />
                 </div>
-                <div style={{ flex: 1, display: 'flex', gap: 5 }}>
-                  <SaoInput type="number" style={{ width: '60%' }} value={item.quantity} onChange={e => {
-                    const newItems = [...scannedBillItems];
-                    newItems[index].quantity = parseFloat(e.target.value) || 0;
-                    setScannedBillItems(newItems);
-                  }} disabled={!item.keep} />
-                  <SaoInput type="text" style={{ width: '40%' }} value={item.unit} onChange={e => {
-                    const newItems = [...scannedBillItems];
-                    newItems[index].unit = e.target.value;
-                    setScannedBillItems(newItems);
-                  }} disabled={!item.keep} />
+                <div className={styles.colQty}>
+                  <span className={styles.mobileCellLabel}>Số lượng & Đơn vị</span>
+                  <div className={styles.qtyPair}>
+                    <SaoInput type="number" value={item.quantity} onChange={e => {
+                      const newItems = [...scannedBillItems];
+                      newItems[index].quantity = parseFloat(e.target.value) || 0;
+                      setScannedBillItems(newItems);
+                    }} disabled={!item.keep} />
+                    <SaoInput type="text" value={item.unit} onChange={e => {
+                      const newItems = [...scannedBillItems];
+                      newItems[index].unit = e.target.value;
+                      setScannedBillItems(newItems);
+                    }} disabled={!item.keep} />
+                  </div>
                 </div>
-                <div style={{ flex: 1 }}>
+                <div className={styles.colPrice}>
+                  <span className={styles.mobileCellLabel}>Giá tiền</span>
                   <SaoInput type="number" value={item.price} onChange={e => {
                     const newItems = [...scannedBillItems];
                     newItems[index].price = parseFloat(e.target.value) || 0;
                     setScannedBillItems(newItems);
                   }} disabled={!item.keep || item.isGift} />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div className={styles.colCategory}>
+                  <span className={styles.mobileCellLabel}>Phân loại</span>
                   <SaoSelect options={[...INVENTORY_CATEGORY_OPTIONS, ...FINANCE_CATEGORY_OPTIONS.filter(c => c.value !== 'food' && c.value !== 'other'), { value: 'other', label: 'Khác' }]} initialValue={item.category} onChange={v => {
                     const newItems = [...scannedBillItems];
                     newItems[index].category = v;
                     setScannedBillItems(newItems);
                   }} disabled={!item.keep} />
                 </div>
-                <div style={{ width: 60, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
-                  <label style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', color: item.isGift ? '#00ffaa' : '#a0c4ff' }}>
+                <div className={styles.colActions}>
+                  <label className={styles.freeToggle} style={{ color: item.isGift ? '#00ffaa' : '#a0c4ff' }}>
                     <input type="checkbox" checked={item.isGift} onChange={e => {
                       const newItems = [...scannedBillItems];
                       newItems[index].isGift = e.target.checked;
@@ -950,11 +956,17 @@ export default function FinancePage() {
                     }} disabled={!item.keep} />
                     Free
                   </label>
-                  <button type="button" onClick={() => {
-                    const newItems = [...scannedBillItems];
-                    newItems[index].keep = !newItems[index].keep;
-                    setScannedBillItems(newItems);
-                  }} style={{ background: 'transparent', border: 'none', color: item.keep ? '#ff4444' : '#00f0ff', cursor: 'pointer', padding: 5 }}>
+                  <button
+                    type="button"
+                    className={styles.scanRowToggleBtn}
+                    onClick={() => {
+                      const newItems = [...scannedBillItems];
+                      newItems[index].keep = !newItems[index].keep;
+                      setScannedBillItems(newItems);
+                    }}
+                    style={{ color: item.keep ? '#ff4444' : '#00f0ff' }}
+                    aria-label={item.keep ? 'Bỏ món này' : 'Khôi phục món này'}
+                  >
                     {item.keep ? <Trash2 size={16} /> : <RotateCcw size={16} />}
                   </button>
                 </div>
@@ -962,12 +974,12 @@ export default function FinancePage() {
             ))}
           </div>
 
-          <div style={{ marginTop: 20, padding: 15, background: 'rgba(0,0,0,0.3)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className={styles.scannedSummaryBar}>
             <div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' }}>Tổng tiền: {formatMoney(totalAmount)} VND</div>
-              <div style={{ fontSize: '0.9rem', color: '#a0c4ff' }}>Đánh dấu "Free" hoặc xóa sẽ không tính tiền.</div>
+              <div className={styles.scannedSummaryTotal}>Tổng tiền: {formatMoney(totalAmount)} VND</div>
+              <div className={styles.scannedSummaryHint}>Đánh dấu &quot;Free&quot; hoặc xóa sẽ không tính tiền.</div>
             </div>
-            <div style={{ minWidth: 250 }}>
+            <div className={styles.scannedWalletBox}>
               <label className={styles.formLabel}>Nguồn tiền</label>
               <SaoSelect
                 initialValue={billWalletId}
@@ -978,9 +990,9 @@ export default function FinancePage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: 20 }}>
-            <SaoButton variant="primary" type="submit">
-              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> Nhập kho & Lưu chi tiêu
+          <div className={styles.scannedSubmitRow}>
+            <SaoButton variant="primary" type="submit" style={{ width: '100%', justifyContent: 'center' }}>
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> Nhập kho &amp; Lưu chi tiêu
             </SaoButton>
           </div>
         </form>

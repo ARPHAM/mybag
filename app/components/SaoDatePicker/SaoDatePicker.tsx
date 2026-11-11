@@ -49,15 +49,15 @@ export default function SaoDatePicker({ value, defaultValue, onChange, required,
     }
   }, [value]);
 
-  // Handle outside click
+  // Handle outside click / tap
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: PointerEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, []);
 
   const formatDateDisplay = (isoString: string) => {
