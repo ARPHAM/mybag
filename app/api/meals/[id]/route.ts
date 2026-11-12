@@ -7,6 +7,7 @@ import Wallet from '@/models/Wallet';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
 import { verifyToken } from '@/lib/auth';
+import { convertQtyToInventoryUnit } from '@/lib/unitHelper';
 
 function toVnDateStr(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
@@ -240,13 +241,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
       }
 
-      // Gộp danh sách nguyên liệu mới được chọn
+      // Gộp danh sách nguyên liệu mới được chọn (tự động quy đổi đơn vị g <-> kg, ml <-> l về đúng đơn vị gốc của Kho)
       const newUsageMap = new Map<string, number>();
       if (source === 'home' && Array.isArray(ingredients_used)) {
         for (const ing of ingredients_used) {
           const q = Number(ing?.qty);
           if (ing?.invId && !isNaN(q) && q > 0) {
-            newUsageMap.set(ing.invId, Number(((newUsageMap.get(ing.invId) || 0) + q).toFixed(4)));
+            const item = await Inventory.findOne({ _id: ing.invId, user_id: decoded.userId });
+            const oldHeld = oldUsageMap.get(ing.invId);
+            const targetUnit = item?.unit || oldHeld?.unit;
+            const refStock = item ? Number((item.quantity + (oldHeld?.qty || 0)).toFixed(4)) : (oldHeld?.qty || undefined);
+            const convertedQ = convertQtyToInventoryUnit(q, ing.unit, targetUnit, refStock);
+            newUsageMap.set(ing.invId, Number(((newUsageMap.get(ing.invId) || 0) + convertedQ).toFixed(4)));
           }
         }
       }

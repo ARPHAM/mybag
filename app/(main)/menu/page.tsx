@@ -15,6 +15,7 @@ import { getRecipes, getMeals, getInventory, calculateMacros, createRecipe, crea
 import styles from './menu.module.css';
 
 import { MenuTabId, Recipe, MealRecord, MealIngredientUsed, InventoryItem } from '@/lib/types';
+import { convertQtyToInventoryUnit, parseRecipeIngredientString } from '@/lib/unitHelper';
 
 interface Wallet {
   _id: string;
@@ -238,16 +239,32 @@ export default function MenuPage() {
     setFormImageUrl('');
     
     // Auto-match ingredients from inventory (only those with quantity > 0, no duplicates)
+    // Kèm bóc tách định lượng từ chuỗi nguyên liệu công thức (vd: "150g ức gà" / "0.15kg ức gà") và quy đổi về đúng đơn vị gốc của kho
     const availableInventory = inventory.filter(i => i.quantity > 0);
     const matched: MealIngredientUsed[] = [];
     const usedIds = new Set<string>();
     recipe.ingredients.forEach(ingName => {
+      const parsed = parseRecipeIngredientString(ingName);
+      const searchName = (parsed.cleanName || ingName).toLowerCase();
       const match = availableInventory.find(
-        i => !usedIds.has(i.id) && (i.name.toLowerCase().includes(ingName.toLowerCase()) || ingName.toLowerCase().includes(i.name.toLowerCase()))
+        i => !usedIds.has(i.id) && (
+          i.name.toLowerCase().includes(searchName) ||
+          searchName.includes(i.name.toLowerCase()) ||
+          i.name.toLowerCase().includes(ingName.toLowerCase()) ||
+          ingName.toLowerCase().includes(i.name.toLowerCase())
+        )
       );
       if (match) {
         usedIds.add(match.id);
-        matched.push({ invId: match.id, qty: Math.min(1, match.quantity), name: match.name, unit: match.unit });
+        const defaultQty = parsed.qty && parsed.qty > 0
+          ? convertQtyToInventoryUnit(parsed.qty, parsed.unit, match.unit, match.quantity)
+          : 1;
+        matched.push({
+          invId: match.id,
+          qty: Math.min(defaultQty, match.quantity),
+          name: match.name,
+          unit: match.unit
+        });
       }
     });
     setSelectedIngredients(matched);

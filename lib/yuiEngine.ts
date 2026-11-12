@@ -13,6 +13,7 @@ import WeightLog from '@/models/WeightLog';
 import Recipe from '@/models/Recipe';
 import { generateContentWithFallback } from '@/lib/ai';
 import { getExpandedCalendarEvents, formatVnDateTime, formatVnDateOnly, getVnDayOfWeek } from '@/lib/calendarHelper';
+import { convertQtyToInventoryUnit, getCanonicalUnit } from '@/lib/unitHelper';
 
 const EXP_REWARDS: Record<string, number> = {
   S: 1000,
@@ -330,12 +331,14 @@ export function detectFastScopesAndParams(text: string, now: Date = new Date()):
     else if (/\b(mua sam|shopping)\b/.test(nt)) params.finances.category = 'shopping';
   }
 
-  // 5. Bữa ăn & Dinh dưỡng
+  // 5. Bữa ăn & Dinh dưỡng & Hoàn tác bữa ăn / kho
   const isMealAction = /\b(an|uong|bua sang|bua trua|bua toi|bua dem|diem tam|lot da|nhau)\b/.test(nt);
   const isNutrition = /\b(calo|kcal|protein|carb|fat|chat beo|tinh bot|macro|dinh duong)\b/.test(nt);
+  const isUndoOrModify = /\b(hoan lai|hoan tac|undo|xoa bua|huy bua|xoa mon|xoa lich su|sua kho|cap nhat kho|chinh lai kho|tra lai kho|cong lai kho)\b/.test(nt);
 
-  if (isMealAction || isNutrition) {
+  if (isMealAction || isNutrition || isUndoOrModify) {
     scopes.add('meals_nutrition');
+    scopes.add('inventory_recipes');
     if (isFinanceAmount || /\b(tien|k|vnd|d|dong)\b/.test(nt)) {
       scopes.add('finances');
     }
@@ -352,9 +355,10 @@ export function detectFastScopesAndParams(text: string, now: Date = new Date()):
   const isStorage = /\b(tu lanh|kho|nguyen lieu|thuc pham|gia vi|ton kho|het han|bao quan|cat vao tu)\b/.test(nt);
   const isCooking = /\b(cong thuc|nau|che bien|cach lam|huong dan|lam mon|mon gi|nau gi|thuc don|menu)\b/.test(nt);
 
-  if (isStorage || isCooking) {
+  if (isStorage || isCooking || isUndoOrModify) {
     scopes.add('inventory_recipes');
-    params.inventory_recipes = {};
+    scopes.add('meals_nutrition');
+    params.inventory_recipes = params.inventory_recipes || {};
 
     if (/\b(het han|sap het han)\b/.test(nt)) {
       params.inventory_recipes.only_expiring = true;
@@ -433,8 +437,8 @@ export async function buildUserSystemContext(
   const needTasks = isAll || scopes.includes('tasks');
   const needFinances = isAll || scopes.includes('finances');
   const needWallets = needFinances || isAll || scopes.includes('meals_nutrition');
-  const needInventory = isAll || scopes.includes('inventory_recipes');
-  const needMeals = isAll || scopes.includes('meals_nutrition');
+  const needInventory = isAll || scopes.includes('inventory_recipes') || scopes.includes('meals_nutrition');
+  const needMeals = isAll || scopes.includes('meals_nutrition') || scopes.includes('inventory_recipes');
   const needWeight = isAll || scopes.includes('weight_health');
   const needShopping = isAll || scopes.includes('shopping');
 
@@ -506,7 +510,7 @@ export async function buildUserSystemContext(
     needFinances ? Transaction.find({ user_id: userId }).sort({ date: -1 }).limit(3).lean() : Promise.resolve([]),
     needFinances ? Debt.find({ user_id: userId, status: { $ne: 'paid' } }).lean() : Promise.resolve([]),
     needFinances ? Budget.find({ user_id: userId, month: currentMonthStr }).lean() : Promise.resolve([]),
-    needInventory ? Inventory.find({ user_id: userId, quantity: { $gt: 0 } }).sort({ expiryDate: 1 }).limit(25).lean() : Promise.resolve([]),
+    needInventory ? Inventory.find({ user_id: userId }).sort({ quantity: -1, expiryDate: 1 }).limit(30).lean() : Promise.resolve([]),
     needTasks ? Task.find({ user_id: userId, status: { $in: ['PENDING', 'IN_PROGRESS'] } }).sort({ due_date: 1 }).lean() : Promise.resolve([]),
     needTasks ? Task.find({ user_id: userId, status: 'OVERDUE' }).sort({ due_date: 1 }).limit(5).lean() : Promise.resolve([]),
     needCalendar ? getExpandedCalendarEvents(userId, calStart, calEnd) : Promise.resolve([]),
@@ -609,19 +613,35 @@ export async function buildUserSystemContext(
   // Kho đồ tủ lạnh & Công thức nấu ăn
   if (needInventory) {
     const threeDaysLater = new Date(now.getTime() + 3 * 86400000);
-    const expiringInventory = (inventoryItems as any[]).filter(item =>
+    const activeInventory = (inventoryItems as any[]).filter(item => (Number(item.quantity) || 0) > 0);
+    const depletedInventory = (inventoryItems as any[]).filter(item => (Number(item.quantity) || 0) <= 0);
+    const expiringInventory = activeInventory.filter(item =>
       item.expiryDate && new Date(item.expiryDate) <= threeDaysLater
     );
 
     context.kho_do_va_cong_thuc = {
       kho_do_sap_het_han: expiringInventory.slice(0, 5).map(i => ({
+        invId: i._id.toString(),
         ten: i.name,
+        quantity: i.quantity,
+        unit: i.unit,
         so_luong: `${i.quantity} ${i.unit}`,
         han_su_dung: new Date(i.expiryDate).toISOString().split('T')[0]
       })),
-      kho_do_hien_co: (inventoryItems as any[]).slice(0, 15).map(i => ({
+      kho_do_hien_co: activeInventory.slice(0, 20).map(i => ({
+        invId: i._id.toString(),
         ten: i.name,
-        so_luong: `${i.quantity} ${i.unit}`
+        quantity: i.quantity,
+        unit: i.unit,
+        so_luong: `${i.quantity} ${i.unit}`,
+        gia_tri_con_lai: i.totalValue || 0
+      })),
+      kho_do_vua_dung_het: depletedInventory.slice(0, 8).map(i => ({
+        invId: i._id.toString(),
+        ten: i.name,
+        quantity: 0,
+        unit: i.unit,
+        originalQuantity: i.originalQuantity
       })),
       // Danh sách công thức tóm tắt gọn gàng (lược bỏ instructions để tiết kiệm token)
       cong_thuc_nau_an_da_luu: (recipes as any[]).map(r => ({
@@ -741,10 +761,21 @@ export async function buildUserSystemContext(
       tong_calo: totalCalories,
       macro: { protein_g: totalProtein, fat_g: totalFat, carbs_g: totalCarbs },
       cac_bua_an: (targetedMeals as any[]).map(m => ({
+        id: m._id.toString(),
         mon: m.food_name,
         loai_bua: m.meal_tier,
+        source: m.source || 'eat_out',
         calo: m.calo,
         gia_tien: m.cost || 0,
+        ingredients_used: Array.isArray(m.ingredients_used)
+          ? m.ingredients_used.map((ing: any) => ({
+              invId: ing.invId ? String(ing.invId) : undefined,
+              name: ing.name,
+              qty: ing.qty,
+              unit: ing.unit,
+              cost: ing.cost
+            }))
+          : [],
         thoi_gian: new Date(m.consumed_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
       })),
       can_nang_gan_nhat_kg: (latestWeight as any)?.weight || null
@@ -954,6 +985,23 @@ QUY TẮC ĐÁNH GIÁ DINH DƯỠNG & CALO (CHUẨN CHUYÊN GIA DINH DƯỠNG):
 - BẮT BUỘC cung cấp trường "ai_description" cho mỗi action meal:
   Mô tả chi tiết nguyên liệu, thành phần và ƯỚC TÍNH ĐỊNH LƯỢNG cụ thể của khẩu phần ăn (vd: "1 ổ bánh mì kẹp (~120g) gồm 75g bánh mì, 35g thịt nguội/chả, 15g pate, dưa leo, ngò và sốt bơ trứng. Cung cấp khoảng 420 kcal giàu protein và carb, nạp năng lượng nhanh cho cơ thể.", khoảng 2-3 câu). Tuyệt đối không để trống hoặc chỉ ghi chung chung!
 
+QUY TẮC NẤU ĂN TỪ KHO ĐỒ, ĐỒNG BỘ ĐƠN VỊ & HOÀN TÁC (CỰC KỲ QUAN TRỌNG):
+1. CHỐNG TRỪ KHO 2 LẦN KHI NẤU ĂN / ĂN ĐỒ TRONG KHO:
+   - Khi Papa nấu ăn hoặc ăn nguyên liệu lấy từ kho dự trữ ("kho_do_hien_co"), bản thân hành động "meal" (với "source": "home" và mảng "ingredients_used") ĐÃ TỰ ĐỘNG TRỪ KHO RỒI!
+   - Do đó, bạn CHỈ ĐƯỢC TẠO DUY NHẤT 1 hành động { "actionType": "meal", "source": "home", "ingredients_used": [...], ... }.
+   - TUYỆT ĐỐI KHÔNG tạo thêm bất kỳ hành động trừ kho riêng lẻ nào ("update_inventory", "create_inventory" số âm...) đi kèm với "meal", nếu không kho sẽ bị trừ gấp đôi!
+2. BẮT BUỘC GIỮ ĐÚNG ĐƠN VỊ GỐC ("unit") CỦA KHO ĐỒ:
+   - Kiểm tra trường "unit" và "invId" của nguyên liệu trong "kho_do_hien_co" (ví dụ: Ức gà đang có "unit": "g", "quantity": 450).
+   - Trong "ingredients_used": [{ "invId": "<invId>", "name": "<tên nguyên liệu>", "qty": <số lượng>, "unit": "<unit của kho>" }], BẮT BUỘC phải quy đổi "qty" về ĐÚNG "unit" gốc của món đồ trong kho!
+   - Ví dụ: Kho lưu Ức gà có "unit": "g" (450 g), Papa ăn 150g hoặc 0.15kg -> BẮT BUỘC ghi "qty": 150, "unit": "g" (TUYỆT ĐỐI KHÔNG đổi thành "qty": 0.15, "unit": "kg"). Ngược lại nếu kho lưu "unit": "kg", ăn 150g mới ghi "qty": 0.15, "unit": "kg".
+3. HOÀN TÁC / XOÁ BỮA ĂN & ĐIỀU CHỈNH KHO ("delete_meal" & "update_inventory"):
+   - Khi Papa yêu cầu hoàn lại / hoàn tác thao tác ăn uống hoặc xoá bữa ăn vừa tạo:
+     * Sử dụng { "actionType": "delete_meal", "meal_id": "<id bữa ăn trong cac_bua_an>", "food_name": "<tên món>" }.
+     * Hành động "delete_meal" ĐÃ TỰ ĐỘNG xoá lịch sử bữa ăn VÀ hoàn trả lại đúng số lượng nguyên liệu trong "ingredients_used" về kho (hoặc hoàn tiền về ví). KHÔNG tạo thêm action cộng kho trùng lặp cho phần nguyên liệu đã nằm trong bữa ăn đó.
+   - Khi Papa yêu cầu sửa/cập nhật trực tiếp số lượng nguyên liệu đã có trong kho (hoặc khôi phục phần nguyên liệu bị trừ ngoài bữa ăn):
+     * Sử dụng { "actionType": "update_inventory", "invId": "<invId>", "name": "<tên nguyên liệu>", "mode": "set"|"add"|"subtract", "quantity": <số lượng theo đúng unit của kho>, "unit": "<unit của kho>" }.
+     * TUYỆT ĐỐI KHÔNG dùng "create_inventory" cho nguyên liệu đã có trong kho để tránh tạo bản ghi trùng lặp.
+
 QUY TẮC VỀ LỊCH TRÌNH VÀ THỨ TRONG TUẦN (CALENDAR & WEEKDAY ACCURACY):
 - Trong dữ liệu "lich_trinh" đã có sẵn trường "thu_va_ngay" (Ví dụ: "Thứ Tư, ngày 14/10/2026", "Chủ Nhật, ngày 18/10/2026") được hệ thống tính toán chính xác tuyệt đối theo lịch thiên văn.
 - Thời gian hiện tại của hệ thống: ${nowStr}.
@@ -983,29 +1031,33 @@ NHIỆM VỤ CỦA BẠN:
    - Khi Papa muốn ghi data mới vào hệ thống (Yui sẽ lên kế hoạch để Papa BẤM XÁC NHẬN trên giao diện trước khi ghi thật vào DB):
    - Phân tích và bóc tách thành danh sách các hành động trong "actions".
    - Các actionType hợp lệ:
-     a) "meal": Món ăn/uống Papa tự nạp (VD: "vừa ăn phở bò 45k trả bằng Momo", "uống cốc sinh tố bơ").
-        - Fields: { actionType: "meal", food_name: string (ĐÃ LỌC BỎ từ chỉ thời gian), meal_tier: "HEAVY"|"LIGHT"|"DRINK", calo: number, protein: number, fat: number, carbs: number, sugar: number, amount: number (0 nếu miễn phí/tự nấu), wallet_id: string, walletName: string, description: string, ai_description: string, custom_time: ISO 8601 string }
-     b) "expense": Chi tiêu thông thường không phải ăn uống tự ăn (VD: "mua xăng 50k bằng tiền mặt", "trả tiền điện 300k").
+     a) "meal": Món ăn/uống Papa tự nạp (VD: "vừa ăn phở bò 45k trả bằng Momo", "nấu 150g ức gà trong kho").
+        - Fields: { actionType: "meal", food_name: string (ĐÃ LỌC BỎ từ chỉ thời gian), meal_tier: "HEAVY"|"LIGHT"|"DRINK", source: "home"|"eat_out" ("home" nếu tự nấu/lấy từ kho, "eat_out" nếu mua ăn ngoài), ingredients_used: [{ invId: string, name: string, qty: number (ĐÚNG ĐƠN VỊ GỐC CỦA KHO), unit: string }], calo: number, protein: number, fat: number, carbs: number, sugar: number, amount: number (0 nếu tự nấu từ kho/miễn phí), wallet_id: string, walletName: string, description: string, ai_description: string, custom_time: ISO 8601 string }
+     b) "delete_meal": Hoàn tác / Xoá lịch sử bữa ăn và tự động hoàn trả nguyên liệu về kho hoặc hoàn tiền về ví (VD: "hoàn lại bữa ăn vừa rồi", "xoá món ức gà vừa ăn").
+        - Fields: { actionType: "delete_meal", meal_id: string (id trong cac_bua_an), food_name: string }
+     c) "update_inventory": Cập nhật / Điều chỉnh / Khôi phục số lượng nguyên liệu ĐÃ CÓ trong kho (VD: "chỉnh lại ức gà trong kho thành 450g", "cộng thêm 150g ức gà vào kho").
+        - Fields: { actionType: "update_inventory", invId: string, name: string, mode: "set"|"add"|"subtract", quantity: number (ĐÚNG ĐƠN VỊ GỐC CỦA KHO), unit: string }
+     d) "expense": Chi tiêu thông thường không phải ăn uống tự ăn (VD: "mua xăng 50k bằng tiền mặt", "trả tiền điện 300k").
         - Fields: { actionType: "expense", amount: number, category: "housing"|"transport"|"entertainment"|"shopping"|"health"|"other", description: string (ĐÃ LỌC BỎ từ chỉ thời gian), wallet_id: string, walletName: string, custom_time: ISO 8601 string }
-     c) "income": Tiền thu vào (VD: "nhận lương 15tr vào MB", "được thưởng 500k").
+     e) "income": Tiền thu vào (VD: "nhận lương 15tr vào MB", "được thưởng 500k").
         - Fields: { actionType: "income", amount: number, category: "salary"|"bonus"|"investment"|"gift"|"other", description: string, wallet_id: string, walletName: string, custom_time: ISO 8601 string }
-     d) "debt_lent": Cho vay / Trả tiền hộ ai đó (VD: "trả hộ anh Nam 50k tiền ăn trưa").
+     f) "debt_lent": Cho vay / Trả tiền hộ ai đó (VD: "trả hộ anh Nam 50k tiền ăn trưa").
         - Fields: { actionType: "debt_lent", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: ISO 8601 string }
-     e) "debt_borrowed": Đi vay tiền ai đó (VD: "vay bạn Hùng 200k").
+     g) "debt_borrowed": Đi vay tiền ai đó (VD: "vay bạn Hùng 200k").
         - Fields: { actionType: "debt_borrowed", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: ISO 8601 string }
-     f) "create_task": Tạo Quest/Nhiệm vụ mới (VD: "tạo quest rank B nộp báo cáo trước 17h chiều mai").
+     h) "create_task": Tạo Quest/Nhiệm vụ mới (VD: "tạo quest rank B nộp báo cáo trước 17h chiều mai").
         - Fields: { actionType: "create_task", title: string, description: string, quest_rank: "S"|"A"|"B"|"C"|"D", due_date: ISO 8601 string (tính dựa vào thời gian hiện tại) }
-     g) "complete_task": Hoàn thành Quest đã có (VD: "đã xong quest dọn dẹp phòng").
+     i) "complete_task": Hoàn thành Quest đã có (VD: "đã xong quest dọn dẹp phòng").
         - Fields: { actionType: "complete_task", task_id: string (so khớp với id trong danh sách quest active), title: string }
-     h) "create_calendar_event": Thêm sự kiện lịch trình (VD: "thêm lịch họp với sếp 14h chiều nay").
+     j) "create_calendar_event": Thêm sự kiện lịch trình (VD: "thêm lịch họp với sếp 14h chiều nay").
         - Fields: { actionType: "create_calendar_event", title: string, description: string, start_time: ISO 8601 string, end_time: ISO 8601 string, color_code: "#00f0ff"|"#ffaa00"|"#ff4444"|"#b900ff" }
-     i) "create_shopping_item": Thêm món cần mua vào danh sách shopping (VD: "thêm 2 hộp sữa tươi và 1 chai dầu ăn vào danh sách mua sắm").
+     k) "create_shopping_item": Thêm món cần mua vào danh sách shopping (VD: "thêm 2 hộp sữa tươi và 1 chai dầu ăn vào danh sách mua sắm").
         - Fields: { actionType: "create_shopping_item", name: string, quantity: number, unit: string, category: "food"|"household"|"other" }
-     j) "create_inventory": Thêm đồ vào kho đồ / tủ lạnh (VD: "vừa mua 5 gói mì Hảo Hảo cất vào tủ").
+     l) "create_inventory": Thêm đồ MỚI MUA vào kho đồ / tủ lạnh (VD: "vừa mua 5 gói mì Hảo Hảo cất vào tủ"). TUYỆT ĐỐI KHÔNG dùng để trừ kho khi nấu ăn hoặc hoàn kho món cũ.
         - Fields: { actionType: "create_inventory", name: string, quantity: number, unit: string, category: string, expiryDate: ISO 8601 string (nếu có đề cập hạn dùng) }
-     k) "record_weight": Ghi nhận / Cập nhật cân nặng và chiều cao (VD: "cập nhật cân nặng hôm nay là 47kg", "cân nặng 52kg", "hôm nay nặng 48kg").
+     m) "record_weight": Ghi nhận / Cập nhật cân nặng và chiều cao (VD: "cập nhật cân nặng hôm nay là 47kg", "cân nặng 52kg", "hôm nay nặng 48kg").
         - Fields: { actionType: "record_weight", weight: number (số kg, vd: 47), height: number (chiều cao cm nếu có nhắc đến), custom_time: ISO 8601 string, description: "Cập nhật cân nặng" }
-     l) "create_recipe": Tạo hoặc lưu công thức nấu ăn mới vào Sổ tay Thực đơn của Papa (VD: "tạo công thức nấu ăn sườn xào chua ngọt phiên bản với cà chua", "lưu công thức canh kim chi").
+     n) "create_recipe": Tạo hoặc lưu công thức nấu ăn mới vào Sổ tay Thực đơn của Papa (VD: "tạo công thức nấu ăn sườn xào chua ngọt phiên bản với cà chua", "lưu công thức canh kim chi").
         - Fields: { actionType: "create_recipe", name: string, ingredients: string[], instructions: string }
 
 YÊU CẦU TRẢ VỀ:
@@ -1017,18 +1069,265 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ không bọc thêm bất k�
 }`;
 
   const aiRaw = await generateContentWithFallback(prompt, undefined, true, 10000);
-  return extractJsonFromAiResponse(aiRaw);
+  const parsedPlan = extractJsonFromAiResponse(aiRaw);
+  if (parsedPlan && Array.isArray(parsedPlan.actions) && parsedPlan.actions.length > 0) {
+    parsedPlan.actions = await sanitizeYuiPlanActions(userId, parsedPlan.actions);
+  }
+  return parsedPlan;
+}
+
+/**
+ * Chuẩn hóa tên nguyên liệu để so khớp chính xác với kho đồ
+ */
+function normalizeIngredientMatchName(raw: string): string {
+  if (!raw) return '';
+  return normalizeVietnamese(cleanTemporalWords(raw))
+    .replace(/\b(tru kho|hoan kho|khoi phuc|nguyen lieu|cap nhat|chinh lai|sua kho|trong kho|tu lanh)\b/g, '')
+    .replace(/[:\-–—()]/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
+ * Bộ lọc bảo vệ chống trừ kho 2 lần, tự động quy đổi đơn vị (g <-> kg, ml <-> l) về đúng đơn vị gốc của Kho,
+ * và chuẩn hóa thao tác hoàn tác (delete_meal / update_inventory).
+ */
+export async function sanitizeYuiPlanActions(userId: string, rawActions: any[]): Promise<any[]> {
+  if (!Array.isArray(rawActions) || rawActions.length === 0) return [];
+
+  const allInv = await Inventory.find({ user_id: userId }).lean();
+
+  const findInvItem = (invId?: string, name?: string) => {
+    if (invId) {
+      const byId = (allInv as any[]).find(i => String(i._id) === String(invId));
+      if (byId) return byId;
+    }
+    const normTarget = normalizeIngredientMatchName(name || '');
+    if (!normTarget) return null;
+
+    // Ưu tiên khớp chính xác tên chuẩn hóa và còn tồn kho
+    const exactActive = (allInv as any[]).find(
+      i => (Number(i.quantity) || 0) > 0 && normalizeIngredientMatchName(i.name) === normTarget
+    );
+    if (exactActive) return exactActive;
+
+    const exactAny = (allInv as any[]).find(
+      i => normalizeIngredientMatchName(i.name) === normTarget
+    );
+    if (exactAny) return exactAny;
+
+    // Khớp bao hàm (substring)
+    const subActive = (allInv as any[]).find(i => {
+      const ni = normalizeIngredientMatchName(i.name);
+      return (Number(i.quantity) || 0) > 0 && ni && (ni.includes(normTarget) || normTarget.includes(ni));
+    });
+    if (subActive) return subActive;
+
+    return (allInv as any[]).find(i => {
+      const ni = normalizeIngredientMatchName(i.name);
+      return ni && (ni.includes(normTarget) || normTarget.includes(ni));
+    }) || null;
+  };
+
+  const actions = rawActions.map(a => ({ ...a }));
+  const mealActions = actions.filter(a => a.actionType === 'meal');
+  const deleteMealActions = actions.filter(a => a.actionType === 'delete_meal');
+
+  const indicesToRemove = new Set<number>();
+
+  // 1. Nếu có hành động MEAL: Gom mọi hành động trừ kho rời rạc vào meal.ingredients_used để CHỐNG TRỪ KHO 2 LẦN
+  if (mealActions.length > 0) {
+    const primaryMeal = mealActions[0];
+    if (!Array.isArray(primaryMeal.ingredients_used)) {
+      primaryMeal.ingredients_used = [];
+    }
+
+    actions.forEach((act, idx) => {
+      if (act === primaryMeal) return;
+      const t = String(act.actionType || '').toLowerCase();
+
+      const isExplicitDeductType = [
+        'deduct_inventory',
+        'consume_inventory',
+        'remove_inventory',
+        'use_inventory',
+        'subtract_inventory'
+      ].includes(t);
+
+      const isUpdateSubtract =
+        t === 'update_inventory' &&
+        (act.mode === 'subtract' || Number(act.quantity) < 0 || /\b(tru|giam|nau|an|dung)\b/.test(normalizeVietnamese(act.description || act.name || '')));
+
+      const isCreateInventoryInMealTurn =
+        t === 'create_inventory' &&
+        (Number(act.quantity) < 0 ||
+          /\b(tru|giam|nau|an|dung)\b/.test(normalizeVietnamese(act.description || act.name || '')) ||
+          !!findInvItem(act.invId, act.name));
+
+      if (isExplicitDeductType || isUpdateSubtract || isCreateInventoryInMealTurn) {
+        const rawQty = Math.abs(Number(act.quantity ?? act.qty) || 0);
+        if (rawQty > 0) {
+          primaryMeal.ingredients_used.push({
+            invId: act.invId,
+            name: act.name || act.food_name || act.description,
+            qty: rawQty,
+            unit: act.unit
+          });
+        }
+        indicesToRemove.add(idx);
+      }
+    });
+
+    // Chuẩn hóa & chống trùng lặp danh sách ingredients_used của từng meal
+    for (const meal of mealActions) {
+      if (Array.isArray(meal.ingredients_used) && meal.ingredients_used.length > 0) {
+        const dedupMap = new Map<string, any>();
+        for (const rawIng of meal.ingredients_used) {
+          const matchedInv = findInvItem(rawIng.invId, rawIng.name);
+          const rawQty = Math.abs(Number(rawIng.qty ?? rawIng.quantity) || 0);
+          if (rawQty <= 0) continue;
+
+          if (matchedInv) {
+            const key = String(matchedInv._id);
+            const convertedQty = convertQtyToInventoryUnit(
+              rawQty,
+              rawIng.unit,
+              matchedInv.unit,
+              Number(matchedInv.quantity) || undefined
+            );
+            // Nếu AI lỡ liệt kê trùng cùng 1 nguyên liệu 2 lần trong mảng, giữ nguyên số lượng hợp lý thay vì cộng dồn gấp đôi
+            if (!dedupMap.has(key)) {
+              dedupMap.set(key, {
+                invId: key,
+                name: matchedInv.name,
+                qty: convertedQty,
+                unit: matchedInv.unit
+              });
+            }
+          } else {
+            const cleanIngName = capitalizeFirst(cleanTemporalWords(rawIng.name || 'Nguyên liệu'));
+            const key = normalizeIngredientMatchName(cleanIngName);
+            if (key && !dedupMap.has(key)) {
+              dedupMap.set(key, {
+                invId: rawIng.invId,
+                name: cleanIngName,
+                qty: rawQty,
+                unit: rawIng.unit || 'phần'
+              });
+            }
+          }
+        }
+        meal.ingredients_used = Array.from(dedupMap.values());
+        if (meal.ingredients_used.length > 0) {
+          meal.source = 'home';
+        }
+      }
+    }
+  }
+
+  // 2. Xử lý DELETE_MEAL & UPDATE_INVENTORY / CREATE_INVENTORY khi hoàn tác
+  if (deleteMealActions.length > 0) {
+    for (const delAct of deleteMealActions) {
+      let targetMeal: any = null;
+      if (delAct.meal_id) {
+        targetMeal = await MealLog.findOne({ _id: delAct.meal_id, user_id: userId }).lean().catch(() => null);
+      }
+      if (!targetMeal && delAct.food_name) {
+        const cleanName = cleanTemporalWords(delAct.food_name);
+        targetMeal = await MealLog.findOne({
+          user_id: userId,
+          food_name: new RegExp(cleanName || delAct.food_name.trim(), 'i')
+        }).sort({ consumed_at: -1 }).lean();
+      }
+      if (!targetMeal) {
+        targetMeal = await MealLog.findOne({ user_id: userId }).sort({ consumed_at: -1 }).lean();
+      }
+      if (targetMeal) {
+        delAct.meal_id = String(targetMeal._id);
+        delAct.food_name = targetMeal.food_name;
+        delAct.restored_ingredients = (targetMeal.ingredients_used || []).map((ing: any) => {
+          const matchedInv = findInvItem(ing.invId, ing.name);
+          const rawQty = Number(ing.qty) || 0;
+          const nativeUnit = matchedInv ? matchedInv.unit : (ing.unit || '');
+          const displayQty = matchedInv
+            ? convertQtyToInventoryUnit(rawQty, ing.unit, matchedInv.unit, Number(matchedInv.originalQuantity || matchedInv.quantity) || undefined)
+            : rawQty;
+          return {
+            invId: matchedInv ? String(matchedInv._id) : ing.invId,
+            name: matchedInv ? matchedInv.name : ing.name,
+            qty: displayQty,
+            unit: nativeUnit
+          };
+        });
+      }
+    }
+  }
+
+  // 3. Chuẩn hóa các action update_inventory / create_inventory còn lại
+  actions.forEach((act, idx) => {
+    if (indicesToRemove.has(idx)) return;
+
+    // Nếu AI gọi create_inventory cho nguyên liệu ĐÃ CÓ SẴN trong kho khi đang hoàn tác/chỉnh kho -> chuyển thành update_inventory
+    if (act.actionType === 'create_inventory') {
+      const existingInv = findInvItem(act.invId, act.name);
+      const isRestoreContext = deleteMealActions.length > 0 || /\b(hoan|tra|khoi phuc|cong|them lai|chinh)\b/.test(normalizeVietnamese(act.description || act.name || ''));
+      if (existingInv && isRestoreContext) {
+        act.actionType = 'update_inventory';
+        act.invId = String(existingInv._id);
+        act.name = existingInv.name;
+        act.mode = act.mode || 'add';
+      }
+    }
+
+    if (act.actionType === 'update_inventory') {
+      const matchedInv = findInvItem(act.invId, act.name);
+      if (matchedInv) {
+        act.invId = String(matchedInv._id);
+        act.name = matchedInv.name;
+        const rawQty = Math.abs(Number(act.quantity ?? act.qty) || 0);
+        act.quantity = convertQtyToInventoryUnit(
+          rawQty,
+          act.unit,
+          matchedInv.unit,
+          Number(matchedInv.originalQuantity || matchedInv.quantity) || undefined
+        );
+        act.unit = matchedInv.unit;
+        if (!['set', 'add', 'subtract'].includes(act.mode)) {
+          act.mode = Number(act.quantity) < 0 ? 'subtract' : 'add';
+        }
+
+        // Nếu trong cùng lượt đã có delete_meal tự động hoàn lại đúng nguyên liệu này, kiểm tra tránh cộng 2 lần
+        if (deleteMealActions.length > 0 && act.mode === 'add') {
+          const alreadyRestoredByMeal = deleteMealActions.some(d =>
+            Array.isArray(d.restored_ingredients) &&
+            d.restored_ingredients.some((ri: any) => String(ri.invId) === String(matchedInv._id))
+          );
+          if (alreadyRestoredByMeal) {
+            const curQty = Number(matchedInv.quantity) || 0;
+            const origQty = Number(matchedInv.originalQuantity) || 0;
+            // Nếu curQty + act.quantity <= origQty (tức chỉ bị trừ 1 lần từ bữa ăn), bỏ action cộng thừa
+            if (origQty > 0 && curQty + act.quantity <= origQty + 0.001) {
+              indicesToRemove.add(idx);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  return actions.filter((_, idx) => !indicesToRemove.has(idx));
 }
 
 /**
  * Thực thi các hành động đã được người dùng xác nhận trên giao diện.
  */
-export async function executeYuiActions(userId: string, actions: any[]) {
+export async function executeYuiActions(userId: string, rawActions: any[]) {
   await dbConnect();
-  if (!actions || !Array.isArray(actions) || actions.length === 0) {
+  if (!rawActions || !Array.isArray(rawActions) || rawActions.length === 0) {
     throw new Error('Danh sách hành động không hợp lệ');
   }
 
+  const actions = await sanitizeYuiPlanActions(userId, rawActions);
   const executedResults: any[] = [];
   const now = new Date();
 
@@ -1044,26 +1343,74 @@ export async function executeYuiActions(userId: string, actions: any[]) {
       }
     }
 
-    // 1. MEAL
+    // 1. MEAL (Hỗ trợ cả tự nấu trừ kho "home" và ăn ngoài "eat_out")
     if (actionType === 'meal') {
-      const amount = Number(action.amount) || 0;
+      const hasIngredients = Array.isArray(action.ingredients_used) && action.ingredients_used.length > 0;
+      const isHomeMeal = action.source === 'home' || hasIngredients;
+      let calculatedCost = Number(action.amount) || 0;
       let txId: any = undefined;
+      const processedIngredientsUsed: any[] = [];
 
       // Chuẩn hóa tên món và mô tả (loại bỏ từ outdate)
       const rawFoodName = action.food_name || action.description || 'Món ăn';
       const cleanFoodName = capitalizeFirst(cleanTemporalWords(rawFoodName)) || 'Bữa ăn';
 
-      if (amount > 0) {
+      if (isHomeMeal && hasIngredients) {
+        let homeIngredientsCost = 0;
+        for (const ing of action.ingredients_used) {
+          let item = ing.invId ? await Inventory.findOne({ _id: ing.invId, user_id: userId }) : null;
+          if (!item && ing.name) {
+            const normTarget = normalizeIngredientMatchName(ing.name);
+            const userInv = await Inventory.find({ user_id: userId });
+            item = userInv.find(i => (Number(i.quantity) || 0) > 0 && normalizeIngredientMatchName(i.name) === normTarget)
+              || userInv.find(i => normalizeIngredientMatchName(i.name) === normTarget)
+              || null;
+          }
+          if (item) {
+            const oldQty = Number(item.quantity) || 0;
+            const oldVal = Number(item.totalValue) || 0;
+            const requestedQty = convertQtyToInventoryUnit(
+              Math.max(0, Number(ing.qty ?? ing.quantity) || 0),
+              ing.unit,
+              item.unit,
+              oldQty > 0 ? oldQty : (Number(item.originalQuantity) || undefined)
+            );
+            const actualDeducted = Math.min(oldQty, requestedQty);
+
+            let ingCost = 0;
+            if (oldQty > 0 && actualDeducted > 0) {
+              const ratio = actualDeducted / oldQty;
+              ingCost = Math.round(oldVal * ratio);
+              homeIngredientsCost += ingCost;
+
+              item.quantity = Math.max(0, Number((oldQty - actualDeducted).toFixed(4)));
+              item.totalValue = Math.max(0, Math.round(oldVal - ingCost));
+              await item.save();
+            }
+
+            processedIngredientsUsed.push({
+              invId: item._id,
+              name: item.name,
+              qty: actualDeducted > 0 ? actualDeducted : requestedQty,
+              unit: item.unit,
+              cost: ingCost
+            });
+          }
+        }
+        if (calculatedCost <= 0) {
+          calculatedCost = homeIngredientsCost;
+        }
+      } else if (calculatedCost > 0) {
         if (action.wallet_id) {
           await Wallet.findOneAndUpdate(
             { _id: action.wallet_id, user_id: userId },
-            { $inc: { balance: -amount } }
+            { $inc: { balance: -calculatedCost } }
           );
         }
         const tx = await Transaction.create({
           user_id: userId,
           type: 'expense',
-          amount,
+          amount: calculatedCost,
           date: actionDate,
           description: `Ăn uống: ${cleanFoodName}`,
           category: 'food',
@@ -1077,8 +1424,10 @@ export async function executeYuiActions(userId: string, actions: any[]) {
       const hp = Math.floor(calo * 1.0); // 1 calo = 1 HP
       const tier = ['HEAVY', 'LIGHT', 'DRINK'].includes(action.meal_tier) ? action.meal_tier : 'LIGHT';
 
-      // Mô tả dinh dưỡng chuyên sâu từ AI, không còn hardcode "Ghi nhận bởi Yui"
-      const aiDesc = action.ai_description?.trim() || `Khẩu phần tiêu chuẩn: ${cleanFoodName}. Ước tính cung cấp khoảng ${calo} kcal.`;
+      const ingSummaryText = processedIngredientsUsed.length > 0
+        ? processedIngredientsUsed.map(i => `${i.qty} ${i.unit} ${i.name}`).join(', ')
+        : '';
+      const aiDesc = action.ai_description?.trim() || `Khẩu phần tiêu chuẩn: ${cleanFoodName}${ingSummaryText ? ` (${ingSummaryText})` : ''}. Ước tính cung cấp khoảng ${calo} kcal.`;
 
       const meal = await MealLog.create({
         user_id: userId,
@@ -1091,12 +1440,14 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         fat: Number(action.fat) || 0,
         carbs: Number(action.carbs) || 0,
         sugar: Number(action.sugar) || 0,
-        cost: amount,
+        cost: calculatedCost,
         ai_status: 'completed',
         ai_description: aiDesc,
-        source: 'eat_out',
+        ingredients_text: ingSummaryText,
+        source: isHomeMeal ? 'home' : 'eat_out',
+        ingredients_used: processedIngredientsUsed,
         transaction_id: txId,
-        wallet_id: amount > 0 ? action.wallet_id : undefined
+        wallet_id: !isHomeMeal && calculatedCost > 0 ? action.wallet_id : undefined
       });
 
       const user = await User.findById(userId);
@@ -1109,10 +1460,175 @@ export async function executeYuiActions(userId: string, actions: any[]) {
         type: 'meal',
         id: meal._id,
         food_name: meal.food_name,
-        amount,
+        source: meal.source,
+        amount: calculatedCost,
         hp,
+        ingredients_used: processedIngredientsUsed,
         walletName: action.walletName
       });
+      continue;
+    }
+
+    // 1B. DELETE MEAL (Hoàn tác bữa ăn: xoá lịch sử ăn + hoàn lại nguyên liệu về kho hoặc hoàn tiền về ví)
+    if (actionType === 'delete_meal') {
+      let meal: any = null;
+      if (action.meal_id) {
+        meal = await MealLog.findOne({ _id: action.meal_id, user_id: userId }).catch(() => null);
+      }
+      if (!meal && action.food_name) {
+        const cleanName = cleanTemporalWords(action.food_name);
+        meal = await MealLog.findOne({
+          user_id: userId,
+          food_name: new RegExp(cleanName || action.food_name.trim(), 'i')
+        }).sort({ consumed_at: -1 });
+      }
+      if (!meal) {
+        meal = await MealLog.findOne({ user_id: userId }).sort({ consumed_at: -1 });
+      }
+
+      if (meal) {
+        const restoredItems: any[] = [];
+        if (meal.source === 'eat_out' && meal.transaction_id) {
+          const oldTx = await Transaction.findById(meal.transaction_id);
+          if (oldTx) {
+            if (oldTx.wallet_id) {
+              await Wallet.findOneAndUpdate(
+                { _id: oldTx.wallet_id, user_id: userId },
+                { $inc: { balance: oldTx.amount } }
+              );
+            }
+            await Transaction.findByIdAndDelete(oldTx._id);
+          }
+        } else if (meal.source === 'home' && Array.isArray(meal.ingredients_used)) {
+          for (const ing of meal.ingredients_used) {
+            let item = ing.invId ? await Inventory.findOne({ _id: ing.invId, user_id: userId }) : null;
+            if (!item && ing.name) {
+              const normTarget = normalizeIngredientMatchName(ing.name);
+              const userInv = await Inventory.find({ user_id: userId });
+              item = userInv.find(i => normalizeIngredientMatchName(i.name) === normTarget) || null;
+            }
+            if (item) {
+              const rawQty = Math.max(0, Number(ing.qty) || 0);
+              const convertedQty = convertQtyToInventoryUnit(
+                rawQty,
+                ing.unit,
+                item.unit,
+                Number(item.originalQuantity || item.quantity) || undefined
+              );
+              const curQty = Number(item.quantity) || 0;
+              const origQty = Number(item.originalQuantity) || 0;
+
+              let restoreQty = convertedQty;
+              // Phát hiện nếu bữa ăn cũ bị lỗi trừ số thập phân (vd: 300 - 0.15 = 299.85 g) kèm 1 lần trừ 150g trước đó
+              if (rawQty > 0 && rawQty !== convertedQty && curQty % 1 !== 0 && Math.abs((curQty + rawQty) % 1) < 0.001) {
+                const hasSeparateRestoreInBatch = actions.some(
+                  a => a.actionType === 'update_inventory' && String(a.invId) === String(item._id)
+                );
+                if (!hasSeparateRestoreInBatch && origQty > 0 && curQty + rawQty + convertedQty <= origQty + 0.001) {
+                  restoreQty = Number((rawQty + convertedQty).toFixed(4));
+                } else {
+                  restoreQty = rawQty;
+                }
+              }
+
+              let restoreVal = Math.max(0, Number(ing.cost) || 0);
+              if (restoreVal <= 0 && curQty > 0 && (Number(item.totalValue) || 0) > 0) {
+                restoreVal = Math.round(((Number(item.totalValue) || 0) / curQty) * restoreQty);
+              }
+
+              item.quantity = Number((curQty + restoreQty).toFixed(4));
+              item.totalValue = Math.round((Number(item.totalValue) || 0) + restoreVal);
+              if (origQty > 0 && item.quantity > origQty) {
+                item.originalQuantity = item.quantity;
+              }
+              await item.save();
+
+              restoredItems.push({
+                invId: item._id,
+                name: item.name,
+                qty: restoreQty,
+                unit: item.unit
+              });
+            }
+          }
+        }
+
+        const hpToRevert = Number(meal.hp_restored) || 0;
+        if (hpToRevert > 0) {
+          const user = await User.findById(userId);
+          if (user) {
+            user.current_hp = Math.max(0, user.current_hp - hpToRevert);
+            await user.save();
+          }
+        }
+
+        const deletedFoodName = meal.food_name;
+        const deletedId = meal._id;
+        await MealLog.findByIdAndDelete(meal._id);
+
+        executedResults.push({
+          type: 'delete_meal',
+          id: deletedId,
+          food_name: deletedFoodName,
+          restored_ingredients: restoredItems
+        });
+      }
+      continue;
+    }
+
+    // 1C. UPDATE INVENTORY (Cập nhật / Khôi phục / Chỉnh sửa số lượng tồn kho của nguyên liệu đã có)
+    if (actionType === 'update_inventory') {
+      let item = action.invId ? await Inventory.findOne({ _id: action.invId, user_id: userId }) : null;
+      if (!item && action.name) {
+        const normTarget = normalizeIngredientMatchName(action.name);
+        const userInv = await Inventory.find({ user_id: userId });
+        item = userInv.find(i => normalizeIngredientMatchName(i.name) === normTarget)
+          || userInv.find(i => {
+            const ni = normalizeIngredientMatchName(i.name);
+            return ni && (ni.includes(normTarget) || normTarget.includes(ni));
+          })
+          || null;
+      }
+
+      if (item) {
+        const curQty = Number(item.quantity) || 0;
+        const curVal = Number(item.totalValue) || 0;
+        const origQty = Number(item.originalQuantity) || curQty;
+        const convertedQty = convertQtyToInventoryUnit(
+          Math.abs(Number(action.quantity ?? action.qty) || 0),
+          action.unit,
+          item.unit,
+          origQty > 0 ? origQty : undefined
+        );
+
+        const mode = ['set', 'add', 'subtract'].includes(action.mode) ? action.mode : 'add';
+        let newQty = curQty;
+        if (mode === 'set') {
+          newQty = Math.max(0, Number(convertedQty.toFixed(4)));
+        } else if (mode === 'subtract') {
+          newQty = Math.max(0, Number((curQty - convertedQty).toFixed(4)));
+        } else {
+          newQty = Math.max(0, Number((curQty + convertedQty).toFixed(4)));
+        }
+
+        if (curQty > 0 && curVal > 0) {
+          item.totalValue = Math.max(0, Math.round((curVal / curQty) * newQty));
+        }
+        item.quantity = newQty;
+        if (newQty > (Number(item.originalQuantity) || 0)) {
+          item.originalQuantity = newQty;
+        }
+        await item.save();
+
+        executedResults.push({
+          type: 'update_inventory',
+          id: item._id,
+          name: item.name,
+          mode,
+          quantity: item.quantity,
+          unit: item.unit
+        });
+      }
       continue;
     }
 
@@ -1423,7 +1939,8 @@ export async function executeYuiActions(userId: string, actions: any[]) {
     if (actionType === 'create_inventory') {
       const rawName = action.name?.trim() || 'Vật phẩm';
       const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Vật phẩm';
-      const quantity = Math.max(1, Number(action.quantity) || 1);
+      const parsedQty = Number(action.quantity);
+      const quantity = parsedQty > 0 ? Number(parsedQty.toFixed(4)) : 1;
       const unit = action.unit?.trim() || 'món';
       const category = action.category?.trim() || 'food';
       const expiryDate = action.expiryDate ? new Date(action.expiryDate) : undefined;

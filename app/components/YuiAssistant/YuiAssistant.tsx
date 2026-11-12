@@ -163,6 +163,10 @@ export default function YuiAssistant() {
     switch (type) {
       case 'meal':
         return <span className={`${styles.badge} ${styles.badgeMeal}`}>Bữa ăn</span>;
+      case 'delete_meal':
+        return <span className={`${styles.badge} ${styles.badgeExpense}`}>Hoàn tác ăn</span>;
+      case 'update_inventory':
+        return <span className={`${styles.badge} ${styles.badgeInventory}`}>Cập nhật kho</span>;
       case 'expense':
         return <span className={`${styles.badge} ${styles.badgeExpense}`}>Chi tiêu</span>;
       case 'income':
@@ -194,6 +198,10 @@ export default function YuiAssistant() {
     switch (t) {
       case 'meal':
         return <Utensils size={15} color="#ffaa00" />;
+      case 'delete_meal':
+        return <RotateCcw size={15} color="#ff4444" />;
+      case 'update_inventory':
+        return <Package size={15} color="#fb923c" />;
       case 'expense':
         return <ArrowDownRight size={15} color="#ff4444" />;
       case 'income':
@@ -222,8 +230,16 @@ export default function YuiAssistant() {
 
   const renderActionDesc = (a: any) => {
     switch (a.actionType) {
-      case 'meal':
-        return `${a.food_name || a.description || 'Món ăn'} · ${a.calo || 0} kcal`;
+      case 'meal': {
+        const isHome = a.source === 'home' || (Array.isArray(a.ingredients_used) && a.ingredients_used.length > 0);
+        return `${a.food_name || a.description || 'Món ăn'} · ${a.calo || 0} kcal${isHome ? ' (Tự nấu từ kho)' : ''}`;
+      }
+      case 'delete_meal':
+        return `Xoá lịch sử ăn & hoàn kho: ${a.food_name || 'Bữa ăn gần nhất'}`;
+      case 'update_inventory': {
+        const modeLabel = a.mode === 'set' ? 'Đặt lại tồn kho' : a.mode === 'subtract' ? 'Trừ kho' : 'Cộng trả vào kho';
+        return `${modeLabel}: ${a.name} (${a.mode === 'add' ? '+' : a.mode === 'subtract' ? '-' : ''}${a.quantity ?? a.qty ?? 0} ${a.unit || ''})`;
+      }
       case 'expense':
       case 'income':
         return a.description || 'Giao dịch';
@@ -337,6 +353,32 @@ export default function YuiAssistant() {
                           <div className={styles.planWalletTag}>
                             <Wallet size={12} color="#00f0ff" />
                             <span>Tài khoản/Ví: <strong>{a.walletName}</strong></span>
+                          </div>
+                        )}
+
+                        {/* Hiển thị nguyên liệu trừ kho tự động của bữa ăn tự nấu */}
+                        {a.actionType === 'meal' && Array.isArray(a.ingredients_used) && a.ingredients_used.length > 0 && (
+                          <div className={styles.planRecipeBox}>
+                            <div className={styles.planRecipeTags}>
+                              {a.ingredients_used.map((ing: any, k: number) => (
+                                <span key={k} className={styles.planRecipeTag}>
+                                  📦 -{ing.qty} {ing.unit} {ing.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Hiển thị nguyên liệu sẽ được hoàn trả về kho khi xoá bữa ăn */}
+                        {a.actionType === 'delete_meal' && Array.isArray(a.restored_ingredients) && a.restored_ingredients.length > 0 && (
+                          <div className={styles.planRecipeBox}>
+                            <div className={styles.planRecipeTags}>
+                              {a.restored_ingredients.map((ing: any, k: number) => (
+                                <span key={k} className={styles.planRecipeTag}>
+                                  ♻️ Hoàn kho: +{ing.qty} {ing.unit} {ing.name}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         )}
 

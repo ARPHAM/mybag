@@ -6,6 +6,7 @@ import Inventory from '@/models/Inventory';
 import '@/models/Recipe'; // Tránh lỗi MissingSchemaError
 import '@/models/User'; // Tránh lỗi MissingSchemaError cho User
 import { verifyToken } from '@/lib/auth';
+import { convertQtyToInventoryUnit } from '@/lib/unitHelper';
 
 function getTodayVnDateStr(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -102,33 +103,40 @@ export async function POST(req: Request) {
     }[] = [];
 
     if (source === 'home' && ingredients_used && Array.isArray(ingredients_used)) {
-      // Gộp các dòng trùng invId và lọc qty > 0
-      const mergedMap = new Map<string, number>();
+      // Gộp các dòng trùng invId và lọc qty > 0 (kèm quy đổi đơn vị g <-> kg, ml <-> l về đúng đơn vị gốc của Kho)
+      const rawByInvId = new Map<string, { qty: number; unit?: string }[]>();
       for (const ing of ingredients_used) {
-            const qtyNum = Number(ing?.qty);
-            if (ing?.invId && !isNaN(qtyNum) && qtyNum > 0) {
-              mergedMap.set(ing.invId, Number(((mergedMap.get(ing.invId) || 0) + qtyNum).toFixed(4)));
-            }
-          }
+        const qtyNum = Number(ing?.qty);
+        if (ing?.invId && !isNaN(qtyNum) && qtyNum > 0) {
+          const list = rawByInvId.get(ing.invId) || [];
+          list.push({ qty: qtyNum, unit: ing.unit });
+          rawByInvId.set(ing.invId, list);
+        }
+      }
 
-          // Bước 1: Kiểm tra tồn kho hợp lệ trước khi trừ
-          const itemsToDeduct: { item: any; qty: number }[] = [];
-          for (const [invId, qty] of mergedMap.entries()) {
-            const item = await Inventory.findOne({ _id: invId, user_id: decoded.userId });
-            if (!item) {
-              return NextResponse.json({ error: 'Một nguyên liệu được chọn không còn tồn tại trong kho' }, { status: 400 });
-            }
-            if (item.quantity <= 0) {
-              return NextResponse.json({ error: `Nguyên liệu "${item.name}" trong kho đã dùng hết!` }, { status: 400 });
-            }
-            if (qty > item.quantity + 1e-6) {
-              return NextResponse.json(
-                { error: `Nguyên liệu "${item.name}" trong kho chỉ còn ${item.quantity} ${item.unit} (không đủ ${qty} ${item.unit})` },
-                { status: 400 }
-              );
-            }
-            itemsToDeduct.push({ item, qty: Math.min(item.quantity, qty) });
-          }
+      // Bước 1: Kiểm tra tồn kho hợp lệ trước khi trừ
+      const itemsToDeduct: { item: any; qty: number }[] = [];
+      for (const [invId, rawList] of rawByInvId.entries()) {
+        const item = await Inventory.findOne({ _id: invId, user_id: decoded.userId });
+        if (!item) {
+          return NextResponse.json({ error: 'Một nguyên liệu được chọn không còn tồn tại trong kho' }, { status: 400 });
+        }
+        if (item.quantity <= 0) {
+          return NextResponse.json({ error: `Nguyên liệu "${item.name}" trong kho đã dùng hết!` }, { status: 400 });
+        }
+        let qty = 0;
+        for (const r of rawList) {
+          qty += convertQtyToInventoryUnit(r.qty, r.unit, item.unit, item.quantity);
+        }
+        qty = Number(qty.toFixed(4));
+        if (qty > item.quantity + 1e-6) {
+          return NextResponse.json(
+            { error: `Nguyên liệu "${item.name}" trong kho chỉ còn ${item.quantity} ${item.unit} (không đủ ${qty} ${item.unit})` },
+            { status: 400 }
+          );
+        }
+        itemsToDeduct.push({ item, qty: Math.min(item.quantity, qty) });
+      }
 
           // Bước 2: Khấu trừ số lượng và giá trị kho chính xác
           for (const { item, qty } of itemsToDeduct) {
