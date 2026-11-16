@@ -4,6 +4,7 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import WeightLog from '@/models/WeightLog';
 import { verifyToken } from '@/lib/auth';
+import { getVnDateStr, parseVnDateTime } from '@/lib/vnTime';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
 
     // Map dữ liệu format để biểu đồ Recharts dễ đọc
     const history = logs.map(log => ({
-      dateLabel: new Date(log.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+      dateLabel: new Date(log.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }),
       date: new Date(log.date).toISOString(), // Giữ nguyên ISO string để frontend tính toán date math
       weight: log.weight,
     }));
@@ -72,12 +73,11 @@ export async function POST(req: Request) {
 
     // Ghi nhận cân nặng
     if (weight) {
-      const recordDate = date ? new Date(date) : new Date();
-      // Xoá log cũ cùng ngày để tránh trùng lặp
-      const startOfDay = new Date(recordDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(recordDate);
-      endOfDay.setHours(23, 59, 59, 999);
+      const recordDate = date ? (parseVnDateTime(date, '12:00:00') ?? new Date()) : new Date();
+      // Xoá log cũ cùng ngày theo múi giờ Việt Nam để tránh trùng lặp
+      const vnDateKey = getVnDateStr(recordDate);
+      const startOfDay = new Date(`${vnDateKey}T00:00:00+07:00`);
+      const endOfDay = new Date(`${vnDateKey}T23:59:59.999+07:00`);
       
       await WeightLog.findOneAndDelete({ 
         user_id: decoded.userId, 

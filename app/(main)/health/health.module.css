@@ -303,6 +303,11 @@
     letter-spacing: 1px;
   }
 
+  .scrollArea {
+    padding-right: 4px;
+    padding-bottom: 70px;
+  }
+
   .gridStats {
     grid-template-columns: 1fr 1fr;
     gap: 10px;

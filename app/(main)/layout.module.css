@@ -599,26 +599,35 @@
   font-size: 0.85rem;
 }
 
+/* Mobile Navigation (ẩn trên Desktop) */
+.mobileNavWrapper {
+  display: none;
+}
+
 /* =========================================
    MOBILE RESPONSIVE (MAX-WIDTH: 768px)
 ========================================= */
 @media (max-width: 768px) {
-  /* 1. Tắt 3D Container & setup layout dọc */
+  /* 1. Tắt 3D Container & setup layout dọc linh hoạt theo viewport */
   .dashboardContainer {
     perspective: none;
     transform-style: flat;
     transform: none;
-    padding-top: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    height: 100dvh;
     min-height: 100dvh;
     justify-content: flex-start;
   }
-  
+
   .dashboardLayout {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    max-width: 100%;
     flex-direction: column;
     transform-style: flat;
     transform: none;
-    height: calc(100dvh - 120px);
-    padding: 0 10px 80px 10px; /* Chừa 80px cho Bottom Nav */
+    padding: 0 10px calc(68px + env(safe-area-inset-bottom, 0px)) 10px;
     gap: 10px;
   }
 
@@ -626,6 +635,8 @@
   .topHeader {
     flex-direction: column;
     align-items: stretch;
+    flex-shrink: 0;
+    max-width: 100%;
     padding: 10px;
     margin: 0;
     gap: 5px;
@@ -767,126 +778,180 @@
     font-size: 0.8rem;
   }
 
-  /* 3. Chuyển Sidebar thành Bottom Nav (Tối ưu cho 8 tabs) */
+  /* 3. Ẩn sidebar desktop và dùng Bottom Nav 5 mục + Drawer "Thêm" */
   .sidebarContainer {
+    display: none;
+  }
+
+  .mobileNavWrapper {
+    display: block;
+  }
+
+  .mobileBottomNav {
     position: fixed;
     bottom: 0;
     left: 0;
-    width: 100%;
-    height: 65px;
-    transform: none;
-    padding: 0;
-    z-index: 100;
-    flex-direction: row;
-    background: rgba(4, 15, 30, 0.95);
+    right: 0;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 6px env(safe-area-inset-bottom, 0px) 6px;
+    z-index: 120;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: center;
+    background: rgba(4, 15, 30, 0.96);
     border-top: 2px solid var(--sao-primary-hex);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.65);
   }
 
-  .sidebarLeftRail, .sidebarTopAccent, .sidebarBottomAccent {
-    display: none;
-  }
-
-  .sidebarMenu {
-    flex-direction: row;
-    width: 100%;
-    border-right: none;
-    justify-content: flex-start;
-    align-items: center;
-    background: transparent;
-    padding: 0 5px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  .sidebarMenu::-webkit-scrollbar {
-    display: none;
-  }
-
-  .menuItem {
-    padding: 0;
-    flex: 0 0 auto;
-    width: 65px;
+  .mobileNavItem {
+    position: relative;
     display: flex;
-    justify-content: center;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-
-  .menuItem.active {
-    flex: 0 0 auto;
-    width: 85px; 
-  }
-
-  .menuItem:not(:last-child)::after {
-    display: none;
-  }
-
-  .menuItemInner {
     flex-direction: column;
-    padding: 5px;
-    gap: 4px;
-    justify-content: center;
     align-items: center;
-    width: 100%;
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    justify-content: center;
+    gap: 3px;
+    height: 100%;
+    padding: 4px 2px;
+    color: #93b8e8;
+    background: transparent;
+    border: none;
+    text-decoration: none;
+    cursor: pointer;
+    font-family: 'Tauri', sans-serif;
+    font-size: 0.68rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    transition: color 0.2s ease, transform 0.2s ease;
   }
 
-  .menuIcon {
-    transition: all 0.3s ease;
-  }
-
-  /* Ẩn text mặc định để đỡ chật, chỉ hiện khi active */
-  .menuText {
-    font-size: 0.65rem;
-    white-space: nowrap; /* Bắt buộc nằm trên 1 dòng */
-    max-height: 0;
-    opacity: 0;
-    overflow: visible; /* Chống cắt chữ ngang/dọc */
-    transition: all 0.3s ease;
-  }
-
-  .activeDecorators {
-    display: none;
-  }
-  
-  /* Hiệu ứng Active nổi bật */
-  .menuItem.active .menuItemInner {
-    transform: translateY(-5px); /* Nổi lên ÍT HƠN, để không lọt ra ngoài viền trên */
-  }
-
-  .menuItem.active .menuText {
-    max-height: 20px;
-    opacity: 1;
+  .mobileNavItemActive {
     color: #fff;
-    text-shadow: 0 0 5px var(--sao-primary-hex);
-    margin-top: 2px;
+    font-weight: bold;
+    text-shadow: 0 0 6px rgba(var(--sao-primary-rgb), 0.7);
   }
 
-  .menuItem.active .menuIcon {
+  .mobileNavItemActive svg {
     color: var(--sao-primary-hex);
-    filter: drop-shadow(0 0 8px var(--sao-primary-hex));
+    filter: drop-shadow(0 0 6px var(--sao-primary-hex));
   }
 
-  .menuItem.active::before {
+  .mobileNavItemActive::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0; /* Trải đều ra thay vì 10% */
-    right: 0;
-    height: 100%;
-    background: radial-gradient(circle at bottom, rgba(var(--sao-primary-rgb), 0.5) 0%, transparent 70%);
-    border-bottom: 3px solid var(--sao-primary-hex);
-    z-index: 0;
-    border-radius: 0;
+    inset: 2px 4px 0 4px;
+    background: radial-gradient(circle at bottom, rgba(var(--sao-primary-rgb), 0.35) 0%, transparent 72%);
+    border-bottom: 2px solid var(--sao-primary-hex);
+    pointer-events: none;
+  }
+
+  .mobileMoreIconWrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobileMoreDot {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--sao-primary-hex);
+    box-shadow: 0 0 6px var(--sao-primary-hex);
+  }
+
+  .mobileDrawerBackdrop {
+    position: fixed;
+    inset: 0;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    background: rgba(0, 8, 20, 0.55);
+    backdrop-filter: blur(3px);
+    z-index: 115;
+  }
+
+  .mobileMoreDrawer {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+    z-index: 125;
+    background: rgba(8, 22, 42, 0.97);
+    border: 1px solid var(--sao-primary-hex);
+    box-shadow: 0 0 24px rgba(var(--sao-primary-rgb), 0.3);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 12px;
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    animation: fadeIn 0.18s ease-out;
+  }
+
+  .mobileMoreHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(var(--sao-primary-rgb), 0.25);
+    font-size: 0.78rem;
+    letter-spacing: 1.5px;
+    color: var(--sao-primary-hex);
+    font-weight: bold;
+  }
+
+  .mobileMoreClose {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #cbd5e1;
+    cursor: pointer;
+  }
+
+  .mobileMoreGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .mobileMoreItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(15, 35, 65, 0.55);
+    border: 1px solid rgba(var(--sao-primary-rgb), 0.25);
+    color: #cde2ff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    transition: all 0.2s;
+  }
+
+  .mobileMoreItemActive {
+    background: rgba(var(--sao-primary-rgb), 0.22);
+    border-color: var(--sao-primary-hex);
+    color: #fff;
+    font-weight: bold;
+    box-shadow: 0 0 12px rgba(var(--sao-primary-rgb), 0.25);
+  }
+
+  .mobileMoreItemActive svg {
+    color: var(--sao-primary-hex);
   }
 
   /* 4. Main Content Area */
   .mainContent {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding-bottom: 20px;
+    padding-bottom: 0;
   }
 }
 

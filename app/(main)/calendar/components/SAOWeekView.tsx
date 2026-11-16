@@ -50,8 +50,8 @@ export default function SAOWeekView({
 
   return (
     <div className="h-full flex flex-col bg-zinc-900/90 border border-cyan-500/30 rounded-sm overflow-hidden font-mono shadow-[0_0_15px_rgba(0,0,0,0.5)]">
-      {/* 7 Columns Grid */}
-      <div className="grid grid-cols-7 flex-1 min-h-0 divide-x divide-zinc-800/80 overflow-y-auto custom-scrollbar">
+      {/* Desktop: 7 Columns Grid | Mobile: Vertical 7-day Agenda */}
+      <div className="flex flex-col md:grid md:grid-cols-7 flex-1 min-h-0 divide-y md:divide-y-0 md:divide-x divide-zinc-800/80 overflow-y-auto custom-scrollbar">
         {weekDays.map((day, idx) => {
           const isSelected = isSameDay(day, selectedDate);
           const isCurrentToday = isSameDay(day, today);
@@ -73,32 +73,49 @@ export default function SAOWeekView({
             <div
               key={idx}
               onClick={() => onSelectDate(day)}
-              className={`flex flex-col min-h-[350px] cursor-pointer transition-colors ${
+              className={`flex flex-col md:min-h-[350px] cursor-pointer transition-colors ${
                 isSelected
                   ? 'bg-cyan-950/25 ring-1 ring-inset ring-cyan-500/50'
                   : 'hover:bg-zinc-800/30'
               }`}
             >
               {/* Day Header */}
-              <div className={`p-2 border-b flex flex-col items-center justify-center transition-colors ${
+              <div className={`px-3 py-2 md:p-2 border-b flex flex-row md:flex-col items-center justify-between md:justify-center transition-colors ${
                 isSelected
                   ? 'border-cyan-500 bg-cyan-900/30'
                   : isCurrentToday
                     ? 'border-zinc-500 bg-zinc-800/50'
                     : 'border-zinc-800 bg-zinc-900/60'
               }`}>
-                <span className="text-[11px] uppercase tracking-wider text-zinc-400">
-                  {day.toLocaleDateString('vi-VN', { weekday: 'short' })}
-                </span>
-                <span className={`text-base font-bold ${
-                  isSelected ? 'text-[var(--sao-primary-hex)]' : isCurrentToday ? 'text-zinc-200' : 'text-zinc-400'
-                }`}>
-                  {day.getDate()}
-                </span>
+                <div className="flex items-center gap-2 md:flex-col md:gap-0">
+                  <span className="text-xs md:text-[11px] uppercase tracking-wider text-zinc-400">
+                    {day.toLocaleDateString('vi-VN', { weekday: 'short' })}
+                  </span>
+                  <span className={`text-sm md:text-base font-bold ${
+                    isSelected ? 'text-[var(--sao-primary-hex)]' : isCurrentToday ? 'text-zinc-200' : 'text-zinc-400'
+                  }`}>
+                    <span className="md:hidden">
+                      {day.getDate()}/{day.getMonth() + 1}
+                    </span>
+                    <span className="hidden md:inline">{day.getDate()}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 md:hidden text-[10px]">
+                  {isCurrentToday && (
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-semibold">
+                      Hôm nay
+                    </span>
+                  )}
+                  {(dayEvents.length > 0 || dayTasks.length > 0) && (
+                    <span className="text-zinc-400">
+                      {dayEvents.length + dayTasks.length} mục
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Day Content (Events & Quests) */}
-              <div className="flex-1 p-1.5 space-y-1.5 overflow-y-auto">
+              <div className="flex-1 p-2 md:p-1.5 space-y-1.5 md:overflow-y-auto">
                 {/* Events list */}
                 {dayEvents.map((ev, evIdx) => (
                   <div
@@ -107,7 +124,7 @@ export default function SAOWeekView({
                       e.stopPropagation();
                       onEventClick(ev);
                     }}
-                    className="p-1.5 rounded-sm border-l-2 bg-zinc-800/60 hover:bg-zinc-800 transition-all text-xs"
+                    className="p-2 md:p-1.5 rounded-sm border-l-2 bg-zinc-800/60 hover:bg-zinc-800 transition-all text-xs flex items-center justify-between gap-2 md:block"
                     style={{
                       borderLeftColor: ev.color_code || 'var(--sao-primary-hex)',
                       boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
@@ -116,7 +133,7 @@ export default function SAOWeekView({
                     <div className="font-semibold text-zinc-200 truncate" title={ev.title}>
                       {ev.title}
                     </div>
-                    <div className="text-[10px] text-cyan-400/80 flex items-center gap-1 mt-0.5">
+                    <div className="text-[11px] md:text-[10px] text-cyan-400/80 flex items-center gap-1 md:mt-0.5 shrink-0">
                       <Clock size={10} />
                       {new Date(ev.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                     </div>
@@ -134,7 +151,7 @@ export default function SAOWeekView({
                         e.stopPropagation();
                         if (onTaskClick) onTaskClick(task);
                       }}
-                      className="p-1.5 rounded-sm border bg-zinc-900/80 hover:bg-zinc-800/80 transition-all text-xs"
+                      className="p-2 md:p-1.5 rounded-sm border bg-zinc-900/80 hover:bg-zinc-800/80 transition-all text-xs"
                       style={{
                         borderColor: rankStyle.border,
                         boxShadow: `0 0 8px ${rankStyle.bg}`
@@ -159,7 +176,7 @@ export default function SAOWeekView({
                 })}
 
                 {dayEvents.length === 0 && dayTasks.length === 0 && (
-                  <div className="h-full flex items-center justify-center text-[11px] text-zinc-600 italic">
+                  <div className="py-1 md:h-full flex items-center md:justify-center text-[11px] text-zinc-600 italic">
                     Trống
                   </div>
                 )}

@@ -238,7 +238,7 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="p-1.5 lg:p-4 flex flex-col font-mono h-full overflow-y-auto lg:overflow-hidden">
+    <div className="p-1.5 lg:p-4 pb-16 lg:pb-4 flex flex-col font-mono h-full overflow-y-auto lg:overflow-hidden">
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
@@ -287,7 +287,7 @@ export default function CalendarPage() {
       {/* Main Layout Area */}
       <div className="flex flex-col lg:grid lg:grid-cols-3 gap-3 lg:gap-6 lg:flex-1 mt-2.5 lg:mt-4 lg:min-h-0">
         {/* Left 2 Cols: Main View (Timeline / Week / Month) */}
-        <div className="h-[420px] sm:h-[480px] lg:h-auto lg:flex-1 shrink-0 lg:shrink lg:col-span-2 relative flex flex-col min-h-[380px] lg:min-h-0">
+        <div className="h-[380px] sm:h-[460px] lg:h-auto lg:flex-1 shrink-0 lg:shrink lg:col-span-2 relative flex flex-col min-h-[320px] lg:min-h-0">
           {loading && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm font-mono" style={{ color: 'var(--sao-primary-hex)' }}>
               Scanning data...
@@ -321,7 +321,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Right 1 Col: QUEST LOG with Events & Tasks Tabs */}
-        <div className="h-[230px] shrink-0 lg:h-auto lg:shrink lg:col-span-1 flex flex-col bg-zinc-900/80 border border-zinc-700 p-4 rounded-sm shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden font-mono min-h-0">
+        <div className="min-h-[180px] max-h-[320px] shrink-0 lg:max-h-none lg:h-auto lg:shrink lg:col-span-1 flex flex-col bg-zinc-900/80 border border-zinc-700 p-3 sm:p-4 rounded-sm shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden font-mono lg:min-h-0">
           <div className="flex items-center justify-between border-b pb-2 mb-3" style={{ borderColor: 'rgba(var(--sao-primary-rgb), 0.3)' }}>
             <h2 className="text-base font-bold" style={{ color: 'var(--sao-primary-hex)', textShadow: '0 0 5px rgba(var(--sao-primary-rgb), 0.8)' }}>
               QUEST LOG
@@ -468,7 +468,7 @@ export default function CalendarPage() {
             />
           </div>
           
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className={styles.formGroup} style={{flex: 1}}>
               <label>Giờ bắt đầu</label>
               <div className="flex items-center gap-2 bg-black/30 border border-zinc-700/50 p-1 rounded">
@@ -528,7 +528,7 @@ export default function CalendarPage() {
 
             {isRecurring && (
               <div className={styles.recurringBox}>
-                <div className="flex gap-6 mb-3">
+                <div className="flex flex-wrap gap-4 sm:gap-6 mb-3">
                   <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
                     <input type="radio" name="recType" checked={recurrenceType === 'DAILY'} onChange={() => setRecurrenceType('DAILY')} className="accent-orange-500 w-4 h-4"/>
                     Hàng ngày
@@ -571,7 +571,7 @@ export default function CalendarPage() {
           
           <div className={`${styles.modalFooter} ${editingEvent ? styles.spaceBetween : ''}`}>
             {editingEvent && (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <SaoButton 
                   type="button"
                   onClick={() => handleDelete('series')}
@@ -591,7 +591,7 @@ export default function CalendarPage() {
               </div>
             )}
             
-            <div className="flex gap-3" style={!editingEvent ? {marginLeft: 'auto'} : {}}>
+            <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 w-full sm:w-auto sm:ml-auto">
               <SaoButton 
                 type="button"
                 onClick={() => setIsModalOpen(false)}

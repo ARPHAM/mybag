@@ -62,13 +62,15 @@ export default function HistoryTab({ transactions, formatMoney, onAdd, onEdit, o
                     </div>
                     <div className={styles.historyDetails}>
                       <div className={styles.historyTitle}>
-                        {tx.description}
-                        <SaoButton variant="ghost" style={{ marginLeft: 8, padding: 4 }} onClick={() => onEdit(tx)}>
-                          <Edit3 size={14} />
-                        </SaoButton>
-                        <SaoButton variant="ghost" ghostType="danger" style={{ marginLeft: 8, padding: 4 }} onClick={() => onDelete(tx.id)}>
-                          <Trash2 size={14} />
-                        </SaoButton>
+                        <span className={styles.historyTitleText}>{tx.description}</span>
+                        <span className={styles.historyItemActions}>
+                          <SaoButton variant="ghost" style={{ padding: 6 }} onClick={() => onEdit(tx)} aria-label="Chỉnh sửa giao dịch">
+                            <Edit3 size={14} />
+                          </SaoButton>
+                          <SaoButton variant="ghost" ghostType="danger" style={{ padding: 6 }} onClick={() => onDelete(tx.id)} aria-label="Xóa giao dịch">
+                            <Trash2 size={14} />
+                          </SaoButton>
+                        </span>
                       </div>
                       <div className={styles.historyMeta}>
                         <span><Wallet size={12} /> {tx.walletName}</span>
@@ -92,11 +94,11 @@ export default function HistoryTab({ transactions, formatMoney, onAdd, onEdit, o
 
       <SaoButton
         variant="primary"
-        style={{ borderRadius: '50%', width: 50, height: 50, position: 'absolute', bottom: 30, right: 30, zIndex: 100, boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)' }}
+        className={styles.overviewFab}
         title="Ghi chép giao dịch"
         onClick={onAdd}
       >
-        <Plus size={32} />
+        <Plus size={28} />
       </SaoButton>
     </div>
   );

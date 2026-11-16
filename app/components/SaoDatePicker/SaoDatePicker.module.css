@@ -143,3 +143,19 @@
   border-color: var(--sao-primary-hex);
   color: var(--sao-primary-hex);
 }
+
+@media (max-width: 768px) {
+  .calendarPopover {
+    width: min(300px, 100%);
+    min-width: min(260px, calc(100vw - 48px));
+    max-width: calc(100vw - 48px);
+    padding: 12px;
+  }
+
+  .dayCell {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    min-height: 30px;
+  }
+}

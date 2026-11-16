@@ -119,3 +119,19 @@
   font-size: 0.85rem;
   text-align: center;
 }
+
+@media (max-width: 768px) {
+  .settingsContainer {
+    padding: 8px;
+  }
+
+  .scrollArea {
+    padding-right: 4px;
+    padding-bottom: 70px;
+  }
+
+  .themeGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}

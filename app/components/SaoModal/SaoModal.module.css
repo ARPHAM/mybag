@@ -88,3 +88,31 @@
   display: flex;
   flex-direction: column;
 }
+
+@media (max-width: 768px) {
+  .modalOverlay {
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 8px calc(16px + env(safe-area-inset-bottom, 0px)) 8px;
+  }
+
+  .modalContent {
+    padding: 16px;
+  }
+
+  .modalContent::before {
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  }
+
+  .modalHeader {
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+
+  .modalTitle {
+    font-size: 1.05rem;
+    gap: 8px;
+  }
+
+  .closeButton {
+    padding: 6px;
+  }
+}
