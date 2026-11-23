@@ -76,7 +76,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
         debt.totalAmount += actionAmount;
         debt.remainingAmount += actionAmount;
-        debt.status = 'unpaid';
+        debt.status = debt.remainingAmount < debt.totalAmount ? 'partial' : 'unpaid';
       }
 
       await wallet.save();
@@ -101,8 +101,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
       await debt.save();
       return NextResponse.json(debt);
-    } 
-    
+    }
+
     // Handle Normal Update (Edit details)
     else {
       if (personName) debt.personName = personName;
@@ -127,7 +127,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const { id } = await params;
-    
+
     // Chỉ xóa record sổ nợ, KHÔNG rollback transactions để tránh sai lệch ví nếu transactions đã cũ
     const debt = await Debt.findOneAndDelete({ _id: id, user_id: decoded.userId });
 

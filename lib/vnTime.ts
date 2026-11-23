@@ -361,6 +361,7 @@ export function getYuiActionScheduleDisplay(
     case 'debt_lent':
     case 'debt_borrowed':
     case 'pay_debt':
+    case 'borrow_more_debt':
     case 'record_weight': {
       const dt = parseVnDateTime(action.custom_time, '12:00:00') ?? fallback;
       return {

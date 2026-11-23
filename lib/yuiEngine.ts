@@ -489,7 +489,7 @@ export function detectFastScopesAndParams(text: string, now: Date = new Date()):
     if (isFinanceAmount || /\b(tien|k|vnd|d|dong)\b/.test(nt)) {
       scopes.add('finances');
     }
-    if (isUndoOrModify || /\b(tu nau|tai nha|o nha|trong tu|trong kho|tu lanh)\b/.test(nt)) {
+    if (isUndoOrModify || /\b(tu nau|tai nha|o nha|trong tu|trong kho|tu lanh|an het|uong het|an not|uong not|het sach|xai het|dung het|con lai|kho do|nguyen lieu)\b/.test(nt)) {
       scopes.add('inventory_recipes');
     }
     if (dateRes && !isEditOrReschedule && !/\b(tuan|7 ngay|thang|xu huong|phan tich)\b/.test(nt)) {
@@ -502,14 +502,14 @@ export function detectFastScopesAndParams(text: string, now: Date = new Date()):
   }
 
   // 6. Kho đồ tủ lạnh & Công thức nấu ăn
-  const isStorage = /\b(tu lanh|kho|nguyen lieu|thuc pham|gia vi|ton kho|het han|bao quan|cat vao tu|cat tu|nhap kho|trong tu|tu do|dung het|xai het|bo di|vut|hong|thiu|cap nhat kho|sua kho)\b/.test(nt);
+  const isStorage = /\b(tu lanh|kho|nguyen lieu|thuc pham|gia vi|ton kho|het han|bao quan|cat vao tu|cat tu|nhap kho|trong tu|tu do|dung het|xai het|an het|uong het|an not|uong not|het sach|bo di|vut|hong|thiu|cap nhat kho|sua kho)\b/.test(nt);
   const isExplicitRecipeWords = /\b(cong thuc|so tay|thuc don|menu|da luu|trong cong thuc|cach lam|cach nau|huong dan)\b/.test(nt);
   const isCooking = isExplicitRecipeWords || /\b(nau|tu nau|che bien|lam mon|mon gi|nau gi)\b/.test(nt);
   const isShoppingAdviceQuery = /\b(mua sam|di cho|sieu thi|can mua|goi y mua|nen mua|tu van mua|mua gi|mua them)\b/.test(nt);
 
   if (isStorage || isCooking || isShoppingAdviceQuery || isUndoOrModify) {
     scopes.add('inventory_recipes');
-    if (isUndoOrModify) {
+    if (isUndoOrModify || /\b(an|uong|xoi|chen|an het|uong het|an not|uong not|nau|tu nau)\b/.test(nt)) {
       scopes.add('meals_nutrition');
     }
     params.inventory_recipes = {
@@ -1419,6 +1419,10 @@ export function normalizeYuiActions<T extends YuiActionRecord>(actions: T[], now
     const action: YuiActionRecord = { ...rawAction };
     const type = action.actionType;
 
+    if (type === 'borrow_more') {
+      action.actionType = 'borrow_more_debt';
+    }
+
     if (type === 'create_calendar_event') {
       const start = parseVnDateTime(action.start_time, '09:00:00') ?? now;
       let end = parseVnDateTime(action.end_time, '10:00:00');
@@ -1556,6 +1560,7 @@ export function normalizeYuiActions<T extends YuiActionRecord>(actions: T[], now
       type === 'debt_lent' ||
       type === 'debt_borrowed' ||
       type === 'pay_debt' ||
+      type === 'borrow_more_debt' ||
       type === 'record_weight' ||
       type === 'complete_task' ||
       type === 'create_shopping_item' ||
@@ -1784,19 +1789,40 @@ QUY TẮC THU NỢ / TRẢ NỢ TRÊN SỔ NỢ CÓ SẴN (PAY DEBT):
   * Nếu Papa nói "trả hết" / "tất toán", đặt "amount" bằng "con_lai" của khoản nợ đó.
   * Nếu Papa chưa nêu rõ ví nhưng có ví trong "danh_sach_vi" (ưu tiên ví Tiền mặt hoặc ví có số dư phù hợp), hãy chọn ví hợp lý và ghi rõ trong "reply" để Papa kiểm tra trước khi bấm xác nhận.
 
-QUY TẮC BỮA ĂN NẤU TẠI NHÀ TRỪ KHO (HOME MEAL vs EAT OUT):
-- Chỉ khi Papa nói rõ tự nấu / nấu ở nhà / ăn đồ trong tủ lạnh / dùng nguyên liệu trong kho (VD: "trưa nay tự nấu mì với 2 quả trứng trong tủ", "nấu cơm gà với 200g ức gà"):
-  * Đặt "source": "home" và đối chiếu "kho_do_va_cong_thuc.kho_do_hien_co" để điền "ingredients_used": [{ "invId": "<id>", "name": "<tên trong kho>", "qty": <số lượng dùng>, "unit": "<đơn vị trong kho>" }].
-  * Quy đổi đơn vị cho khớp với "don_vi" trong kho nếu cần (VD: kho lưu 0.5 kg, dùng 200g -> qty: 0.2; kho lưu quả -> qty nguyên số quả).
-  * Nếu không mua thêm gì bên ngoài thì đặt "amount": 0 (hệ thống tự tính chi phí món theo giá vốn nguyên liệu trong kho, không trừ nhầm tiền ví!). Nếu có mua thêm đồ ngoài (vd "mua thêm 10k rau bằng Momo") thì ghi "amount": 10000 kèm ví đó.
-- Ngược lại, ăn hàng/quán hoặc không nhắc dùng nguyên liệu trong kho -> đặt "source": "eat_out".
+QUY TẮC VAY THÊM / CHO VAY THÊM VÀO SỔ NỢ CÓ SẴN (BORROW MORE DEBT):
+- Khi Papa báo vay thêm từ chủ nợ cũ HOẶC cho người đang có khoản nợ vay thêm tiền (VD: "vay thêm anh Nam 500k vào Momo", "mượn thêm chú Ba 200k tiền mặt", "cho bạn Linh vay thêm 300k", "anh Tuấn vay thêm 500k"):
+  * Kiểm tra "tai_chinh.so_no_chua_tra": nếu khớp tên người đang có khoản nợ chưa tất toán -> BẮT BUỘC dùng "borrow_more_debt" (kèm "debt_id" của khoản nợ đó)!
+  * TUYỆT ĐỐI KHÔNG dùng "debt_lent" hoặc "debt_borrowed" vì sẽ tạo ra một khoản nợ mới trùng tên thay vì ghi chung lịch sử vào khoản nợ cũ!
+  * Điền đúng:
+    - "debt_id": id của khoản nợ trong "tai_chinh.so_no_chua_tra"
+    - "person": tên người đó
+    - "debt_type": "lent" nếu là khoản người ta nợ Papa và Papa cho vay thêm; "borrowed" nếu là khoản Papa nợ người ta và Papa vay thêm từ họ.
+    - "amount": số tiền vay thêm / cho vay thêm
+    - "wallet_id" và "walletName": ví nhận tiền (khi đi vay thêm -> tiền vào ví) hoặc ví chi tiền (khi cho vay thêm -> tiền ra khỏi ví).
+  * Trong "reply", thông báo ngọt ngào rằng con đã ghi nhận vay thêm / cho vay thêm và cập nhật chung vào lịch sử khoản nợ cũ của người đó.
+
+QUY TẮC BỮA ĂN TỪ KHO ĐỒ / TỦ LẠNH (HOME MEAL vs EAT OUT vs UPDATE INVENTORY):
+- NGUYÊN TẮC CỐT LÕI: Mọi trường hợp Papa ĂN / UỐNG / TIÊU THỤ thực phẩm, đồ uống trong tủ lạnh hay kho đồ (KỂ CẢ ĂN HẾT, UỐNG HẾT, ĂN NỐT, DÙNG HẾT ĐỂ ĂN, ĂN SẠCH):
+  * BẮT BUỘC DÙNG ACTION "meal" (với "source": "home"), TUYỆT ĐỐI KHÔNG ĐƯỢC DÙNG "update_inventory"!
+  * Lý do: Khi tạo action "meal" với "source": "home" và "ingredients_used", hệ thống Yui đã TỰ ĐỘNG trừ kho đồ xuống 0 hoặc trừ bớt theo số lượng dùng, ĐỒNG THỜI lưu lịch sử ăn uống (MealLog), tính calo và dinh dưỡng cho Papa. Dùng "update_inventory" sẽ làm mất lịch sử ăn uống và không tính calo!
+  * Điền "ingredients_used": [{ "invId": "<id>", "name": "<tên trong kho>", "qty": <số lượng dùng>, "unit": "<đơn vị trong kho>" }].
+    + Nếu Papa báo "ăn hết" / "uống hết" / "ăn nốt" / "hết sạch": điền "qty" bằng đúng toàn bộ số lượng còn lại ("so_luong") của món đó trong "kho_do_hien_co".
+    + Nếu Papa nêu số lượng ăn cụ thể: quy đổi về đúng "don_vi" của kho (VD: kho lưu 0.5 kg, ăn 200g -> qty: 0.2; kho lưu quả -> qty nguyên số quả).
+  * Đặt "amount": 0 nếu không mua thêm đồ ngoài (hệ thống tự tính chi phí món theo giá vốn nguyên liệu trong kho, không trừ tiền ví). Nếu có mua thêm ngoài (vd "mua thêm 10k rau bằng Momo") thì ghi "amount": 10000 kèm ví đó.
+  * Luôn ước tính calo ("calo"), đạm ("protein"), béo ("fat"), tinh bột ("carbs") hợp lý cho món ăn.
+- Khi nào MỚI ĐƯỢC DÙNG "update_inventory" (với operation: "discard" hoặc "deduct"):
+  * CHỈ DÙNG khi Papa nói rõ đây là hao hụt PHI ĂN UỐNG (KHÔNG ĂN VÀO BỤNG), bao gồm:
+    1) Đồ ăn bị HỎNG, THIU, MỐC, HẾT HẠN, BỎ ĐI, VỨT THÙNG RÁC, ĐỔ ĐI (VD: "vứt hộp sữa thiu", "bỏ 2 quả trứng ung", "thịt thiu đổ thùng rác").
+    2) CHO, BIẾU, TẶNG NGƯỜI KHÁC (VD: "cho bạn 1 vỉ sữa", "biếu hàng xóm nải chuối", "tặng đồng nghiệp bánh").
+    3) KIỂM KÊ / ĐẾM LẠI / SỬA SỐ LƯỢNG KHO (VD: "đếm lại kho còn 3 quả trứng chứ không phải 5").
+  * Nếu KHÔNG CÓ từ ngữ hỏng/vứt rác hay cho người khác hay kiểm kê -> 100% là ăn uống -> PHẢI TẠO ACTION "meal"!
+- Ăn hàng quán hoặc không dùng nguyên liệu trong kho -> đặt "source": "eat_out".
 
 QUY TẮC ĐI CHỢ XONG -> TICK SHOPPING + NHẬP KHO + TRỪ VÍ (PURCHASE SHOPPING):
 - Khi Papa báo đã mua xong các món trong danh sách mua sắm (VD: "mua xong sữa và trứng trong danh sách rồi, hết 95k bằng Momo, cất tủ lạnh", "đi chợ xong 2 hộp sữa 60k và bó rau 20k bằng tiền mặt"):
   * Dùng "purchase_shopping" cho TỪNG món để khớp "shopping_item_id" từ "danh_sach_mua_sam_can_mua" (nếu có), tick đã mua + cất vào Kho đồ + tạo giao dịch chi tiêu tương ứng.
   * Nếu Papa chỉ nêu 1 tổng tiền cho nhiều món (vd "mua xong sữa và trứng hết 100k"), hãy phân bổ hợp lý "amount" cho từng món sao cho TỔNG "amount" đúng bằng tổng tiền Papa trả, và ghi chú rõ phần ước chia này trong "reply" để Papa xem xác nhận.
   * Nếu Papa nói rõ chỉ tick đã mua xong mà không cất kho (vd đồ dùng tiêu hao ngay) -> đặt "add_to_inventory": false. Nếu không nhắc giá tiền -> "amount": 0.
-- Nếu Papa báo dùng hết / bỏ đi / vứt đồ hỏng / chỉnh số lượng đồ trong tủ lạnh -> dùng "update_inventory" với "inv_id" khớp từ "kho_do_hien_co".
 
 QUY TẮC SỬA / DỜI / HỦY / LỊCH LẶP (CALENDAR, TASK, TRANSACTION, BUDGET):
 - TUYỆT ĐỐI chỉ lấy "id" / "event_id" / "task_id" / "transaction_id" / "debt_id" / "inv_id" / "shopping_item_id" có thật trong DỮ LIỆU HIỆN TẠI bên dưới, KHÔNG bao giờ tự bịa ID!
@@ -1867,12 +1893,14 @@ NHIỆM VỤ CỦA BẠN:
         - Fields: { actionType: "income", amount: number, category: "salary"|"bonus"|"investment"|"gift"|"other", description: string, wallet_id: string, walletName: string, custom_time: "YYYY-MM-DD HH:mm" }
      d0) "transfer": Chuyển tiền / nạp ví / rút tiền giữa 2 ví nội bộ.
         - Fields: { actionType: "transfer", amount: number, description: string, wallet_id: string, walletName: string, to_wallet_id: string, toWalletName: string, custom_time: "YYYY-MM-DD HH:mm" }
-     d) "debt_lent": Cho vay / Trả tiền hộ ai đó (khoản nợ mới).
+     d) "debt_lent": Cho vay / Trả tiền hộ ai đó (khoản nợ mới hoàn toàn, người này chưa có trong "so_no_chua_tra").
         - Fields: { actionType: "debt_lent", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: "YYYY-MM-DD HH:mm" }
-     e) "debt_borrowed": Đi vay tiền ai đó (khoản nợ mới).
+     e) "debt_borrowed": Đi vay tiền ai đó (khoản nợ mới hoàn toàn, người này chưa có trong "so_no_chua_tra").
         - Fields: { actionType: "debt_borrowed", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: "YYYY-MM-DD HH:mm" }
      e2) "pay_debt": Thu nợ / Trả bớt / Tất toán khoản nợ ĐÃ CÓ trong "tai_chinh.so_no_chua_tra".
         - Fields: { actionType: "pay_debt", debt_id: string, person: string, debt_type: "lent"|"borrowed", amount: number, wallet_id: string, walletName: string, description?: string, custom_time: "YYYY-MM-DD HH:mm" }
+     e2b) "borrow_more_debt": Vay thêm / Cho vay thêm vào khoản nợ ĐÃ CÓ trong "tai_chinh.so_no_chua_tra" (ghi chung vào lịch sử khoản nợ cũ, KHÔNG tạo khoản nợ mới).
+        - Fields: { actionType: "borrow_more_debt", debt_id: string, person: string, debt_type: "lent"|"borrowed", amount: number, wallet_id: string, walletName: string, description?: string, custom_time: "YYYY-MM-DD HH:mm" }
      e3) "upsert_budget": Đặt hoặc cập nhật hạn mức ngân sách chi tiêu tháng.
         - Fields: { actionType: "upsert_budget", category: "food"|"housing"|"transport"|"entertainment"|"shopping"|"health"|"other", name?: string, month?: "YYYY-MM", limit: number }
      e4) "update_transaction": Sửa giao dịch ĐÃ CÓ trong "tai_chinh.giao_dich_moi_nhat".
@@ -1899,7 +1927,7 @@ NHIỆM VỤ CỦA BẠN:
         - Fields: { actionType: "purchase_shopping", shopping_item_id?: string, name: string, quantity: number, unit: string, inventory_category?: "food"|"spices"|"utilities", add_to_inventory?: boolean, amount?: number, wallet_id?: string, walletName?: string, expiryDate?: "YYYY-MM-DD", custom_time: "YYYY-MM-DD HH:mm" }
      j) "create_inventory": Thêm đồ MỚI MUA trực tiếp vào kho đồ / tủ lạnh (TUYỆT ĐỐI KHÔNG dùng để trừ kho khi nấu ăn hoặc hoàn kho món cũ; chỉ trừ ví khi KHÔNG qua "purchase_shopping").
         - Fields: { actionType: "create_inventory", name: string, quantity: number, unit: string, category: string, custom_time: "YYYY-MM-DD HH:mm", expiryDate?: "YYYY-MM-DD" }
-     j2) "update_inventory": Tiêu hao, thêm/bớt số lượng, sửa HSD hoặc bỏ/dùng hết đồ đang có trong "kho_do_hien_co" / "kho_do_vua_dung_het" (nhớ quy đổi về đúng "don_vi" gốc của kho).
+     j2) "update_inventory": Tiêu hao PHI ĂN UỐNG (vứt đồ hỏng/thiu/hết hạn, cho/tặng người khác), kiểm kê thêm/bớt số lượng, sửa HSD đồ trong "kho_do_hien_co" (TUYỆT ĐỐI KHÔNG dùng khi ăn/uống/nấu nướng - ăn hết hay dùng hết để ăn BẮT BUỘC dùng action "meal" với source="home").
         - Fields: { actionType: "update_inventory", inv_id: string, name: string, operation: "set"|"deduct"|"add"|"discard", quantity?: number, delta_quantity?: number, unit?: string, expiryDate?: "YYYY-MM-DD", custom_time: "YYYY-MM-DD HH:mm" }
      k) "record_weight": Ghi nhận / Cập nhật cân nặng và chiều cao.
         - Fields: { actionType: "record_weight", weight: number, height?: number, custom_time: "YYYY-MM-DD HH:mm", description: "Cập nhật cân nặng" }
@@ -1924,7 +1952,15 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ không bọc thêm bất k�
   if (parsed && Array.isArray(parsed.actions)) {
     parsed.actions = normalizeYuiActions(parsed.actions, now);
     if (parsed.actions.length > 0) {
-      parsed.actions = await sanitizeYuiPlanActions(userId, parsed.actions);
+      const originalHadMeal = parsed.actions.some((a: any) => a.actionType === 'meal');
+      parsed.actions = await sanitizeYuiPlanActions(userId, parsed.actions, normalizedUserText);
+      const nowHasMeal = parsed.actions.some((a: any) => a.actionType === 'meal');
+      if (!originalHadMeal && nowHasMeal) {
+        const mealAct = parsed.actions.find((a: any) => a.actionType === 'meal');
+        const foodName = mealAct?.food_name || 'món ăn';
+        parsed.summary = `Ghi nhận bữa ăn: ${foodName} và trừ kho tương ứng`;
+        parsed.reply = `Yui đã ghi nhận Papa dùng ${foodName} vào lịch sử ăn uống và trừ kho đồ tương ứng rồi ạ! Papa xác nhận kế hoạch giúp con nhé~`;
+      }
     }
   }
   return parsed;
@@ -1946,211 +1982,2098 @@ function normalizeIngredientMatchName(raw: string): string {
  * Bộ lọc bảo vệ chống trừ kho 2 lần, tự động quy đổi đơn vị (g <-> kg, ml <-> l) về đúng đơn vị gốc của Kho,
  * và chuẩn hóa thao tác hoàn tác (delete_meal / update_inventory).
  */
-export async function sanitizeYuiPlanActions(userId: string, rawActions: any[]): Promise<any[]> {
-  if (!Array.isArray(rawActions) || rawActions.length === 0) return [];
+  export async function sanitizeYuiPlanActions(userId: string, rawActions: any[], userText?: string): Promise<any[]> {
+    if (!Array.isArray(rawActions) || rawActions.length === 0) return [];
 
-  const allInv = await Inventory.find({ user_id: userId }).lean();
+    const allInv = await Inventory.find({ user_id: userId }).lean();
 
-  const findInvItem = (invId?: string, name?: string) => {
-    if (invId) {
-      const byId = (allInv as any[]).find(i => String(i._id) === String(invId));
-      if (byId) return byId;
-    }
-    const normTarget = normalizeIngredientMatchName(name || '');
-    if (!normTarget) return null;
+    const findInvItem = (invId?: string, name?: string) => {
+      if (invId) {
+        const byId = (allInv as any[]).find(i => String(i._id) === String(invId));
+        if (byId) return byId;
+      }
+      const normTarget = normalizeIngredientMatchName(name || '');
+      if (!normTarget) return null;
 
-    // Ưu tiên khớp chính xác tên chuẩn hóa và còn tồn kho
-    const exactActive = (allInv as any[]).find(
-      i => (Number(i.quantity) || 0) > 0 && normalizeIngredientMatchName(i.name) === normTarget
-    );
-    if (exactActive) return exactActive;
+      // Ưu tiên khớp chính xác tên chuẩn hóa và còn tồn kho
+      const exactActive = (allInv as any[]).find(
+        i => (Number(i.quantity) || 0) > 0 && normalizeIngredientMatchName(i.name) === normTarget
+      );
+      if (exactActive) return exactActive;
 
-    const exactAny = (allInv as any[]).find(
-      i => normalizeIngredientMatchName(i.name) === normTarget
-    );
-    if (exactAny) return exactAny;
+      const exactAny = (allInv as any[]).find(
+        i => normalizeIngredientMatchName(i.name) === normTarget
+      );
+      if (exactAny) return exactAny;
 
-    // Khớp bao hàm (substring)
-    const subActive = (allInv as any[]).find(i => {
-      const ni = normalizeIngredientMatchName(i.name);
-      return (Number(i.quantity) || 0) > 0 && ni && (ni.includes(normTarget) || normTarget.includes(ni));
-    });
-    if (subActive) return subActive;
+      // Khớp bao hàm (substring)
+      const subActive = (allInv as any[]).find(i => {
+        const ni = normalizeIngredientMatchName(i.name);
+        return (Number(i.quantity) || 0) > 0 && ni && (ni.includes(normTarget) || normTarget.includes(ni));
+      });
+      if (subActive) return subActive;
 
-    return (allInv as any[]).find(i => {
-      const ni = normalizeIngredientMatchName(i.name);
-      return ni && (ni.includes(normTarget) || normTarget.includes(ni));
-    }) || null;
-  };
+      return (allInv as any[]).find(i => {
+        const ni = normalizeIngredientMatchName(i.name);
+        return ni && (ni.includes(normTarget) || normTarget.includes(ni));
+      }) || null;
+    };
 
-  const actions = rawActions.map(a => ({ ...a }));
-  const mealActions = actions.filter(a => a.actionType === 'meal');
-  const deleteMealActions = actions.filter(a => a.actionType === 'delete_meal');
+    const actions = rawActions.map(a => ({ ...a }));
+    const mealActions = actions.filter(a => a.actionType === 'meal');
+    const deleteMealActions = actions.filter(a => a.actionType === 'delete_meal');
 
-  const indicesToRemove = new Set<number>();
+    const indicesToRemove = new Set<number>();
 
-  // 1. Nếu có hành động MEAL: Gom mọi hành động trừ kho rời rạc vào meal.ingredients_used để CHỐNG TRỪ KHO 2 LẦN
-  if (mealActions.length > 0) {
-    const primaryMeal = mealActions[0];
-    if (!Array.isArray(primaryMeal.ingredients_used)) {
-      primaryMeal.ingredients_used = [];
-    }
+    // 0. BẢO VỆ LỊCH SỬ ĂN UỐNG: Khi user báo ăn uống / ăn hết thực phẩm trong kho mà AI trả về update_inventory thay vì meal
+    const normUserText = normalizeVietnamese(userText || '');
+    const hasEatingVerb = /\b(an|uong|xoi|chen|danh chen|ham|che bien|nau|lam mon|an het|uong het|an not|uong not|het sach|xai het|dung het)\b/.test(normUserText);
+    const isExplicitNonEating = /\b(hong|thiu|moc|hu|hu hong|oi thiu|het han|bo di|vut|do rac|sot rac|thung rac|cho ban|cho nguoi|tang|bieu|kiem ke|dem lai|sua kho|chinh kho)\b/.test(normUserText);
 
-    actions.forEach((act, idx) => {
-      if (act === primaryMeal) return;
-      const t = String(act.actionType || '').toLowerCase();
-      const actInvId = act.inv_id || act.invId;
-      const actOp = String(act.operation || act.mode || '').toLowerCase();
-
-      const isExplicitDeductType = [
-        'deduct_inventory',
-        'consume_inventory',
-        'remove_inventory',
-        'use_inventory',
-        'subtract_inventory'
-      ].includes(t);
-
-      const isUpdateSubtract =
-        t === 'update_inventory' &&
-        (actOp === 'deduct' ||
+    if (mealActions.length === 0) {
+      const candidateDeductIndices: number[] = [];
+      actions.forEach((act, idx) => {
+        const t = String(act.actionType || '').toLowerCase();
+        const actOp = String(act.operation || act.mode || '').toLowerCase();
+        const isExplicitDeductType = [
+          'deduct_inventory',
+          'consume_inventory',
+          'remove_inventory',
+          'use_inventory',
+          'subtract_inventory'
+        ].includes(t);
+        const isUpdateSubtract = t === 'update_inventory' && (
+          actOp === 'deduct' ||
           actOp === 'subtract' ||
           actOp === 'discard' ||
           Number(act.delta_quantity) < 0 ||
           Number(act.quantity) < 0 ||
-          /\b(tru|giam|nau|an|dung)\b/.test(normalizeVietnamese(act.description || act.name || '')));
-
-      const isCreateInventoryInMealTurn =
-        t === 'create_inventory' &&
-        (Number(act.quantity) < 0 ||
-          /\b(tru|giam|nau|an|dung)\b/.test(normalizeVietnamese(act.description || act.name || '')) ||
-          !!findInvItem(actInvId, act.name));
-
-      if (isExplicitDeductType || isUpdateSubtract || isCreateInventoryInMealTurn) {
-        const rawQty = Math.abs(Number(act.delta_quantity ?? act.quantity ?? act.qty) || 0);
-        if (rawQty > 0) {
-          primaryMeal.ingredients_used.push({
-            invId: actInvId,
-            name: act.name || act.food_name || act.description,
-            qty: rawQty,
-            unit: act.unit
-          });
+          /\b(tru|giam|nau|an|dung|xai|het)\b/.test(normalizeVietnamese(act.description || act.name || ''))
+        );
+        if (isExplicitDeductType || isUpdateSubtract) {
+          candidateDeductIndices.push(idx);
         }
-        indicesToRemove.add(idx);
-      }
-    });
+      });
 
-    // Chuẩn hóa & chống trùng lặp danh sách ingredients_used của từng meal
-    for (const meal of mealActions) {
-      if (Array.isArray(meal.ingredients_used) && meal.ingredients_used.length > 0) {
-        const dedupMap = new Map<string, any>();
-        for (const rawIng of meal.ingredients_used) {
-          const matchedInv = findInvItem(rawIng.invId || rawIng.inv_id, rawIng.name);
-          const rawQty = Math.abs(Number(rawIng.qty ?? rawIng.quantity) || 0);
-          if (rawQty <= 0) continue;
+      const actDescriptions = candidateDeductIndices
+        .map(idx => normalizeVietnamese(actions[idx].description || actions[idx].name || ''))
+        .join(' ');
+      const actHasEatingVerb = /\b(an|uong|nau|bua)\b/.test(actDescriptions);
+
+      if (candidateDeductIndices.length > 0 && (hasEatingVerb || actHasEatingVerb) && !isExplicitNonEating) {
+        const ingredientsUsed: any[] = [];
+        const itemNames: string[] = [];
+        let earliestCustomTime: string | undefined = undefined;
+
+        for (const idx of candidateDeductIndices) {
+          const act = actions[idx];
+          const actInvId = act.inv_id || act.invId;
+          const matchedInv = findInvItem(actInvId, act.name);
+          const rawQty = Math.abs(Number(act.delta_quantity ?? act.quantity ?? act.qty) || 0);
+          const isFullDeplete = act.operation === 'discard' || /\b(het|not|sach)\b/.test(normUserText) || rawQty === 0;
+
+          let finalQty: number;
+          let finalUnit: string;
+          let finalName: string;
+          let finalInvId: string | undefined;
 
           if (matchedInv) {
-            const key = String(matchedInv._id);
-            const convertedQty = convertQtyToInventoryUnit(
-              rawQty,
-              rawIng.unit,
-              matchedInv.unit,
-              Number(matchedInv.quantity) || undefined
-            );
-            // Nếu AI lỡ liệt kê trùng cùng 1 nguyên liệu 2 lần trong mảng, giữ nguyên số lượng đầu thay vì cộng dồn gấp đôi
-            if (!dedupMap.has(key)) {
-              dedupMap.set(key, {
-                invId: key,
-                name: matchedInv.name,
-                qty: convertedQty,
-                unit: matchedInv.unit
-              });
+            finalInvId = String(matchedInv._id);
+            finalName = matchedInv.name;
+            finalUnit = matchedInv.unit;
+            if (isFullDeplete || rawQty >= (Number(matchedInv.quantity) || 0)) {
+              finalQty = Number(matchedInv.quantity) || 1;
+            } else {
+              finalQty = convertQtyToInventoryUnit(rawQty, act.unit, matchedInv.unit, Number(matchedInv.quantity) || undefined);
             }
           } else {
-            const cleanIngName = capitalizeFirst(cleanTemporalWords(rawIng.name || 'Nguyên liệu'));
-            const key = normalizeIngredientMatchName(cleanIngName);
-            if (key && !dedupMap.has(key)) {
-              dedupMap.set(key, {
-                invId: rawIng.invId || rawIng.inv_id,
-                name: cleanIngName,
-                qty: rawQty,
-                unit: rawIng.unit || 'phần'
-              });
+            finalInvId = actInvId;
+            finalName = act.name || 'Thực phẩm';
+            finalUnit = act.unit || 'phần';
+            finalQty = rawQty > 0 ? rawQty : 1;
+          }
+
+          ingredientsUsed.push({
+            invId: finalInvId,
+            name: finalName,
+            qty: finalQty,
+            unit: finalUnit
+          });
+          itemNames.push(cleanTemporalWords(finalName));
+          if (!earliestCustomTime && act.custom_time) {
+            earliestCustomTime = act.custom_time;
+          }
+          indicesToRemove.add(idx);
+        }
+
+        const cleanFoodName = itemNames.filter(Boolean).join(', ') || 'Món ăn tại nhà';
+
+        // Ước tính calo sơ bộ
+        let estimatedCalo = 0;
+        for (const ing of ingredientsUsed) {
+          const normName = normalizeVietnamese(ing.name);
+          const qty = Number(ing.qty) || 1;
+          if (/trung/.test(normName)) {
+            estimatedCalo += Math.round(qty * 75);
+          } else if (/sua chua/.test(normName)) {
+            estimatedCalo += Math.round(qty * 100);
+          } else if (/sua/.test(normName)) {
+            estimatedCalo += Math.round(qty * 120);
+          } else if (/uc ga|thit ga|ga/.test(normName)) {
+            const g = /kg/.test(ing.unit) ? qty * 1000 : qty;
+            estimatedCalo += Math.round(g * 1.65);
+          } else if (/thit bo|bo/.test(normName)) {
+            const g = /kg/.test(ing.unit) ? qty * 1000 : qty;
+            estimatedCalo += Math.round(g * 2.5);
+          } else if (/thit heo|thit lon|thit/.test(normName)) {
+            const g = /kg/.test(ing.unit) ? qty * 1000 : qty;
+            estimatedCalo += Math.round(g * 2.4);
+          } else {
+            estimatedCalo += 150;
+          }
+        }
+        estimatedCalo = Math.max(100, Math.min(1200, estimatedCalo));
+
+        const synthesizedMeal: any = {
+          actionType: 'meal',
+          food_name: capitalizeFirst(cleanFoodName),
+          meal_tier: estimatedCalo > 500 ? 'HEAVY' : 'LIGHT',
+          source: 'home',
+          amount: 0,
+          calo: estimatedCalo,
+          protein: Math.round(estimatedCalo * 0.06),
+          fat: Math.round(estimatedCalo * 0.03),
+          carbs: Math.round(estimatedCalo * 0.1),
+          sugar: 0,
+          ingredients_used: ingredientsUsed,
+          custom_time: earliestCustomTime,
+          ai_description: `Tự ăn/nấu tại nhà từ đồ trong kho: ${cleanFoodName}. Ước tính khoảng ${estimatedCalo} kcal.`
+        };
+
+        actions.push(synthesizedMeal);
+        mealActions.push(synthesizedMeal);
+      }
+    }
+
+    // 1. Nếu có hành động MEAL: Gom mọi hành động trừ kho rời rạc vào meal.ingredients_used để CHỐNG TRỪ KHO 2 LẦN
+    if (mealActions.length > 0) {
+      const primaryMeal = mealActions[0];
+      if (!Array.isArray(primaryMeal.ingredients_used)) {
+        primaryMeal.ingredients_used = [];
+      }
+
+      actions.forEach((act, idx) => {
+        if (act === primaryMeal) return;
+        const t = String(act.actionType || '').toLowerCase();
+        const actInvId = act.inv_id || act.invId;
+        const actOp = String(act.operation || act.mode || '').toLowerCase();
+
+        const isExplicitDeductType = [
+          'deduct_inventory',
+          'consume_inventory',
+          'remove_inventory',
+          'use_inventory',
+          'subtract_inventory'
+        ].includes(t);
+
+        const isUpdateSubtract =
+          t === 'update_inventory' &&
+          (actOp === 'deduct' ||
+            actOp === 'subtract' ||
+            actOp === 'discard' ||
+            Number(act.delta_quantity) < 0 ||
+            Number(act.quantity) < 0 ||
+            /\b(tru|giam|nau|an|dung)\b/.test(normalizeVietnamese(act.description || act.name || '')));
+
+        const isCreateInventoryInMealTurn =
+          t === 'create_inventory' &&
+          (Number(act.quantity) < 0 ||
+            /\b(tru|giam|nau|an|dung)\b/.test(normalizeVietnamese(act.description || act.name || '')) ||
+            !!findInvItem(actInvId, act.name));
+
+        if (isExplicitDeductType || isUpdateSubtract || isCreateInventoryInMealTurn) {
+          const rawQty = Math.abs(Number(act.delta_quantity ?? act.quantity ?? act.qty) || 0);
+          if (rawQty > 0) {
+            primaryMeal.ingredients_used.push({
+              invId: actInvId,
+              name: act.name || act.food_name || act.description,
+              qty: rawQty,
+              unit: act.unit
+            });
+          }
+          indicesToRemove.add(idx);
+        }
+      });
+
+      // Chuẩn hóa & chống trùng lặp danh sách ingredients_used của từng meal
+      for (const meal of mealActions) {
+        if (Array.isArray(meal.ingredients_used) && meal.ingredients_used.length > 0) {
+          const dedupMap = new Map<string, any>();
+          for (const rawIng of meal.ingredients_used) {
+            const matchedInv = findInvItem(rawIng.invId || rawIng.inv_id, rawIng.name);
+            const rawQty = Math.abs(Number(rawIng.qty ?? rawIng.quantity) || 0);
+            if (rawQty <= 0) continue;
+
+            if (matchedInv) {
+              const key = String(matchedInv._id);
+              const convertedQty = convertQtyToInventoryUnit(
+                rawQty,
+                rawIng.unit,
+                matchedInv.unit,
+                Number(matchedInv.quantity) || undefined
+              );
+              // Nếu AI lỡ liệt kê trùng cùng 1 nguyên liệu 2 lần trong mảng, giữ nguyên số lượng đầu thay vì cộng dồn gấp đôi
+              if (!dedupMap.has(key)) {
+                dedupMap.set(key, {
+                  invId: key,
+                  name: matchedInv.name,
+                  qty: convertedQty,
+                  unit: matchedInv.unit
+                });
+              }
+            } else {
+              const cleanIngName = capitalizeFirst(cleanTemporalWords(rawIng.name || 'Nguyên liệu'));
+              const key = normalizeIngredientMatchName(cleanIngName);
+              if (key && !dedupMap.has(key)) {
+                dedupMap.set(key, {
+                  invId: rawIng.invId || rawIng.inv_id,
+                  name: cleanIngName,
+                  qty: rawQty,
+                  unit: rawIng.unit || 'phần'
+                });
+              }
+            }
+          }
+          meal.ingredients_used = Array.from(dedupMap.values());
+          if (meal.ingredients_used.length > 0) {
+            meal.source = 'home';
+          }
+        }
+      }
+    }
+
+    // 2. Xử lý DELETE_MEAL & UPDATE_INVENTORY / CREATE_INVENTORY khi hoàn tác
+    if (deleteMealActions.length > 0) {
+      for (const delAct of deleteMealActions) {
+        let targetMeal: any = null;
+        if (delAct.meal_id && mongoose.Types.ObjectId.isValid(String(delAct.meal_id))) {
+          targetMeal = await MealLog.findOne({ _id: delAct.meal_id, user_id: userId }).lean().catch(() => null);
+        }
+        if (!targetMeal && delAct.food_name) {
+          const cleanName = cleanTemporalWords(delAct.food_name);
+          targetMeal = await MealLog.findOne({
+            user_id: userId,
+            food_name: new RegExp(cleanName || delAct.food_name.trim(), 'i')
+          }).sort({ consumed_at: -1 }).lean();
+        }
+        if (!targetMeal) {
+          targetMeal = await MealLog.findOne({ user_id: userId }).sort({ consumed_at: -1 }).lean();
+        }
+        if (targetMeal) {
+          delAct.meal_id = String(targetMeal._id);
+          delAct.food_name = targetMeal.food_name;
+          delAct.restored_ingredients = (targetMeal.ingredients_used || []).map((ing: any) => {
+            const matchedInv = findInvItem(ing.invId, ing.name);
+            const rawQty = Number(ing.qty) || 0;
+            const nativeUnit = matchedInv ? matchedInv.unit : (ing.unit || '');
+            const displayQty = matchedInv
+              ? convertQtyToInventoryUnit(rawQty, ing.unit, matchedInv.unit, Number(matchedInv.originalQuantity || matchedInv.quantity) || undefined)
+              : rawQty;
+            return {
+              invId: matchedInv ? String(matchedInv._id) : ing.invId,
+              name: matchedInv ? matchedInv.name : ing.name,
+              qty: displayQty,
+              unit: nativeUnit
+            };
+          });
+        }
+      }
+    }
+
+    // 3. Chuẩn hóa các action update_inventory / create_inventory còn lại
+    actions.forEach((act, idx) => {
+      if (indicesToRemove.has(idx)) return;
+      const actInvId = act.inv_id || act.invId;
+
+      // Nếu AI gọi create_inventory cho nguyên liệu ĐÃ CÓ SẴN trong kho khi đang hoàn tác/chỉnh kho -> chuyển thành update_inventory
+      if (act.actionType === 'create_inventory') {
+        const existingInv = findInvItem(actInvId, act.name);
+        const isRestoreContext = deleteMealActions.length > 0 || /\b(hoan|tra|khoi phuc|cong|them lai|chinh)\b/.test(normalizeVietnamese(act.description || act.name || ''));
+        if (existingInv && isRestoreContext) {
+          act.actionType = 'update_inventory';
+          act.inv_id = String(existingInv._id);
+          act.invId = String(existingInv._id);
+          act.name = existingInv.name;
+          act.operation = act.operation || 'add';
+        }
+      }
+
+      if (act.actionType === 'update_inventory') {
+        const matchedInv = findInvItem(actInvId, act.name);
+        if (matchedInv) {
+          act.inv_id = String(matchedInv._id);
+          act.invId = String(matchedInv._id);
+          act.name = matchedInv.name;
+
+          const rawOp = String(act.operation || '').toLowerCase();
+          const rawMode = String(act.mode || '').toLowerCase();
+          const op = ['set', 'deduct', 'add', 'discard'].includes(rawOp)
+            ? rawOp
+            : rawMode === 'subtract'
+              ? 'deduct'
+              : rawMode === 'add'
+                ? 'add'
+                : rawMode === 'set'
+                  ? 'set'
+                  : Number(act.delta_quantity ?? act.quantity) < 0
+                    ? 'deduct'
+                    : 'add';
+          act.operation = op;
+
+          const rawAmount = act.delta_quantity !== undefined ? act.delta_quantity : (act.quantity ?? act.qty);
+          const rawQty = Math.abs(Number(rawAmount) || 0);
+          if (op !== 'discard' && rawQty > 0) {
+            const converted = convertQtyToInventoryUnit(
+              rawQty,
+              act.unit,
+              matchedInv.unit,
+              Number(matchedInv.originalQuantity || matchedInv.quantity) || undefined
+            );
+            if (op === 'set') {
+              act.quantity = converted;
+            } else {
+              act.delta_quantity = converted;
+              act.quantity = converted;
+            }
+          }
+          act.unit = matchedInv.unit;
+
+          // Nếu trong cùng lượt đã có delete_meal tự động hoàn lại đúng nguyên liệu này, kiểm tra tránh cộng 2 lần
+          if (deleteMealActions.length > 0 && op === 'add') {
+            const alreadyRestoredByMeal = deleteMealActions.some(d =>
+              Array.isArray(d.restored_ingredients) &&
+              d.restored_ingredients.some((ri: any) => String(ri.invId) === String(matchedInv._id))
+            );
+            if (alreadyRestoredByMeal) {
+              const curQty = Number(matchedInv.quantity) || 0;
+              const origQty = Number(matchedInv.originalQuantity) || 0;
+              const addQty = Number(act.delta_quantity ?? act.quantity) || 0;
+              if (origQty > 0 && curQty + addQty <= origQty + 0.001) {
+                indicesToRemove.add(idx);
+              }
             }
           }
         }
-        meal.ingredients_used = Array.from(dedupMap.values());
-        if (meal.ingredients_used.length > 0) {
-          meal.source = 'home';
+      }
+    });
+
+    // 4. Xử lý VAY THÊM / CHO VAY THÊM VÀO SỔ NỢ CÓ SẴN (BORROW_MORE_DEBT)
+    // Nếu AI trả về borrow_more hoặc pay_debt kèm action='borrow_more', hoặc debt_borrowed/debt_lent
+    // có chứa debt_id / có từ khóa "vay thêm", "cho vay thêm", "mượn thêm" khớp với sổ nợ mở -> chuyển sang borrow_more_debt
+    const openDebts = await Debt.find({ user_id: userId, status: { $ne: 'paid' } }).lean().catch(() => []);
+
+    actions.forEach((act, idx) => {
+      if (indicesToRemove.has(idx)) return;
+      const t = String(act.actionType || '');
+
+      if (t === 'borrow_more') {
+        act.actionType = 'borrow_more_debt';
+      }
+
+      if (t === 'pay_debt' && (act.action === 'borrow_more' || act.type === 'borrow_more')) {
+        act.actionType = 'borrow_more_debt';
+      }
+
+      const currentType = String(act.actionType || '');
+      const isDebtLentOrBorrowed = currentType === 'debt_lent' || currentType === 'debt_borrowed';
+      const isBorrowMoreDebt = currentType === 'borrow_more_debt';
+
+      if (isDebtLentOrBorrowed || isBorrowMoreDebt) {
+        let matchedDebt: any = null;
+
+        if (act.debt_id && mongoose.Types.ObjectId.isValid(String(act.debt_id))) {
+          matchedDebt = (openDebts as any[]).find((d: any) => String(d._id) === String(act.debt_id));
+        }
+
+        if (!matchedDebt && act.person) {
+          const targetType = isDebtLentOrBorrowed
+            ? (currentType === 'debt_lent' ? 'lent' : 'borrowed')
+            : (act.debt_type || (act.type === 'lent' ? 'lent' : 'borrowed'));
+
+          const typedDebts = (openDebts as any[]).filter((d: any) => !targetType || d.type === targetType);
+          matchedDebt = matchByNormalizedName(typedDebts, act.person, (d: any) => d.personName)
+            || matchByNormalizedName(openDebts as any[], act.person, (d: any) => d.personName);
+        }
+
+        const descNorm = normalizeVietnamese(act.description || '');
+        const userTextNorm = normalizeVietnamese(userText || '');
+        const isBorrowMoreIntent = isBorrowMoreDebt ||
+          Boolean(act.debt_id) ||
+          /\b(vay them|cho vay them|muon them|vay them tien|muon them tien|them vao khoan no|cho muon them|vay them tu|vay lai|muon lai)\b/i.test(descNorm) ||
+          /\b(vay them|cho vay them|muon them|vay them tien|muon them tien|them vao khoan no|cho muon them|vay them tu|vay lai|muon lai)\b/i.test(userTextNorm);
+
+        if (matchedDebt && isBorrowMoreIntent) {
+          act.actionType = 'borrow_more_debt';
+          act.debt_id = String(matchedDebt._id);
+          act.person = matchedDebt.personName;
+          act.debt_type = matchedDebt.type; // 'lent' hoặc 'borrowed'
+        }
+      }
+    });
+
+    return actions.filter((_, idx) => !indicesToRemove.has(idx));
+  }
+
+  function matchByNormalizedName<T>(
+    items: T[],
+    targetName: unknown,
+    getName: (item: T) => string
+  ): T | null {
+    if (typeof targetName !== 'string' || !targetName.trim() || items.length === 0) return null;
+    const target = normalizeVietnamese(targetName);
+    if (!target) return null;
+
+    const exact = items.find((item) => normalizeVietnamese(getName(item)) === target);
+    if (exact) return exact;
+
+    const partial = items.find((item) => {
+      const candidate = normalizeVietnamese(getName(item));
+      return candidate.includes(target) || target.includes(candidate);
+    });
+    return partial ?? null;
+  }
+
+  async function resolveUserWallet(
+    userId: string,
+    walletId?: unknown,
+    walletName?: unknown,
+    fallbackToSingle: boolean = false
+  ) {
+    if (typeof walletId === 'string' && mongoose.Types.ObjectId.isValid(walletId)) {
+      const byId = await Wallet.findOne({ _id: walletId, user_id: userId });
+      if (byId) return byId;
+    }
+
+    const allWallets = await Wallet.find({ user_id: userId });
+    const byName = matchByNormalizedName(allWallets, walletName, (w) => w.name);
+    if (byName) return byName;
+
+    if (fallbackToSingle && allWallets.length === 1) {
+      return allWallets[0];
+    }
+    return null;
+  }
+
+  async function deductInventoryForHomeMeal(
+    userId: string,
+    rawIngredients: Array<{ invId?: unknown; inv_id?: unknown; name?: unknown; qty?: unknown; quantity?: unknown; unit?: unknown }>
+  ) {
+    const userInventory = await Inventory.find({ user_id: userId, quantity: { $gt: 0 } });
+    const mergedQty = new Map<string, number>();
+
+    for (const ing of rawIngredients) {
+      if (!ing || typeof ing !== 'object') continue;
+      const rawQtyNum = Number(ing.qty ?? ing.quantity);
+      if (isNaN(rawQtyNum) || rawQtyNum <= 0) continue;
+
+      let invItem: (typeof userInventory)[number] | null = null;
+      const ingId = ing.invId || ing.inv_id;
+      if (typeof ingId === 'string' && mongoose.Types.ObjectId.isValid(ingId)) {
+        invItem = userInventory.find((i) => i._id.toString() === ingId) ?? null;
+      }
+      if (!invItem && ing.name) {
+        invItem = matchByNormalizedName(userInventory, ing.name, (i) => i.name);
+      }
+      if (!invItem) {
+        throw new Error(`Không tìm thấy nguyên liệu "${ing.name || '?'}" còn tồn trong kho để trừ kho`);
+      }
+
+      const convertedQty = convertQtyToInventoryUnit(
+        rawQtyNum,
+        typeof ing.unit === 'string' ? ing.unit : undefined,
+        invItem.unit,
+        Number(invItem.quantity) || undefined
+      );
+
+      const idStr = invItem._id.toString();
+      mergedQty.set(idStr, Number(((mergedQty.get(idStr) || 0) + convertedQty).toFixed(4)));
+    }
+
+    // Pass 1: Validate tồn kho toàn bộ trước khi trừ
+    const itemsToDeduct: Array<{ item: (typeof userInventory)[number]; qty: number }> = [];
+    for (const [invId, qty] of mergedQty.entries()) {
+      const item = userInventory.find((i) => i._id.toString() === invId);
+      if (!item || item.quantity <= 0) {
+        throw new Error(`Nguyên liệu "${item?.name || '?'}" trong kho đã dùng hết`);
+      }
+      if (qty > item.quantity + 1e-6) {
+        throw new Error(
+          `Nguyên liệu "${item.name}" trong kho chỉ còn ${item.quantity} ${item.unit} (không đủ ${qty} ${item.unit})`
+        );
+      }
+      itemsToDeduct.push({ item, qty: Math.min(item.quantity, qty) });
+    }
+
+    // Pass 2: Trừ số lượng và giá trị kho tương ứng
+    let totalInventoryCost = 0;
+    const processedIngredientsUsed: {
+      invId: string;
+      qty: number;
+      cost: number;
+      name: string;
+      unit: string;
+    }[] = [];
+
+    for (const { item, qty } of itemsToDeduct) {
+      if (!item.originalValue && item.totalValue && item.totalValue > 0 && item.quantity === item.originalQuantity) {
+        item.originalValue = item.totalValue;
+      }
+
+      let valueToDeduct = 0;
+      if (item.totalValue && item.totalValue > 0 && item.quantity > 0) {
+        if (qty >= item.quantity - 1e-6) {
+          valueToDeduct = Math.round(item.totalValue);
+        } else {
+          const valuePerUnit = item.totalValue / item.quantity;
+          valueToDeduct = Math.min(Math.round(item.totalValue), Math.round(valuePerUnit * qty));
+        }
+        item.totalValue = Math.max(0, Math.round(item.totalValue - valueToDeduct));
+        totalInventoryCost += valueToDeduct;
+      }
+
+      item.quantity = Math.max(0, Number((item.quantity - qty).toFixed(4)));
+      await item.save();
+
+      processedIngredientsUsed.push({
+        invId: item._id.toString(),
+        qty,
+        cost: valueToDeduct,
+        name: item.name,
+        unit: item.unit
+      });
+    }
+
+    return { totalInventoryCost, processedIngredientsUsed };
+  }
+
+  async function applyTaskCompletionReward(userId: string, task: any, completedAt: Date) {
+    task.status = 'COMPLETED';
+    task.completed_at = completedAt;
+    await task.save();
+
+    const user = await User.findById(userId);
+    const rewardExp = EXP_REWARDS[task.quest_rank as keyof typeof EXP_REWARDS] || 50;
+    let leveledUp = false;
+
+    if (user) {
+      user.current_exp += rewardExp;
+      let requiredExp = getExpForNextLevel(user.level);
+      while (user.current_exp >= requiredExp) {
+        user.current_exp -= requiredExp;
+        user.level += 1;
+        leveledUp = true;
+        requiredExp = getExpForNextLevel(user.level);
+      }
+
+      const mpReward = Math.floor(Math.random() * 21) + 40;
+      user.current_mp = Math.min(user.max_mp, user.current_mp + mpReward);
+      await user.save();
+    }
+
+    return { rewardExp, leveledUp };
+  }
+
+  async function applyTaskUndoPenalty(userId: string, task: any) {
+    task.status = 'PENDING';
+    task.completed_at = undefined;
+    await task.save();
+
+    const user = await User.findById(userId);
+    const penaltyExp = EXP_REWARDS[task.quest_rank as keyof typeof EXP_REWARDS] || 50;
+    if (user) {
+      user.current_exp -= penaltyExp;
+      while (user.current_exp < 0 && user.level > 1) {
+        user.level -= 1;
+        user.current_exp += getExpForNextLevel(user.level);
+      }
+      if (user.current_exp < 0) user.current_exp = 0;
+      if (user.current_hp > user.max_hp) user.current_hp = user.max_hp;
+      if (user.current_mp > user.max_mp) user.current_mp = user.max_mp;
+      await user.save();
+    }
+    return penaltyExp;
+  }
+
+  async function findTargetTask(userId: string, action: any) {
+    if (typeof action.task_id === 'string' && mongoose.Types.ObjectId.isValid(action.task_id)) {
+      const byId = await Task.findOne({ _id: action.task_id, user_id: userId });
+      if (byId) return byId;
+    }
+    const searchTitle = action.original_title || action.title;
+    if (typeof searchTitle === 'string' && searchTitle.trim()) {
+      const userTasks = await Task.find({ user_id: userId }).sort({ createdAt: -1 }).limit(50);
+      const cleaned = cleanTemporalWords(searchTitle) || searchTitle;
+      return matchByNormalizedName(userTasks, cleaned, (t) => t.title);
+    }
+    return null;
+  }
+
+  async function findTargetDebt(userId: string, action: any) {
+    if (typeof action.debt_id === 'string' && mongoose.Types.ObjectId.isValid(action.debt_id)) {
+      const byId = await Debt.findOne({ _id: action.debt_id, user_id: userId, status: { $ne: 'paid' } });
+      if (byId) return byId;
+      const anyById = await Debt.findOne({ _id: action.debt_id, user_id: userId });
+      if (anyById) return anyById;
+    }
+    const openDebts = await Debt.find({ user_id: userId, status: { $ne: 'paid' } }).sort({ createdAt: -1 });
+    const typedDebts = action.debt_type === 'lent' || action.debt_type === 'borrowed'
+      ? openDebts.filter((d) => d.type === action.debt_type)
+      : openDebts;
+    const matched = matchByNormalizedName(typedDebts, action.person, (d) => d.personName);
+    if (matched) return matched;
+    return matchByNormalizedName(openDebts, action.person, (d) => d.personName);
+  }
+
+  async function resolveCalendarTarget(userId: string, action: any) {
+    const rawEventId = typeof action.event_id === 'string' ? action.event_id.trim() : '';
+    let baseDoc: any = null;
+    let compositeOccDate: Date | null = null;
+
+    if (rawEventId.includes('_')) {
+      const sepIdx = rawEventId.indexOf('_');
+      const parentId = rawEventId.slice(0, sepIdx);
+      const isoPart = rawEventId.slice(sepIdx + 1);
+      if (mongoose.Types.ObjectId.isValid(parentId)) {
+        baseDoc = await CalendarEvent.findOne({ _id: parentId, user_id: userId });
+      }
+      const parsedIso = new Date(isoPart);
+      if (!isNaN(parsedIso.getTime())) {
+        compositeOccDate = parsedIso;
+      }
+    } else if (mongoose.Types.ObjectId.isValid(rawEventId)) {
+      baseDoc = await CalendarEvent.findOne({ _id: rawEventId, user_id: userId });
+    }
+
+    if (!baseDoc && typeof action.parent_event_id === 'string' && mongoose.Types.ObjectId.isValid(action.parent_event_id)) {
+      baseDoc = await CalendarEvent.findOne({ _id: action.parent_event_id, user_id: userId });
+    }
+
+    if (!baseDoc && (action.original_title || action.title)) {
+      const userEvents = await CalendarEvent.find({
+        user_id: userId,
+        is_cancelled: { $ne: true }
+      }).sort({ start_time: 1 });
+      const searchTitle = cleanTemporalWords(action.original_title || action.title) || action.title;
+      baseDoc = matchByNormalizedName(userEvents, searchTitle, (e) => e.title);
+    }
+
+    if (!baseDoc) return null;
+
+    let occurrenceStart: Date | null = compositeOccDate;
+    if (!occurrenceStart && baseDoc.is_recurring && action.scope !== 'series') {
+      const hint = action.exception_date || action.start_time;
+      const parsedHint = parseVnDateTime(hint, '09:00:00');
+      if (parsedHint) {
+        const hintVn = getVnDateStr(parsedHint);
+        const rangeStart = new Date(parsedHint.getTime() - 2 * 86400000);
+        const rangeEnd = new Date(parsedHint.getTime() + 2 * 86400000);
+        const expanded = await getExpandedCalendarEvents(userId, rangeStart, rangeEnd);
+        const matchOcc = (expanded as any[]).find((ev) => {
+          const pId = ev.parent_event_id?.toString() || ev._id?.toString();
+          return pId === baseDoc._id.toString() && getVnDateStr(ev.start_time) === hintVn;
+        });
+        if (matchOcc) {
+          occurrenceStart = new Date(matchOcc.start_time);
         }
       }
     }
+
+    return { baseDoc, occurrenceStart };
   }
 
-  // 2. Xử lý DELETE_MEAL & UPDATE_INVENTORY / CREATE_INVENTORY khi hoàn tác
-  if (deleteMealActions.length > 0) {
-    for (const delAct of deleteMealActions) {
-      let targetMeal: any = null;
-      if (delAct.meal_id && mongoose.Types.ObjectId.isValid(String(delAct.meal_id))) {
-        targetMeal = await MealLog.findOne({ _id: delAct.meal_id, user_id: userId }).lean().catch(() => null);
-      }
-      if (!targetMeal && delAct.food_name) {
-        const cleanName = cleanTemporalWords(delAct.food_name);
-        targetMeal = await MealLog.findOne({
+  async function revertTransactionWalletEffect(userId: string, tx: any): Promise<boolean> {
+    const { type, amount, wallet_id, to_wallet_id } = tx;
+    if (type === 'income' && wallet_id) {
+      const w = await Wallet.findOneAndUpdate(
+        { _id: wallet_id, user_id: userId, balance: { $gte: amount } },
+        { $inc: { balance: -amount } }
+      );
+      return Boolean(w);
+    }
+    if (type === 'expense' && wallet_id) {
+      await Wallet.findOneAndUpdate(
+        { _id: wallet_id, user_id: userId },
+        { $inc: { balance: amount } }
+      );
+      return true;
+    }
+    if (type === 'transfer' && wallet_id && to_wallet_id) {
+      const dest = await Wallet.findOneAndUpdate(
+        { _id: to_wallet_id, user_id: userId, balance: { $gte: amount } },
+        { $inc: { balance: -amount } }
+      );
+      if (!dest) return false;
+      await Wallet.findOneAndUpdate(
+        { _id: wallet_id, user_id: userId },
+        { $inc: { balance: amount } }
+      );
+      return true;
+    }
+    return true;
+  }
+
+  async function rollbackTransactionWalletRevert(userId: string, oldTx: any) {
+    const { type, amount, wallet_id, to_wallet_id } = oldTx;
+    if (type === 'income' && wallet_id) {
+      await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: userId }, { $inc: { balance: amount } });
+    } else if (type === 'expense' && wallet_id) {
+      await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: userId }, { $inc: { balance: -amount } });
+    } else if (type === 'transfer' && wallet_id && to_wallet_id) {
+      await Wallet.findOneAndUpdate({ _id: to_wallet_id, user_id: userId }, { $inc: { balance: amount } });
+      await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: userId }, { $inc: { balance: -amount } });
+    }
+  }
+
+  /**
+   * Thực thi các hành động đã được người dùng xác nhận trên giao diện.
+   */
+  export async function executeYuiActions(userId: string, rawActions: any[]) {
+    await dbConnect();
+    if (!rawActions || !Array.isArray(rawActions) || rawActions.length === 0) {
+      throw new Error('Danh sách hành động không hợp lệ');
+    }
+
+    const actions = await sanitizeYuiPlanActions(userId, rawActions);
+    const executedResults: any[] = [];
+    const now = new Date();
+
+    for (const action of actions) {
+      const actionType = action.actionType;
+
+      // Trích xuất ngày giờ tùy chỉnh chuẩn múi giờ Việt Nam (+07:00)
+      const actionDate = parseVnDateTime(action.custom_time, '12:00:00') ?? now;
+
+      // 1. MEAL (Hỗ trợ cả Ăn ngoài lẫn Tự nấu trừ Kho)
+      if (actionType === 'meal') {
+        const cashAmount = Math.max(0, Number(action.amount) || 0);
+        const hasIngredients = Array.isArray(action.ingredients_used) && action.ingredients_used.length > 0;
+        const isHomeCook = action.source === 'home' || hasIngredients;
+        let txId: any = undefined;
+        let resolvedWallet: any = null;
+        let calculatedInventoryCost = 0;
+        let processedIngredientsUsed: any[] | undefined = undefined;
+
+        const rawFoodName = action.food_name || action.description || 'Món ăn';
+        const cleanFoodName = capitalizeFirst(cleanTemporalWords(rawFoodName)) || 'Bữa ăn';
+
+        if (isHomeCook && hasIngredients) {
+          const invDeduct = await deductInventoryForHomeMeal(userId, action.ingredients_used);
+          calculatedInventoryCost = invDeduct.totalInventoryCost;
+          processedIngredientsUsed = invDeduct.processedIngredientsUsed;
+        }
+
+        if (cashAmount > 0) {
+          resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
+          if (resolvedWallet) {
+            await Wallet.findOneAndUpdate(
+              { _id: resolvedWallet._id, user_id: userId },
+              { $inc: { balance: -cashAmount } }
+            );
+          }
+          const tx = await Transaction.create({
+            user_id: userId,
+            type: 'expense',
+            amount: cashAmount,
+            date: actionDate,
+            description: `Ăn uống: ${cleanFoodName}`,
+            category: 'food',
+            wallet_id: resolvedWallet?._id || action.wallet_id || undefined,
+            walletName: resolvedWallet?.name || action.walletName || 'Ví không xác định'
+          });
+          txId = tx._id;
+        }
+
+        const calo = Math.max(0, Number(action.calo) || 0);
+        const hp = Math.floor(calo * 1.0);
+        const tier = ['HEAVY', 'LIGHT', 'DRINK'].includes(action.meal_tier) ? action.meal_tier : 'LIGHT';
+        const totalMealCost = (isHomeCook ? calculatedInventoryCost : 0) + cashAmount;
+        const ingSummaryText = processedIngredientsUsed && processedIngredientsUsed.length > 0
+          ? processedIngredientsUsed.map(i => `${i.qty} ${i.unit} ${i.name}`).join(', ')
+          : '';
+        const aiDesc = action.ai_description?.trim() || `Khẩu phần tiêu chuẩn: ${cleanFoodName}${ingSummaryText ? ` (${ingSummaryText})` : ''}. Ước tính cung cấp khoảng ${calo} kcal.`;
+
+        const meal = await MealLog.create({
           user_id: userId,
-          food_name: new RegExp(cleanName || delAct.food_name.trim(), 'i')
-        }).sort({ consumed_at: -1 }).lean();
-      }
-      if (!targetMeal) {
-        targetMeal = await MealLog.findOne({ user_id: userId }).sort({ consumed_at: -1 }).lean();
-      }
-      if (targetMeal) {
-        delAct.meal_id = String(targetMeal._id);
-        delAct.food_name = targetMeal.food_name;
-        delAct.restored_ingredients = (targetMeal.ingredients_used || []).map((ing: any) => {
-          const matchedInv = findInvItem(ing.invId, ing.name);
-          const rawQty = Number(ing.qty) || 0;
-          const nativeUnit = matchedInv ? matchedInv.unit : (ing.unit || '');
-          const displayQty = matchedInv
-            ? convertQtyToInventoryUnit(rawQty, ing.unit, matchedInv.unit, Number(matchedInv.originalQuantity || matchedInv.quantity) || undefined)
-            : rawQty;
-          return {
-            invId: matchedInv ? String(matchedInv._id) : ing.invId,
-            name: matchedInv ? matchedInv.name : ing.name,
-            qty: displayQty,
-            unit: nativeUnit
-          };
+          food_name: cleanFoodName,
+          meal_tier: tier,
+          hp_restored: hp,
+          consumed_at: actionDate,
+          calo,
+          protein: Number(action.protein) || 0,
+          fat: Number(action.fat) || 0,
+          carbs: Number(action.carbs) || 0,
+          sugar: Number(action.sugar) || 0,
+          cost: totalMealCost,
+          ai_status: 'completed',
+          ai_description: aiDesc,
+          ...(ingSummaryText ? { ingredients_text: ingSummaryText } : {}),
+          source: isHomeCook ? 'home' : 'eat_out',
+          ingredients_used: isHomeCook && processedIngredientsUsed ? processedIngredientsUsed : undefined,
+          transaction_id: txId,
+          wallet_id: cashAmount > 0 ? (resolvedWallet?._id || action.wallet_id) : undefined
         });
+
+        const user = await User.findById(userId);
+        if (user) {
+          user.current_hp = Math.min(user.max_hp, user.current_hp + hp);
+          await user.save();
+        }
+
+        executedResults.push({
+          type: 'meal',
+          id: meal._id,
+          food_name: meal.food_name,
+          source: meal.source,
+          amount: totalMealCost,
+          hp,
+          ingredients_used: processedIngredientsUsed,
+          walletName: resolvedWallet?.name || action.walletName
+        });
+        continue;
       }
-    }
-  }
 
-  // 3. Chuẩn hóa các action update_inventory / create_inventory còn lại
-  actions.forEach((act, idx) => {
-    if (indicesToRemove.has(idx)) return;
-    const actInvId = act.inv_id || act.invId;
+      // 1B. DELETE MEAL (Hoàn tác bữa ăn: xóa lịch sử ăn + hoàn lại nguyên liệu về kho hoặc hoàn tiền về ví)
+      if (actionType === 'delete_meal') {
+        let meal: any = null;
+        if (action.meal_id && mongoose.Types.ObjectId.isValid(String(action.meal_id))) {
+          meal = await MealLog.findOne({ _id: action.meal_id, user_id: userId }).catch(() => null);
+        }
+        if (!meal && action.food_name) {
+          const cleanName = cleanTemporalWords(action.food_name);
+          meal = await MealLog.findOne({
+            user_id: userId,
+            food_name: new RegExp(cleanName || action.food_name.trim(), 'i')
+          }).sort({ consumed_at: -1 });
+        }
+        if (!meal) {
+          meal = await MealLog.findOne({ user_id: userId }).sort({ consumed_at: -1 });
+        }
 
-    // Nếu AI gọi create_inventory cho nguyên liệu ĐÃ CÓ SẴN trong kho khi đang hoàn tác/chỉnh kho -> chuyển thành update_inventory
-    if (act.actionType === 'create_inventory') {
-      const existingInv = findInvItem(actInvId, act.name);
-      const isRestoreContext = deleteMealActions.length > 0 || /\b(hoan|tra|khoi phuc|cong|them lai|chinh)\b/.test(normalizeVietnamese(act.description || act.name || ''));
-      if (existingInv && isRestoreContext) {
-        act.actionType = 'update_inventory';
-        act.inv_id = String(existingInv._id);
-        act.invId = String(existingInv._id);
-        act.name = existingInv.name;
-        act.operation = act.operation || 'add';
+        if (meal) {
+          const restoredItems: any[] = [];
+          if (meal.transaction_id) {
+            const oldTx = await Transaction.findById(meal.transaction_id);
+            if (oldTx) {
+              if (oldTx.wallet_id) {
+                await Wallet.findOneAndUpdate(
+                  { _id: oldTx.wallet_id, user_id: userId },
+                  { $inc: { balance: oldTx.amount } }
+                );
+              }
+              await Transaction.findByIdAndDelete(oldTx._id);
+            }
+          }
+          if (meal.source === 'home' && Array.isArray(meal.ingredients_used)) {
+            for (const ing of meal.ingredients_used) {
+              let item = ing.invId && mongoose.Types.ObjectId.isValid(String(ing.invId))
+                ? await Inventory.findOne({ _id: ing.invId, user_id: userId })
+                : null;
+              if (!item && ing.name) {
+                const normTarget = normalizeIngredientMatchName(ing.name);
+                const userInv = await Inventory.find({ user_id: userId });
+                item = userInv.find(i => normalizeIngredientMatchName(i.name) === normTarget) || null;
+              }
+              if (item) {
+                const rawQty = Math.max(0, Number(ing.qty) || 0);
+                const convertedQty = convertQtyToInventoryUnit(
+                  rawQty,
+                  ing.unit,
+                  item.unit,
+                  Number(item.originalQuantity || item.quantity) || undefined
+                );
+                const curQty = Number(item.quantity) || 0;
+                const origQty = Number(item.originalQuantity) || 0;
+
+                let restoreQty = convertedQty;
+                // Phát hiện nếu bữa ăn cũ bị lỗi trừ số thập phân (vd: 300 - 0.15 = 299.85 g) kèm 1 lần trừ 150g trước đó
+                if (rawQty > 0 && rawQty !== convertedQty && curQty % 1 !== 0 && Math.abs((curQty + rawQty) % 1) < 0.001) {
+                  const hasSeparateRestoreInBatch = actions.some(
+                    a => a.actionType === 'update_inventory' && String(a.inv_id || a.invId) === String(item._id)
+                  );
+                  if (!hasSeparateRestoreInBatch && origQty > 0 && curQty + rawQty + convertedQty <= origQty + 0.001) {
+                    restoreQty = Number((rawQty + convertedQty).toFixed(4));
+                  } else {
+                    restoreQty = rawQty;
+                  }
+                }
+
+                let restoreVal = Math.max(0, Number(ing.cost) || 0);
+                if (restoreVal <= 0) {
+                  let baseValue = item.originalValue || 0;
+                  if (!baseValue && item.transaction_id) {
+                    const tx = await Transaction.findById(item.transaction_id);
+                    if (tx) baseValue = tx.amount;
+                  }
+                  if (baseValue > 0 && origQty > 0) {
+                    restoreVal = Math.round((baseValue / origQty) * restoreQty);
+                  } else if (curQty > 0 && (Number(item.totalValue) || 0) > 0) {
+                    restoreVal = Math.round(((Number(item.totalValue) || 0) / curQty) * restoreQty);
+                  }
+                }
+
+                item.quantity = Number((curQty + restoreQty).toFixed(4));
+                item.totalValue = Math.round((Number(item.totalValue) || 0) + restoreVal);
+                if (origQty > 0 && item.quantity > origQty) {
+                  item.originalQuantity = item.quantity;
+                }
+                await item.save();
+
+                restoredItems.push({
+                  invId: item._id,
+                  name: item.name,
+                  qty: restoreQty,
+                  unit: item.unit
+                });
+              }
+            }
+          }
+
+          const hpToRevert = Number(meal.hp_restored) || 0;
+          if (hpToRevert > 0) {
+            const user = await User.findById(userId);
+            if (user) {
+              user.current_hp = Math.max(0, user.current_hp - hpToRevert);
+              await user.save();
+            }
+          }
+
+          const deletedFoodName = meal.food_name;
+          const deletedId = meal._id;
+          await MealLog.findByIdAndDelete(meal._id);
+
+          executedResults.push({
+            type: 'delete_meal',
+            id: deletedId,
+            food_name: deletedFoodName,
+            restored_ingredients: restoredItems
+          });
+        }
+        continue;
       }
-    }
 
-    if (act.actionType === 'update_inventory') {
-      const matchedInv = findInvItem(actInvId, act.name);
-      if (matchedInv) {
-        act.inv_id = String(matchedInv._id);
-        act.invId = String(matchedInv._id);
-        act.name = matchedInv.name;
+      // 2. EXPENSE
+      if (actionType === 'expense') {
+        const amount = Number(action.amount) || 0;
+        if (amount <= 0) continue;
 
-        const rawOp = String(act.operation || '').toLowerCase();
-        const rawMode = String(act.mode || '').toLowerCase();
+        const rawDesc = action.description || 'Chi tiêu';
+        const cleanDesc = capitalizeFirst(cleanTemporalWords(rawDesc)) || 'Chi tiêu';
+        const resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
+
+        if (resolvedWallet) {
+          await Wallet.findOneAndUpdate(
+            { _id: resolvedWallet._id, user_id: userId },
+            { $inc: { balance: -amount } }
+          );
+        }
+
+        const tx = await Transaction.create({
+          user_id: userId,
+          type: 'expense',
+          amount,
+          date: actionDate,
+          description: cleanDesc,
+          category: action.category || 'other',
+          wallet_id: resolvedWallet?._id || action.wallet_id || undefined,
+          walletName: resolvedWallet?.name || action.walletName || 'Ví không xác định'
+        });
+
+        executedResults.push({
+          type: 'expense',
+          id: tx._id,
+          amount,
+          description: tx.description,
+          walletName: tx.walletName
+        });
+        continue;
+      }
+
+      // 3. INCOME
+      if (actionType === 'income') {
+        const amount = Number(action.amount) || 0;
+        if (amount <= 0) continue;
+
+        const rawDesc = action.description || 'Thu nhập';
+        const cleanDesc = capitalizeFirst(cleanTemporalWords(rawDesc)) || 'Thu nhập';
+        const resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
+
+        if (resolvedWallet) {
+          await Wallet.findOneAndUpdate(
+            { _id: resolvedWallet._id, user_id: userId },
+            { $inc: { balance: amount } }
+          );
+        }
+
+        const tx = await Transaction.create({
+          user_id: userId,
+          type: 'income',
+          amount,
+          date: actionDate,
+          description: cleanDesc,
+          category: action.category || 'other',
+          wallet_id: resolvedWallet?._id || action.wallet_id || undefined,
+          walletName: resolvedWallet?.name || action.walletName || 'Ví không xác định'
+        });
+
+        executedResults.push({
+          type: 'income',
+          id: tx._id,
+          amount,
+          description: tx.description,
+          walletName: tx.walletName
+        });
+        continue;
+      }
+
+      // 3b. TRANSFER (Chuyển tiền giữa các ví nội bộ)
+      if (actionType === 'transfer') {
+        const amount = Number(action.amount) || 0;
+        if (amount <= 0) continue;
+
+        const sourceWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
+        const destWallet = await resolveUserWallet(
+          userId,
+          action.to_wallet_id || action.toWalletId,
+          action.toWalletName || action.to_wallet_name
+        );
+
+        if (!sourceWallet || !destWallet) {
+          throw new Error('Không tìm thấy ví nguồn hoặc ví đích để thực hiện chuyển khoản');
+        }
+        if (sourceWallet._id.toString() === destWallet._id.toString()) {
+          throw new Error('Ví nguồn và ví đích phải khác nhau khi chuyển khoản');
+        }
+
+        const deductedSource = await Wallet.findOneAndUpdate(
+          { _id: sourceWallet._id, user_id: userId, balance: { $gte: amount } },
+          { $inc: { balance: -amount } },
+          { returnDocument: 'after' }
+        );
+        if (!deductedSource) {
+          throw new Error(`Số dư ví "${sourceWallet.name}" không đủ để chuyển ${amount.toLocaleString('vi-VN')}đ`);
+        }
+
+        const creditedDest = await Wallet.findOneAndUpdate(
+          { _id: destWallet._id, user_id: userId },
+          { $inc: { balance: amount } },
+          { returnDocument: 'after' }
+        );
+        if (!creditedDest) {
+          await Wallet.findByIdAndUpdate(sourceWallet._id, { $inc: { balance: amount } });
+          throw new Error('Ví đích không tồn tại, đã hoàn lại số dư ví nguồn');
+        }
+
+        const rawDesc = action.description || `Chuyển khoản: ${sourceWallet.name} -> ${destWallet.name}`;
+        const cleanDesc = capitalizeFirst(cleanTemporalWords(rawDesc)) || `Chuyển khoản: ${sourceWallet.name} -> ${destWallet.name}`;
+        const combinedWalletName = `${sourceWallet.name} -> ${destWallet.name}`;
+
+        const tx = await Transaction.create({
+          user_id: userId,
+          type: 'transfer',
+          amount,
+          date: actionDate,
+          description: cleanDesc,
+          wallet_id: sourceWallet._id,
+          to_wallet_id: destWallet._id,
+          walletName: combinedWalletName
+        });
+
+        executedResults.push({
+          type: 'transfer',
+          id: tx._id,
+          amount,
+          description: tx.description,
+          walletName: combinedWalletName
+        });
+        continue;
+      }
+
+      const handleBorrowMoreDebt = async (act: any, forcedType?: 'lent' | 'borrowed') => {
+        const borrowAmount = Number(act.amount) || 0;
+        if (borrowAmount <= 0) {
+          throw new Error('Số tiền vay thêm / cho vay thêm phải lớn hơn 0');
+        }
+
+        if (forcedType && !act.debt_type) {
+          act.debt_type = forcedType;
+        }
+
+        const debt = await findTargetDebt(userId, act);
+        if (!debt) {
+          throw new Error(`Không tìm thấy khoản nợ chưa tất toán với "${act.person || 'đối tượng'}" để ghi nhận vay thêm`);
+        }
+
+        const wallet = await resolveUserWallet(userId, act.wallet_id, act.walletName, true);
+        if (!wallet) {
+          throw new Error('Vui lòng chọn hoặc nêu rõ ví để thực hiện giao dịch vay thêm');
+        }
+
+        let transactionType: 'income' | 'expense';
+        let txDesc: string;
+
+        if (debt.type === 'lent') {
+          const deducted = await Wallet.findOneAndUpdate(
+            { _id: wallet._id, user_id: userId, balance: { $gte: borrowAmount } },
+            { $inc: { balance: -borrowAmount } },
+            { returnDocument: 'after' }
+          );
+          if (!deducted) {
+            throw new Error(`Số dư ví "${wallet.name}" không đủ để cho ${debt.personName} vay thêm ${borrowAmount.toLocaleString('vi-VN')}đ`);
+          }
+          transactionType = 'expense';
+          txDesc = act.description || `Cho ${debt.personName} vay thêm`;
+        } else {
+          await Wallet.findOneAndUpdate(
+            { _id: wallet._id, user_id: userId },
+            { $inc: { balance: borrowAmount } }
+          );
+          transactionType = 'income';
+          txDesc = act.description || `Vay thêm từ ${debt.personName}`;
+        }
+
+        debt.totalAmount += borrowAmount;
+        debt.remainingAmount += borrowAmount;
+        debt.status = debt.remainingAmount < debt.totalAmount ? 'partial' : 'unpaid';
+        if (debt.completedDate) {
+          debt.completedDate = undefined;
+        }
+        debt.history.push({
+          date: actionDate,
+          amount: borrowAmount,
+          type: 'borrow_more',
+          walletName: wallet.name
+        } as any);
+
+        await debt.save();
+
+        const cleanDesc = cleanTemporalWords(txDesc) || txDesc;
+        const tx = await Transaction.create({
+          user_id: userId,
+          type: transactionType,
+          amount: borrowAmount,
+          date: actionDate,
+          description: cleanDesc,
+          category: 'other',
+          wallet_id: wallet._id,
+          walletName: wallet.name
+        });
+
+        executedResults.push({
+          type: 'borrow_more_debt',
+          id: debt._id,
+          person: debt.personName,
+          debt_type: debt.type,
+          amount: borrowAmount,
+          totalAmount: debt.totalAmount,
+          remainingAmount: debt.remainingAmount,
+          status: debt.status,
+          walletName: wallet.name,
+          transaction_id: tx._id
+        });
+      };
+
+      // 4. DEBT LENT (Cho vay / Trả hộ)
+      if (actionType === 'debt_lent') {
+        const amount = Number(action.amount) || 0;
+        if (amount <= 0) continue;
+
+        const matchedDebt = await findTargetDebt(userId, { debt_id: action.debt_id, person: action.person, debt_type: 'lent' });
+        const isBorrowMoreExplicit = Boolean(action.debt_id) || /\b(vay them|cho vay them|muon them|them vao khoan no|cho muon them)\b/i.test(normalizeVietnamese(action.description || ''));
+
+        if (matchedDebt && isBorrowMoreExplicit) {
+          action.debt_id = String(matchedDebt._id);
+          action.person = matchedDebt.personName;
+          action.debt_type = 'lent';
+          await handleBorrowMoreDebt(action, 'lent');
+          continue;
+        }
+
+        const cleanDesc = cleanTemporalWords(action.description || '');
+        const resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
+
+        if (resolvedWallet) {
+          await Wallet.findOneAndUpdate(
+            { _id: resolvedWallet._id, user_id: userId },
+            { $inc: { balance: -amount } }
+          );
+          await Transaction.create({
+            user_id: userId,
+            type: 'expense',
+            amount,
+            date: actionDate,
+            description: `Trả hộ / Cho vay: ${action.person || 'Khác'}${cleanDesc ? ` - ${cleanDesc}` : ''}`,
+            category: 'other',
+            wallet_id: resolvedWallet._id,
+            walletName: resolvedWallet.name
+          });
+        }
+
+        const debt = await Debt.create({
+          user_id: userId,
+          personName: action.person || 'Người quen',
+          type: 'lent',
+          status: 'unpaid',
+          totalAmount: amount,
+          remainingAmount: amount,
+          history: [{
+            date: actionDate,
+            amount,
+            type: 'borrow_more',
+            walletName: resolvedWallet?.name || action.walletName || 'Tiền mặt'
+          }]
+        });
+
+        executedResults.push({
+          type: 'debt_lent',
+          id: debt._id,
+          amount,
+          person: debt.personName,
+          walletName: resolvedWallet?.name || action.walletName
+        });
+        continue;
+      }
+
+      // 5. DEBT BORROWED (Đi vay)
+      if (actionType === 'debt_borrowed') {
+        const amount = Number(action.amount) || 0;
+        if (amount <= 0) continue;
+
+        const matchedDebt = await findTargetDebt(userId, { debt_id: action.debt_id, person: action.person, debt_type: 'borrowed' });
+        const isBorrowMoreExplicit = Boolean(action.debt_id) || /\b(vay them|cho vay them|muon them|them vao khoan no|cho muon them)\b/i.test(normalizeVietnamese(action.description || ''));
+
+        if (matchedDebt && isBorrowMoreExplicit) {
+          action.debt_id = String(matchedDebt._id);
+          action.person = matchedDebt.personName;
+          action.debt_type = 'borrowed';
+          await handleBorrowMoreDebt(action, 'borrowed');
+          continue;
+        }
+
+        const cleanDesc = cleanTemporalWords(action.description || '');
+        const resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
+
+        if (resolvedWallet) {
+          await Wallet.findOneAndUpdate(
+            { _id: resolvedWallet._id, user_id: userId },
+            { $inc: { balance: amount } }
+          );
+          await Transaction.create({
+            user_id: userId,
+            type: 'income',
+            amount,
+            date: actionDate,
+            description: `Đi vay: ${action.person || 'Khác'}${cleanDesc ? ` - ${cleanDesc}` : ''}`,
+            category: 'other',
+            wallet_id: resolvedWallet._id,
+            walletName: resolvedWallet.name
+          });
+        }
+
+        const debt = await Debt.create({
+          user_id: userId,
+          personName: action.person || 'Chủ nợ',
+          type: 'borrowed',
+          status: 'unpaid',
+          totalAmount: amount,
+          remainingAmount: amount,
+          history: [{
+            date: actionDate,
+            amount,
+            type: 'borrow_more',
+            walletName: resolvedWallet?.name || action.walletName || 'Tiền mặt'
+          }]
+        });
+
+        executedResults.push({
+          type: 'debt_borrowed',
+          id: debt._id,
+          amount,
+          person: debt.personName,
+          walletName: resolvedWallet?.name || action.walletName
+        });
+        continue;
+      }
+
+      // 5b. PAY DEBT (Thu nợ / Trả bớt / Tất toán sổ nợ có sẵn)
+      if (actionType === 'pay_debt') {
+        const payAmount = Number(action.amount) || 0;
+        if (payAmount <= 0) {
+          throw new Error('Số tiền thu/trả nợ phải lớn hơn 0');
+        }
+
+        const debt = await findTargetDebt(userId, action);
+        if (!debt) {
+          throw new Error(`Không tìm thấy khoản nợ chưa tất toán với "${action.person || 'đối tượng'}"`);
+        }
+        if (payAmount > debt.remainingAmount) {
+          throw new Error(
+            `Số tiền ${payAmount.toLocaleString('vi-VN')}đ vượt quá số nợ còn lại với ${debt.personName} (${debt.remainingAmount.toLocaleString('vi-VN')}đ)`
+          );
+        }
+
+        const wallet = await resolveUserWallet(userId, action.wallet_id, action.walletName, true);
+        if (!wallet) {
+          throw new Error('Vui lòng chọn hoặc nêu rõ ví để thu/trả nợ');
+        }
+
+        let transactionType: 'income' | 'expense';
+        let txDesc: string;
+
+        if (debt.type === 'lent') {
+          await Wallet.findOneAndUpdate(
+            { _id: wallet._id, user_id: userId },
+            { $inc: { balance: payAmount } }
+          );
+          transactionType = 'income';
+          txDesc = `${debt.personName} trả tiền nợ`;
+        } else {
+          const deducted = await Wallet.findOneAndUpdate(
+            { _id: wallet._id, user_id: userId, balance: { $gte: payAmount } },
+            { $inc: { balance: -payAmount } },
+            { returnDocument: 'after' }
+          );
+          if (!deducted) {
+            throw new Error(`Số dư ví "${wallet.name}" không đủ để trả nợ ${payAmount.toLocaleString('vi-VN')}đ`);
+          }
+          transactionType = 'expense';
+          txDesc = `Trả tiền nợ cho ${debt.personName}`;
+        }
+
+        debt.remainingAmount = Math.max(0, debt.remainingAmount - payAmount);
+        if (debt.remainingAmount === 0) {
+          debt.status = 'paid';
+          debt.completedDate = actionDate;
+        } else {
+          debt.status = 'partial';
+        }
+        debt.history.push({
+          date: actionDate,
+          amount: payAmount,
+          type: 'pay_back',
+          walletName: wallet.name
+        } as any);
+        await debt.save();
+
+        await Transaction.create({
+          user_id: userId,
+          type: transactionType,
+          amount: payAmount,
+          date: actionDate,
+          description: txDesc,
+          category: 'other',
+          wallet_id: wallet._id,
+          walletName: wallet.name
+        });
+
+        executedResults.push({
+          type: 'pay_debt',
+          id: debt._id,
+          person: debt.personName,
+          debt_type: debt.type,
+          amount: payAmount,
+          remainingAmount: debt.remainingAmount,
+          status: debt.status,
+          walletName: wallet.name
+        });
+        continue;
+      }
+
+      // 5bb. BORROW MORE DEBT (Vay thêm / Cho vay thêm vào sổ nợ có sẵn)
+      if (actionType === 'borrow_more_debt') {
+        await handleBorrowMoreDebt(action);
+        continue;
+      }
+
+      // 5c. UPSERT BUDGET (Đặt / Sửa hạn mức chi tiêu tháng)
+      if (actionType === 'upsert_budget') {
+        const category = FINANCE_CATEGORY_DEFAULT_NAMES[action.category] ? action.category : 'other';
+        const limit = Number(action.limit);
+        if (isNaN(limit) || limit < 0) {
+          throw new Error('Hạn mức ngân sách không hợp lệ');
+        }
+
+        const month = typeof action.month === 'string' && /^\d{4}-\d{2}$/.test(action.month.trim())
+          ? action.month.trim()
+          : getVnDateStr(now).slice(0, 7);
+        const defaultName = FINANCE_CATEGORY_DEFAULT_NAMES[category] || 'Ngân sách';
+        const cleanName = action.name?.trim() || defaultName;
+
+        const existing = await Budget.findOne({ user_id: userId, category, month });
+        let budget: any;
+        if (existing) {
+          existing.limit = limit;
+          if (action.name?.trim()) existing.name = action.name.trim();
+          budget = await existing.save();
+        } else {
+          budget = await Budget.create({
+            user_id: userId,
+            name: cleanName,
+            category,
+            month,
+            limit
+          });
+        }
+
+        executedResults.push({
+          type: 'upsert_budget',
+          id: budget._id,
+          name: budget.name,
+          category: budget.category,
+          month: budget.month,
+          limit: budget.limit
+        });
+        continue;
+      }
+
+      // 5d. UPDATE TRANSACTION (Sửa giao dịch gần đây + cân chỉnh lại số dư ví an toàn)
+      if (actionType === 'update_transaction') {
+        if (typeof action.transaction_id !== 'string' || !mongoose.Types.ObjectId.isValid(action.transaction_id)) {
+          throw new Error('Không xác định được giao dịch cần sửa');
+        }
+        const oldTx = await Transaction.findOne({ _id: action.transaction_id, user_id: userId });
+        if (!oldTx) {
+          throw new Error('Giao dịch không tồn tại hoặc đã bị xóa');
+        }
+
+        const newAmount = action.amount !== undefined ? Number(action.amount) : oldTx.amount;
+        if (isNaN(newAmount) || newAmount <= 0) {
+          throw new Error('Số tiền giao dịch mới phải lớn hơn 0');
+        }
+
+        const newDesc = action.description
+          ? capitalizeFirst(cleanTemporalWords(action.description)) || oldTx.description
+          : oldTx.description;
+        const newCategory = action.category !== undefined ? action.category : oldTx.category;
+        const newDate = action.custom_time ? (parseVnDateTime(action.custom_time, '12:00:00') ?? oldTx.date) : oldTx.date;
+
+        const targetWallet = await resolveUserWallet(userId, action.wallet_id ?? oldTx.wallet_id?.toString(), action.walletName);
+        const targetToWallet = oldTx.type === 'transfer'
+          ? await resolveUserWallet(userId, action.to_wallet_id ?? oldTx.to_wallet_id?.toString(), action.toWalletName)
+          : null;
+
+        if (oldTx.type === 'transfer') {
+          if (!targetWallet || !targetToWallet || targetWallet._id.toString() === targetToWallet._id.toString()) {
+            throw new Error('Thông tin ví nguồn/đích của giao dịch chuyển khoản không hợp lệ');
+          }
+        }
+
+        const reverted = await revertTransactionWalletEffect(userId, oldTx);
+        if (!reverted) {
+          throw new Error('Không thể sửa do số dư ví hiện tại không đủ để hoàn tác giao dịch cũ');
+        }
+
+        let newWalletName = oldTx.walletName;
+        if (oldTx.type === 'income' && targetWallet) {
+          const w = await Wallet.findOneAndUpdate(
+            { _id: targetWallet._id, user_id: userId },
+            { $inc: { balance: newAmount } },
+            { returnDocument: 'after' }
+          );
+          if (!w) {
+            await rollbackTransactionWalletRevert(userId, oldTx);
+            throw new Error('Không tìm thấy ví áp dụng');
+          }
+          newWalletName = w.name;
+        } else if (oldTx.type === 'expense' && targetWallet) {
+          const w = await Wallet.findOneAndUpdate(
+            { _id: targetWallet._id, user_id: userId, balance: { $gte: newAmount } },
+            { $inc: { balance: -newAmount } },
+            { returnDocument: 'after' }
+          );
+          if (!w) {
+            await rollbackTransactionWalletRevert(userId, oldTx);
+            throw new Error(`Số dư ví "${targetWallet.name}" không đủ cho mức tiền mới ${newAmount.toLocaleString('vi-VN')}đ`);
+          }
+          newWalletName = w.name;
+        } else if (oldTx.type === 'transfer' && targetWallet && targetToWallet) {
+          const src = await Wallet.findOneAndUpdate(
+            { _id: targetWallet._id, user_id: userId, balance: { $gte: newAmount } },
+            { $inc: { balance: -newAmount } },
+            { returnDocument: 'after' }
+          );
+          if (!src) {
+            await rollbackTransactionWalletRevert(userId, oldTx);
+            throw new Error(`Số dư ví "${targetWallet.name}" không đủ`);
+          }
+          const dst = await Wallet.findOneAndUpdate(
+            { _id: targetToWallet._id, user_id: userId },
+            { $inc: { balance: newAmount } },
+            { returnDocument: 'after' }
+          );
+          if (!dst) {
+            await Wallet.findByIdAndUpdate(targetWallet._id, { $inc: { balance: newAmount } });
+            await rollbackTransactionWalletRevert(userId, oldTx);
+            throw new Error('Ví đích không tồn tại');
+          }
+          newWalletName = `${src.name} -> ${dst.name}`;
+        }
+
+        oldTx.amount = newAmount;
+        oldTx.description = newDesc;
+        oldTx.category = newCategory;
+        oldTx.date = newDate;
+        if (targetWallet) oldTx.wallet_id = targetWallet._id;
+        if (targetToWallet) oldTx.to_wallet_id = targetToWallet._id;
+        oldTx.walletName = newWalletName;
+        await oldTx.save();
+
+        executedResults.push({
+          type: 'update_transaction',
+          id: oldTx._id,
+          amount: oldTx.amount,
+          description: oldTx.description,
+          walletName: oldTx.walletName
+        });
+        continue;
+      }
+
+      // 5e. DELETE TRANSACTION (Xóa giao dịch và hoàn trả số dư ví)
+      if (actionType === 'delete_transaction') {
+        if (typeof action.transaction_id !== 'string' || !mongoose.Types.ObjectId.isValid(action.transaction_id)) {
+          throw new Error('Không xác định được giao dịch cần xóa');
+        }
+        const tx = await Transaction.findOne({ _id: action.transaction_id, user_id: userId });
+        if (!tx) {
+          throw new Error('Giao dịch không tồn tại hoặc đã bị xóa');
+        }
+
+        const reverted = await revertTransactionWalletEffect(userId, tx);
+        if (!reverted) {
+          throw new Error('Không thể hủy do ví không đủ số dư để hoàn trả giao dịch này');
+        }
+
+        await Transaction.deleteOne({ _id: tx._id, user_id: userId });
+
+        executedResults.push({
+          type: 'delete_transaction',
+          id: tx._id,
+          amount: tx.amount,
+          description: tx.description
+        });
+        continue;
+      }
+
+      // 6. CREATE TASK / QUEST
+      if (actionType === 'create_task') {
+        const rawTitle = action.title?.trim() || 'Nhiệm vụ mới';
+        const cleanTitle = capitalizeFirst(cleanTemporalWords(rawTitle)) || 'Nhiệm vụ mới';
+        const questRank = ['S', 'A', 'B', 'C', 'D'].includes(action.quest_rank) ? action.quest_rank : 'C';
+        const defaultDue = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const dueDate = parseVnDateTime(action.due_date, '23:59:00') ?? defaultDue;
+
+        const task = await Task.create({
+          user_id: userId,
+          title: cleanTitle,
+          description: action.description || '',
+          quest_rank: questRank,
+          due_date: dueDate,
+          status: 'PENDING',
+        });
+
+        executedResults.push({
+          type: 'create_task',
+          id: task._id,
+          title: task.title,
+          quest_rank: task.quest_rank
+        });
+        continue;
+      }
+
+      // 7. COMPLETE TASK / QUEST
+      if (actionType === 'complete_task') {
+        const task = await findTargetTask(userId, action);
+        if (!task) {
+          throw new Error(`Không tìm thấy Quest "${action.title || ''}" để hoàn thành`);
+        }
+
+        if (task.status !== 'COMPLETED') {
+          const { rewardExp, leveledUp } = await applyTaskCompletionReward(userId, task, actionDate);
+          executedResults.push({
+            type: 'complete_task',
+            id: task._id,
+            title: task.title,
+            exp: rewardExp,
+            leveledUp
+          });
+        }
+        continue;
+      }
+
+      // 7b. UPDATE TASK / QUEST (Sửa tiêu đề, rank, deadline, chuyển trạng thái hoặc hoàn tác)
+      if (actionType === 'update_task') {
+        const task = await findTargetTask(userId, action);
+        if (!task) {
+          throw new Error(`Không tìm thấy Quest "${action.original_title || action.title || ''}" để cập nhật`);
+        }
+
+        const prevStatus = task.status;
+        const nextStatus = ['PENDING', 'IN_PROGRESS', 'COMPLETED'].includes(action.status) ? action.status : undefined;
+
+        if (action.title && action.title.trim()) {
+          task.title = capitalizeFirst(cleanTemporalWords(action.title.trim())) || task.title;
+        }
+        if (action.description !== undefined) {
+          task.description = String(action.description);
+        }
+        if (['S', 'A', 'B', 'C', 'D'].includes(action.quest_rank)) {
+          task.quest_rank = action.quest_rank;
+        }
+        if (action.due_date) {
+          const newDue = parseVnDateTime(action.due_date, '23:59:00');
+          if (newDue) {
+            task.due_date = newDue;
+            if (!nextStatus && task.status === 'OVERDUE' && newDue > now) {
+              task.status = 'PENDING';
+            }
+          }
+        }
+
+        let exp = 0;
+        let leveledUp = false;
+
+        if (nextStatus === 'COMPLETED' && prevStatus !== 'COMPLETED') {
+          const reward = await applyTaskCompletionReward(userId, task, actionDate);
+          exp = reward.rewardExp;
+          leveledUp = reward.leveledUp;
+        } else if (nextStatus === 'PENDING' && prevStatus === 'COMPLETED') {
+          await applyTaskUndoPenalty(userId, task);
+        } else {
+          if (nextStatus) task.status = nextStatus;
+          await task.save();
+        }
+
+        executedResults.push({
+          type: 'update_task',
+          id: task._id,
+          title: task.title,
+          status: task.status,
+          quest_rank: task.quest_rank,
+          ...(exp > 0 ? { exp, leveledUp } : {})
+        });
+        continue;
+      }
+
+      // 7c. DELETE TASK / QUEST
+      if (actionType === 'delete_task') {
+        const task = await findTargetTask(userId, action);
+        if (!task) {
+          throw new Error(`Không tìm thấy Quest "${action.title || ''}" để xóa`);
+        }
+        await Task.deleteOne({ _id: task._id, user_id: userId });
+
+        executedResults.push({
+          type: 'delete_task',
+          id: task._id,
+          title: task.title
+        });
+        continue;
+      }
+
+      // 8. CREATE CALENDAR EVENT (Hỗ trợ cả sự kiện đơn lẫn lịch lặp định kỳ)
+      if (actionType === 'create_calendar_event') {
+        const rawTitle = action.title?.trim() || 'Sự kiện mới';
+        const cleanTitle = capitalizeFirst(cleanTemporalWords(rawTitle)) || 'Sự kiện mới';
+        const startTime = parseVnDateTime(action.start_time, '09:00:00') ?? now;
+        let endTime = parseVnDateTime(action.end_time, '10:00:00');
+        if (!endTime || endTime.getTime() <= startTime.getTime()) {
+          endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+        }
+
+        const isRecurring = Boolean(action.is_recurring);
+        const recurrenceType = isRecurring && ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'].includes(action.recurrence_type)
+          ? action.recurrence_type
+          : (isRecurring ? 'WEEKLY' : undefined);
+        const recurrenceDays = isRecurring && Array.isArray(action.recurrence_days)
+          ? action.recurrence_days.map((d: any) => Number(d)).filter((d: number) => Number.isInteger(d) && d >= 0 && d <= 6)
+          : undefined;
+        const recurrenceEnd = isRecurring && action.recurrence_end
+          ? (parseVnDateTime(action.recurrence_end, '23:59:59') ?? undefined)
+          : undefined;
+
+        const event = await CalendarEvent.create({
+          user_id: userId,
+          title: cleanTitle,
+          description: action.description || '',
+          start_time: startTime,
+          end_time: endTime,
+          color_code: action.color_code || '#00f0ff',
+          is_recurring: isRecurring,
+          ...(recurrenceType ? { recurrence_type: recurrenceType } : {}),
+          ...(recurrenceDays && recurrenceDays.length > 0 ? { recurrence_days: recurrenceDays } : {}),
+          ...(recurrenceEnd ? { recurrence_end: recurrenceEnd } : {})
+        });
+
+        executedResults.push({
+          type: 'create_calendar_event',
+          id: event._id,
+          title: event.title,
+          start_time: event.start_time,
+          is_recurring: event.is_recurring
+        });
+        continue;
+      }
+
+      // 8b. UPDATE CALENDAR EVENT (Dời giờ/ngày, đổi tên, sửa 1 buổi ngoại lệ hoặc cả chuỗi lặp)
+      if (actionType === 'update_calendar_event') {
+        const resolved = await resolveCalendarTarget(userId, action);
+        if (!resolved) {
+          throw new Error(`Không tìm thấy sự kiện "${action.title || ''}" trong lịch trình để cập nhật`);
+        }
+        const { baseDoc, occurrenceStart } = resolved;
+        const isSingleOccurrenceOverride =
+          baseDoc.is_recurring &&
+          action.scope !== 'series' &&
+          occurrenceStart !== null;
+
+        if (isSingleOccurrenceOverride && occurrenceStart) {
+          const origDuration = new Date(baseDoc.end_time).getTime() - new Date(baseDoc.start_time).getTime();
+          const occEndDefault = new Date(occurrenceStart.getTime() + origDuration);
+          const newStart = action.start_time
+            ? (parseVnDateTime(action.start_time, '09:00:00') ?? occurrenceStart)
+            : occurrenceStart;
+          let newEnd = action.end_time
+            ? parseVnDateTime(action.end_time, '10:00:00')
+            : (action.start_time ? new Date(newStart.getTime() + origDuration) : occEndDefault);
+          if (!newEnd || newEnd.getTime() <= newStart.getTime()) {
+            newEnd = new Date(newStart.getTime() + Math.max(origDuration, 60 * 60 * 1000));
+          }
+
+          const newTitle = action.title?.trim()
+            ? (capitalizeFirst(cleanTemporalWords(action.title.trim())) || baseDoc.title)
+            : baseDoc.title;
+
+          const existingException = await CalendarEvent.findOne({
+            user_id: userId,
+            parent_event_id: baseDoc._id,
+            exception_date: occurrenceStart
+          });
+
+          let savedEx: any;
+          if (existingException) {
+            existingException.title = newTitle;
+            if (action.description !== undefined) existingException.description = action.description;
+            existingException.start_time = newStart;
+            existingException.end_time = newEnd;
+            if (action.color_code) existingException.color_code = action.color_code;
+            existingException.is_cancelled = false;
+            savedEx = await existingException.save();
+          } else {
+            savedEx = await CalendarEvent.create({
+              user_id: userId,
+              title: newTitle,
+              description: action.description !== undefined ? action.description : (baseDoc.description || ''),
+              start_time: newStart,
+              end_time: newEnd,
+              color_code: action.color_code || baseDoc.color_code || '#00f0ff',
+              is_recurring: false,
+              parent_event_id: baseDoc._id,
+              exception_date: occurrenceStart,
+              is_cancelled: false
+            });
+          }
+
+          executedResults.push({
+            type: 'update_calendar_event',
+            id: savedEx._id,
+            title: savedEx.title,
+            start_time: savedEx.start_time,
+            scope: 'single'
+          });
+        } else {
+          const origDuration = new Date(baseDoc.end_time).getTime() - new Date(baseDoc.start_time).getTime();
+          if (action.title?.trim()) {
+            baseDoc.title = capitalizeFirst(cleanTemporalWords(action.title.trim())) || baseDoc.title;
+          }
+          if (action.description !== undefined) baseDoc.description = action.description;
+          if (action.color_code) baseDoc.color_code = action.color_code;
+
+          if (action.start_time) {
+            const parsedStart = parseVnDateTime(action.start_time, '09:00:00');
+            if (parsedStart) {
+              baseDoc.start_time = parsedStart;
+              if (!action.end_time) {
+                baseDoc.end_time = new Date(parsedStart.getTime() + Math.max(origDuration, 60 * 60 * 1000));
+              }
+            }
+          }
+          if (action.end_time) {
+            const parsedEnd = parseVnDateTime(action.end_time, '10:00:00');
+            if (parsedEnd) baseDoc.end_time = parsedEnd;
+          }
+          if (new Date(baseDoc.end_time).getTime() <= new Date(baseDoc.start_time).getTime()) {
+            baseDoc.end_time = new Date(new Date(baseDoc.start_time).getTime() + 60 * 60 * 1000);
+          }
+
+          await baseDoc.save();
+          executedResults.push({
+            type: 'update_calendar_event',
+            id: baseDoc._id,
+            title: baseDoc.title,
+            start_time: baseDoc.start_time,
+            scope: baseDoc.is_recurring ? 'series' : 'single'
+          });
+        }
+        continue;
+      }
+
+      // 8c. DELETE CALENDAR EVENT (Xóa sự kiện hoặc tạm nghỉ 1 buổi của lịch lặp)
+      if (actionType === 'delete_calendar_event') {
+        const resolved = await resolveCalendarTarget(userId, action);
+        if (!resolved) {
+          throw new Error(`Không tìm thấy sự kiện "${action.title || ''}" trong lịch trình để hủy`);
+        }
+        const { baseDoc, occurrenceStart } = resolved;
+
+        if (baseDoc.is_recurring && action.scope !== 'series' && occurrenceStart) {
+          // Nghỉ 1 buổi của lịch lặp -> tạo exception is_cancelled = true khớp chính xác timestamp ảo
+          const origDuration = new Date(baseDoc.end_time).getTime() - new Date(baseDoc.start_time).getTime();
+          const existingException = await CalendarEvent.findOne({
+            user_id: userId,
+            parent_event_id: baseDoc._id,
+            exception_date: occurrenceStart
+          });
+          if (existingException) {
+            existingException.is_cancelled = true;
+            await existingException.save();
+          } else {
+            await CalendarEvent.create({
+              user_id: userId,
+              title: 'Cancelled Exception',
+              start_time: occurrenceStart,
+              end_time: new Date(occurrenceStart.getTime() + Math.max(origDuration, 60 * 60 * 1000)),
+              is_recurring: false,
+              parent_event_id: baseDoc._id,
+              exception_date: occurrenceStart,
+              is_cancelled: true
+            });
+          }
+
+          executedResults.push({
+            type: 'delete_calendar_event',
+            id: baseDoc._id,
+            title: baseDoc.title,
+            scope: 'single'
+          });
+        } else if (baseDoc.is_recurring) {
+          // Dừng cả chuỗi lặp (khớp behavior của DELETE /api/calendar/[id])
+          const yesterday = new Date(now.getTime() - 86400000);
+          baseDoc.recurrence_end = yesterday;
+          await baseDoc.save();
+
+          executedResults.push({
+            type: 'delete_calendar_event',
+            id: baseDoc._id,
+            title: baseDoc.title,
+            scope: 'series'
+          });
+        } else if (baseDoc.parent_event_id) {
+          // Nếu đang là bản ghi exception của lịch lặp -> đánh dấu is_cancelled = true thay vì xóa vật lý (tránh occurrence gốc mọc lại)
+          baseDoc.is_cancelled = true;
+          await baseDoc.save();
+
+          executedResults.push({
+            type: 'delete_calendar_event',
+            id: baseDoc._id,
+            title: baseDoc.title,
+            scope: 'single'
+          });
+        } else {
+          await CalendarEvent.deleteOne({ _id: baseDoc._id, user_id: userId });
+
+          executedResults.push({
+            type: 'delete_calendar_event',
+            id: baseDoc._id,
+            title: baseDoc.title,
+            scope: 'single'
+          });
+        }
+        continue;
+      }
+
+      // 9. CREATE SHOPPING ITEM
+      if (actionType === 'create_shopping_item') {
+        const rawName = action.name?.trim() || 'Món đồ';
+        const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Món đồ';
+        const quantity = Math.max(1, Number(action.quantity) || 1);
+        const unit = action.unit?.trim() || 'món';
+        const category = ['food', 'household', 'other'].includes(action.category) ? action.category : 'food';
+
+        const item = await ShoppingItem.create({
+          user_id: userId,
+          name: cleanName,
+          quantity,
+          unit,
+          category,
+          checked: false
+        });
+
+        executedResults.push({
+          type: 'create_shopping_item',
+          id: item._id,
+          name: item.name,
+          quantity: item.quantity,
+          unit: item.unit
+        });
+        continue;
+      }
+
+      // 9b. PURCHASE SHOPPING (Tick đã mua ShoppingItem -> Cất vào Kho đồ -> Trừ ví & ghi Transaction nếu có tiền)
+      if (actionType === 'purchase_shopping') {
+        const rawName = action.name?.trim() || 'Món đồ';
+        const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Món đồ';
+        const quantity = Math.max(0.01, Number(action.quantity) || 1);
+        const unit = action.unit?.trim() || 'món';
+        const invCategory = ['food', 'spices', 'utilities'].includes(action.inventory_category)
+          ? action.inventory_category
+          : 'food';
+        const addToInventory = action.add_to_inventory !== false;
+        const amount = Math.max(0, Number(action.amount) || 0);
+        const expiryDate = parseVnDateTime(action.expiryDate, '12:00:00') ?? undefined;
+
+        let resolvedWallet: any = null;
+        let txId: any = undefined;
+
+        if (amount > 0) {
+          resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName, true);
+          if (!resolvedWallet) {
+            throw new Error(`Vui lòng chọn hoặc nêu rõ ví thanh toán cho "${cleanName}"`);
+          }
+
+          const deducted = await Wallet.findOneAndUpdate(
+            { _id: resolvedWallet._id, user_id: userId, balance: { $gte: amount } },
+            { $inc: { balance: -amount } },
+            { returnDocument: 'after' }
+          );
+          if (!deducted) {
+            throw new Error(`Số dư ví "${resolvedWallet.name}" không đủ để thanh toán ${amount.toLocaleString('vi-VN')}đ`);
+          }
+
+          const tx = await Transaction.create({
+            user_id: userId,
+            type: 'expense',
+            amount,
+            date: actionDate,
+            description: addToInventory ? `Mua dự trữ: ${cleanName}` : `Mua sắm: ${cleanName}`,
+            category: invCategory === 'food' || invCategory === 'spices' ? 'food' : 'shopping',
+            wallet_id: resolvedWallet._id,
+            walletName: resolvedWallet.name
+          });
+          txId = tx._id;
+        }
+
+        // Tick ShoppingItem tương ứng (nếu có trong danh sách)
+        let shoppingItem: any = null;
+        if (typeof action.shopping_item_id === 'string' && mongoose.Types.ObjectId.isValid(action.shopping_item_id)) {
+          shoppingItem = await ShoppingItem.findOneAndUpdate(
+            { _id: action.shopping_item_id, user_id: userId },
+            { $set: { checked: true } },
+            { new: true }
+          );
+        }
+        if (!shoppingItem) {
+          const unchecked = await ShoppingItem.find({ user_id: userId, checked: false });
+          const matched = matchByNormalizedName(unchecked, cleanName, (s) => s.name);
+          if (matched) {
+            matched.checked = true;
+            shoppingItem = await matched.save();
+          }
+        }
+
+        let invItem: any = null;
+        if (addToInventory) {
+          invItem = await Inventory.create({
+            user_id: userId,
+            name: cleanName,
+            category: invCategory,
+            quantity,
+            originalQuantity: quantity,
+            unit,
+            purchaseDate: actionDate,
+            expiryDate,
+            isGift: false,
+            totalValue: amount > 0 ? amount : undefined,
+            originalValue: amount > 0 ? amount : undefined,
+            wallet_id: amount > 0 ? resolvedWallet?._id : undefined,
+            walletName: amount > 0 ? resolvedWallet?.name : undefined,
+            transaction_id: txId
+          });
+        }
+
+        executedResults.push({
+          type: 'purchase_shopping',
+          id: invItem?._id || shoppingItem?._id || txId,
+          name: cleanName,
+          amount,
+          addedToInventory: addToInventory,
+          checkedShopping: Boolean(shoppingItem),
+          walletName: resolvedWallet?.name || action.walletName
+        });
+        continue;
+      }
+
+      // 10. CREATE INVENTORY ITEM
+      if (actionType === 'create_inventory') {
+        const rawName = action.name?.trim() || 'Vật phẩm';
+        const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Vật phẩm';
+        const parsedQty = Number(action.quantity);
+        const quantity = parsedQty > 0 ? Number(parsedQty.toFixed(4)) : 1;
+        const unit = action.unit?.trim() || 'món';
+        const category = action.category?.trim() || 'food';
+        const expiryDate = parseVnDateTime(action.expiryDate, '12:00:00') ?? undefined;
+
+        const item = await Inventory.create({
+          user_id: userId,
+          name: cleanName,
+          category,
+          quantity,
+          originalQuantity: quantity,
+          unit,
+          purchaseDate: actionDate,
+          expiryDate,
+          isGift: false
+        });
+
+        executedResults.push({
+          type: 'create_inventory',
+          id: item._id,
+          name: item.name,
+          quantity: item.quantity,
+          unit: item.unit
+        });
+        continue;
+      }
+
+      // 10b. UPDATE INVENTORY ITEM (Tiêu hao, bỏ đồ hỏng, thêm/điều chỉnh số lượng hoặc HSD trong Kho)
+      if (actionType === 'update_inventory') {
+        let item: any = null;
+        const targetInvId = action.inv_id || action.invId;
+        if (typeof targetInvId === 'string' && mongoose.Types.ObjectId.isValid(targetInvId)) {
+          item = await Inventory.findOne({ _id: targetInvId, user_id: userId });
+        }
+        if (!item && action.name) {
+          const activeInv = await Inventory.find({ user_id: userId, quantity: { $gt: 0 } });
+          item = matchByNormalizedName(activeInv, action.name, (i) => i.name);
+          if (!item) {
+            const allInv = await Inventory.find({ user_id: userId });
+            item = matchByNormalizedName(allInv, action.name, (i) => i.name);
+          }
+        }
+        if (!item) {
+          throw new Error(`Không tìm thấy "${action.name || 'món đồ'}" trong kho để cập nhật`);
+        }
+
+        const rawOp = String(action.operation || '').toLowerCase();
+        const rawMode = String(action.mode || '').toLowerCase();
         const op = ['set', 'deduct', 'add', 'discard'].includes(rawOp)
           ? rawOp
           : rawMode === 'subtract'
@@ -2159,1767 +4082,178 @@ export async function sanitizeYuiPlanActions(userId: string, rawActions: any[]):
               ? 'add'
               : rawMode === 'set'
                 ? 'set'
-                : Number(act.delta_quantity ?? act.quantity) < 0
-                  ? 'deduct'
-                  : 'add';
-        act.operation = op;
+                : 'set';
 
-        const rawAmount = act.delta_quantity !== undefined ? act.delta_quantity : (act.quantity ?? act.qty);
-        const rawQty = Math.abs(Number(rawAmount) || 0);
-        if (op !== 'discard' && rawQty > 0) {
-          const converted = convertQtyToInventoryUnit(
-            rawQty,
-            act.unit,
-            matchedInv.unit,
-            Number(matchedInv.originalQuantity || matchedInv.quantity) || undefined
+        const oldQty = Number(item.quantity) || 0;
+        const origQty = Number(item.originalQuantity) || oldQty;
+        let newQty = oldQty;
+
+        if (op === 'discard') {
+          newQty = 0;
+        } else if (op === 'deduct') {
+          const rawDelta = Math.max(0, Number(action.delta_quantity ?? action.quantity ?? action.qty ?? 0));
+          const convertedDelta = convertQtyToInventoryUnit(
+            rawDelta,
+            action.unit,
+            item.unit,
+            oldQty > 0 ? oldQty : (origQty > 0 ? origQty : undefined)
           );
-          if (op === 'set') {
-            act.quantity = converted;
-          } else {
-            act.delta_quantity = converted;
-            act.quantity = converted;
+          if (convertedDelta > 0) {
+            newQty = Math.max(0, Number((oldQty - convertedDelta).toFixed(4)));
           }
-        }
-        act.unit = matchedInv.unit;
-
-        // Nếu trong cùng lượt đã có delete_meal tự động hoàn lại đúng nguyên liệu này, kiểm tra tránh cộng 2 lần
-        if (deleteMealActions.length > 0 && op === 'add') {
-          const alreadyRestoredByMeal = deleteMealActions.some(d =>
-            Array.isArray(d.restored_ingredients) &&
-            d.restored_ingredients.some((ri: any) => String(ri.invId) === String(matchedInv._id))
+        } else if (op === 'add') {
+          const rawDelta = Math.max(0, Number(action.delta_quantity ?? action.quantity ?? action.qty ?? 0));
+          const convertedDelta = convertQtyToInventoryUnit(
+            rawDelta,
+            action.unit,
+            item.unit,
+            origQty > 0 ? origQty : undefined
           );
-          if (alreadyRestoredByMeal) {
-            const curQty = Number(matchedInv.quantity) || 0;
-            const origQty = Number(matchedInv.originalQuantity) || 0;
-            const addQty = Number(act.delta_quantity ?? act.quantity) || 0;
-            if (origQty > 0 && curQty + addQty <= origQty + 0.001) {
-              indicesToRemove.add(idx);
+          newQty = Number((oldQty + convertedDelta).toFixed(4));
+        } else if (action.quantity !== undefined) {
+          const rawTarget = Math.max(0, Number(action.quantity) || 0);
+          const convertedTarget = convertQtyToInventoryUnit(
+            rawTarget,
+            action.unit,
+            item.unit,
+            origQty > 0 ? origQty : undefined
+          );
+          newQty = Math.max(0, Number(convertedTarget.toFixed(4)));
+        }
+
+        if (newQty === 0) {
+          item.totalValue = 0;
+        } else if (newQty !== oldQty) {
+          if (oldQty > 0 && item.totalValue && item.totalValue > 0) {
+            const unitPrice = item.totalValue / oldQty;
+            item.totalValue = Math.max(0, Math.round(unitPrice * newQty));
+          } else if (oldQty === 0 && newQty > 0) {
+            let baseValue = item.originalValue || 0;
+            if (!baseValue && item.transaction_id) {
+              const tx = await Transaction.findById(item.transaction_id);
+              if (tx) baseValue = tx.amount;
+            }
+            if (baseValue > 0 && item.originalQuantity > 0) {
+              const unitPrice = baseValue / item.originalQuantity;
+              item.totalValue = Math.round(unitPrice * newQty);
             }
           }
         }
-      }
-    }
-  });
 
-  return actions.filter((_, idx) => !indicesToRemove.has(idx));
-}
-
-function matchByNormalizedName<T>(
-  items: T[],
-  targetName: unknown,
-  getName: (item: T) => string
-): T | null {
-  if (typeof targetName !== 'string' || !targetName.trim() || items.length === 0) return null;
-  const target = normalizeVietnamese(targetName);
-  if (!target) return null;
-
-  const exact = items.find((item) => normalizeVietnamese(getName(item)) === target);
-  if (exact) return exact;
-
-  const partial = items.find((item) => {
-    const candidate = normalizeVietnamese(getName(item));
-    return candidate.includes(target) || target.includes(candidate);
-  });
-  return partial ?? null;
-}
-
-async function resolveUserWallet(
-  userId: string,
-  walletId?: unknown,
-  walletName?: unknown,
-  fallbackToSingle: boolean = false
-) {
-  if (typeof walletId === 'string' && mongoose.Types.ObjectId.isValid(walletId)) {
-    const byId = await Wallet.findOne({ _id: walletId, user_id: userId });
-    if (byId) return byId;
-  }
-
-  const allWallets = await Wallet.find({ user_id: userId });
-  const byName = matchByNormalizedName(allWallets, walletName, (w) => w.name);
-  if (byName) return byName;
-
-  if (fallbackToSingle && allWallets.length === 1) {
-    return allWallets[0];
-  }
-  return null;
-}
-
-async function deductInventoryForHomeMeal(
-  userId: string,
-  rawIngredients: Array<{ invId?: unknown; inv_id?: unknown; name?: unknown; qty?: unknown; quantity?: unknown; unit?: unknown }>
-) {
-  const userInventory = await Inventory.find({ user_id: userId, quantity: { $gt: 0 } });
-  const mergedQty = new Map<string, number>();
-
-  for (const ing of rawIngredients) {
-    if (!ing || typeof ing !== 'object') continue;
-    const rawQtyNum = Number(ing.qty ?? ing.quantity);
-    if (isNaN(rawQtyNum) || rawQtyNum <= 0) continue;
-
-    let invItem: (typeof userInventory)[number] | null = null;
-    const ingId = ing.invId || ing.inv_id;
-    if (typeof ingId === 'string' && mongoose.Types.ObjectId.isValid(ingId)) {
-      invItem = userInventory.find((i) => i._id.toString() === ingId) ?? null;
-    }
-    if (!invItem && ing.name) {
-      invItem = matchByNormalizedName(userInventory, ing.name, (i) => i.name);
-    }
-    if (!invItem) {
-      throw new Error(`Không tìm thấy nguyên liệu "${ing.name || '?'}" còn tồn trong kho để trừ kho`);
-    }
-
-    const convertedQty = convertQtyToInventoryUnit(
-      rawQtyNum,
-      typeof ing.unit === 'string' ? ing.unit : undefined,
-      invItem.unit,
-      Number(invItem.quantity) || undefined
-    );
-
-    const idStr = invItem._id.toString();
-    mergedQty.set(idStr, Number(((mergedQty.get(idStr) || 0) + convertedQty).toFixed(4)));
-  }
-
-  // Pass 1: Validate tồn kho toàn bộ trước khi trừ
-  const itemsToDeduct: Array<{ item: (typeof userInventory)[number]; qty: number }> = [];
-  for (const [invId, qty] of mergedQty.entries()) {
-    const item = userInventory.find((i) => i._id.toString() === invId);
-    if (!item || item.quantity <= 0) {
-      throw new Error(`Nguyên liệu "${item?.name || '?'}" trong kho đã dùng hết`);
-    }
-    if (qty > item.quantity + 1e-6) {
-      throw new Error(
-        `Nguyên liệu "${item.name}" trong kho chỉ còn ${item.quantity} ${item.unit} (không đủ ${qty} ${item.unit})`
-      );
-    }
-    itemsToDeduct.push({ item, qty: Math.min(item.quantity, qty) });
-  }
-
-  // Pass 2: Trừ số lượng và giá trị kho tương ứng
-  let totalInventoryCost = 0;
-  const processedIngredientsUsed: {
-    invId: string;
-    qty: number;
-    cost: number;
-    name: string;
-    unit: string;
-  }[] = [];
-
-  for (const { item, qty } of itemsToDeduct) {
-    if (!item.originalValue && item.totalValue && item.totalValue > 0 && item.quantity === item.originalQuantity) {
-      item.originalValue = item.totalValue;
-    }
-
-    let valueToDeduct = 0;
-    if (item.totalValue && item.totalValue > 0 && item.quantity > 0) {
-      if (qty >= item.quantity - 1e-6) {
-        valueToDeduct = Math.round(item.totalValue);
-      } else {
-        const valuePerUnit = item.totalValue / item.quantity;
-        valueToDeduct = Math.min(Math.round(item.totalValue), Math.round(valuePerUnit * qty));
-      }
-      item.totalValue = Math.max(0, Math.round(item.totalValue - valueToDeduct));
-      totalInventoryCost += valueToDeduct;
-    }
-
-    item.quantity = Math.max(0, Number((item.quantity - qty).toFixed(4)));
-    await item.save();
-
-    processedIngredientsUsed.push({
-      invId: item._id.toString(),
-      qty,
-      cost: valueToDeduct,
-      name: item.name,
-      unit: item.unit
-    });
-  }
-
-  return { totalInventoryCost, processedIngredientsUsed };
-}
-
-async function applyTaskCompletionReward(userId: string, task: any, completedAt: Date) {
-  task.status = 'COMPLETED';
-  task.completed_at = completedAt;
-  await task.save();
-
-  const user = await User.findById(userId);
-  const rewardExp = EXP_REWARDS[task.quest_rank as keyof typeof EXP_REWARDS] || 50;
-  let leveledUp = false;
-
-  if (user) {
-    user.current_exp += rewardExp;
-    let requiredExp = getExpForNextLevel(user.level);
-    while (user.current_exp >= requiredExp) {
-      user.current_exp -= requiredExp;
-      user.level += 1;
-      leveledUp = true;
-      requiredExp = getExpForNextLevel(user.level);
-    }
-
-    const mpReward = Math.floor(Math.random() * 21) + 40;
-    user.current_mp = Math.min(user.max_mp, user.current_mp + mpReward);
-    await user.save();
-  }
-
-  return { rewardExp, leveledUp };
-}
-
-async function applyTaskUndoPenalty(userId: string, task: any) {
-  task.status = 'PENDING';
-  task.completed_at = undefined;
-  await task.save();
-
-  const user = await User.findById(userId);
-  const penaltyExp = EXP_REWARDS[task.quest_rank as keyof typeof EXP_REWARDS] || 50;
-  if (user) {
-    user.current_exp -= penaltyExp;
-    while (user.current_exp < 0 && user.level > 1) {
-      user.level -= 1;
-      user.current_exp += getExpForNextLevel(user.level);
-    }
-    if (user.current_exp < 0) user.current_exp = 0;
-    if (user.current_hp > user.max_hp) user.current_hp = user.max_hp;
-    if (user.current_mp > user.max_mp) user.current_mp = user.max_mp;
-    await user.save();
-  }
-  return penaltyExp;
-}
-
-async function findTargetTask(userId: string, action: any) {
-  if (typeof action.task_id === 'string' && mongoose.Types.ObjectId.isValid(action.task_id)) {
-    const byId = await Task.findOne({ _id: action.task_id, user_id: userId });
-    if (byId) return byId;
-  }
-  const searchTitle = action.original_title || action.title;
-  if (typeof searchTitle === 'string' && searchTitle.trim()) {
-    const userTasks = await Task.find({ user_id: userId }).sort({ createdAt: -1 }).limit(50);
-    const cleaned = cleanTemporalWords(searchTitle) || searchTitle;
-    return matchByNormalizedName(userTasks, cleaned, (t) => t.title);
-  }
-  return null;
-}
-
-async function findTargetDebt(userId: string, action: any) {
-  if (typeof action.debt_id === 'string' && mongoose.Types.ObjectId.isValid(action.debt_id)) {
-    const byId = await Debt.findOne({ _id: action.debt_id, user_id: userId, status: { $ne: 'paid' } });
-    if (byId) return byId;
-  }
-  const openDebts = await Debt.find({ user_id: userId, status: { $ne: 'paid' } }).sort({ createdAt: -1 });
-  const typedDebts = action.debt_type === 'lent' || action.debt_type === 'borrowed'
-    ? openDebts.filter((d) => d.type === action.debt_type)
-    : openDebts;
-  const matched = matchByNormalizedName(typedDebts, action.person, (d) => d.personName);
-  if (matched) return matched;
-  return matchByNormalizedName(openDebts, action.person, (d) => d.personName);
-}
-
-async function resolveCalendarTarget(userId: string, action: any) {
-  const rawEventId = typeof action.event_id === 'string' ? action.event_id.trim() : '';
-  let baseDoc: any = null;
-  let compositeOccDate: Date | null = null;
-
-  if (rawEventId.includes('_')) {
-    const sepIdx = rawEventId.indexOf('_');
-    const parentId = rawEventId.slice(0, sepIdx);
-    const isoPart = rawEventId.slice(sepIdx + 1);
-    if (mongoose.Types.ObjectId.isValid(parentId)) {
-      baseDoc = await CalendarEvent.findOne({ _id: parentId, user_id: userId });
-    }
-    const parsedIso = new Date(isoPart);
-    if (!isNaN(parsedIso.getTime())) {
-      compositeOccDate = parsedIso;
-    }
-  } else if (mongoose.Types.ObjectId.isValid(rawEventId)) {
-    baseDoc = await CalendarEvent.findOne({ _id: rawEventId, user_id: userId });
-  }
-
-  if (!baseDoc && typeof action.parent_event_id === 'string' && mongoose.Types.ObjectId.isValid(action.parent_event_id)) {
-    baseDoc = await CalendarEvent.findOne({ _id: action.parent_event_id, user_id: userId });
-  }
-
-  if (!baseDoc && (action.original_title || action.title)) {
-    const userEvents = await CalendarEvent.find({
-      user_id: userId,
-      is_cancelled: { $ne: true }
-    }).sort({ start_time: 1 });
-    const searchTitle = cleanTemporalWords(action.original_title || action.title) || action.title;
-    baseDoc = matchByNormalizedName(userEvents, searchTitle, (e) => e.title);
-  }
-
-  if (!baseDoc) return null;
-
-  let occurrenceStart: Date | null = compositeOccDate;
-  if (!occurrenceStart && baseDoc.is_recurring && action.scope !== 'series') {
-    const hint = action.exception_date || action.start_time;
-    const parsedHint = parseVnDateTime(hint, '09:00:00');
-    if (parsedHint) {
-      const hintVn = getVnDateStr(parsedHint);
-      const rangeStart = new Date(parsedHint.getTime() - 2 * 86400000);
-      const rangeEnd = new Date(parsedHint.getTime() + 2 * 86400000);
-      const expanded = await getExpandedCalendarEvents(userId, rangeStart, rangeEnd);
-      const matchOcc = (expanded as any[]).find((ev) => {
-        const pId = ev.parent_event_id?.toString() || ev._id?.toString();
-        return pId === baseDoc._id.toString() && getVnDateStr(ev.start_time) === hintVn;
-      });
-      if (matchOcc) {
-        occurrenceStart = new Date(matchOcc.start_time);
-      }
-    }
-  }
-
-  return { baseDoc, occurrenceStart };
-}
-
-async function revertTransactionWalletEffect(userId: string, tx: any): Promise<boolean> {
-  const { type, amount, wallet_id, to_wallet_id } = tx;
-  if (type === 'income' && wallet_id) {
-    const w = await Wallet.findOneAndUpdate(
-      { _id: wallet_id, user_id: userId, balance: { $gte: amount } },
-      { $inc: { balance: -amount } }
-    );
-    return Boolean(w);
-  }
-  if (type === 'expense' && wallet_id) {
-    await Wallet.findOneAndUpdate(
-      { _id: wallet_id, user_id: userId },
-      { $inc: { balance: amount } }
-    );
-    return true;
-  }
-  if (type === 'transfer' && wallet_id && to_wallet_id) {
-    const dest = await Wallet.findOneAndUpdate(
-      { _id: to_wallet_id, user_id: userId, balance: { $gte: amount } },
-      { $inc: { balance: -amount } }
-    );
-    if (!dest) return false;
-    await Wallet.findOneAndUpdate(
-      { _id: wallet_id, user_id: userId },
-      { $inc: { balance: amount } }
-    );
-    return true;
-  }
-  return true;
-}
-
-async function rollbackTransactionWalletRevert(userId: string, oldTx: any) {
-  const { type, amount, wallet_id, to_wallet_id } = oldTx;
-  if (type === 'income' && wallet_id) {
-    await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: userId }, { $inc: { balance: amount } });
-  } else if (type === 'expense' && wallet_id) {
-    await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: userId }, { $inc: { balance: -amount } });
-  } else if (type === 'transfer' && wallet_id && to_wallet_id) {
-    await Wallet.findOneAndUpdate({ _id: to_wallet_id, user_id: userId }, { $inc: { balance: amount } });
-    await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: userId }, { $inc: { balance: -amount } });
-  }
-}
-
-/**
- * Thực thi các hành động đã được người dùng xác nhận trên giao diện.
- */
-export async function executeYuiActions(userId: string, rawActions: any[]) {
-  await dbConnect();
-  if (!rawActions || !Array.isArray(rawActions) || rawActions.length === 0) {
-    throw new Error('Danh sách hành động không hợp lệ');
-  }
-
-  const actions = await sanitizeYuiPlanActions(userId, rawActions);
-  const executedResults: any[] = [];
-  const now = new Date();
-
-  for (const action of actions) {
-    const actionType = action.actionType;
-
-    // Trích xuất ngày giờ tùy chỉnh chuẩn múi giờ Việt Nam (+07:00)
-    const actionDate = parseVnDateTime(action.custom_time, '12:00:00') ?? now;
-
-    // 1. MEAL (Hỗ trợ cả Ăn ngoài lẫn Tự nấu trừ Kho)
-    if (actionType === 'meal') {
-      const cashAmount = Math.max(0, Number(action.amount) || 0);
-      const hasIngredients = Array.isArray(action.ingredients_used) && action.ingredients_used.length > 0;
-      const isHomeCook = action.source === 'home' || hasIngredients;
-      let txId: any = undefined;
-      let resolvedWallet: any = null;
-      let calculatedInventoryCost = 0;
-      let processedIngredientsUsed: any[] | undefined = undefined;
-
-      const rawFoodName = action.food_name || action.description || 'Món ăn';
-      const cleanFoodName = capitalizeFirst(cleanTemporalWords(rawFoodName)) || 'Bữa ăn';
-
-      if (isHomeCook && hasIngredients) {
-        const invDeduct = await deductInventoryForHomeMeal(userId, action.ingredients_used);
-        calculatedInventoryCost = invDeduct.totalInventoryCost;
-        processedIngredientsUsed = invDeduct.processedIngredientsUsed;
-      }
-
-      if (cashAmount > 0) {
-        resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
-        if (resolvedWallet) {
-          await Wallet.findOneAndUpdate(
-            { _id: resolvedWallet._id, user_id: userId },
-            { $inc: { balance: -cashAmount } }
-          );
+        item.quantity = newQty;
+        if (newQty > item.originalQuantity) {
+          item.originalQuantity = newQty;
         }
-        const tx = await Transaction.create({
-          user_id: userId,
-          type: 'expense',
-          amount: cashAmount,
-          date: actionDate,
-          description: `Ăn uống: ${cleanFoodName}`,
-          category: 'food',
-          wallet_id: resolvedWallet?._id || action.wallet_id || undefined,
-          walletName: resolvedWallet?.name || action.walletName || 'Ví không xác định'
+        if (action.expiryDate) {
+          const parsedExp = parseVnDateTime(action.expiryDate, '12:00:00');
+          if (parsedExp) item.expiryDate = parsedExp;
+        }
+        await item.save();
+
+        executedResults.push({
+          type: 'update_inventory',
+          id: item._id,
+          name: item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          operation: op
         });
-        txId = tx._id;
+        continue;
       }
 
-      const calo = Math.max(0, Number(action.calo) || 0);
-      const hp = Math.floor(calo * 1.0);
-      const tier = ['HEAVY', 'LIGHT', 'DRINK'].includes(action.meal_tier) ? action.meal_tier : 'LIGHT';
-      const totalMealCost = (isHomeCook ? calculatedInventoryCost : 0) + cashAmount;
-      const ingSummaryText = processedIngredientsUsed && processedIngredientsUsed.length > 0
-        ? processedIngredientsUsed.map(i => `${i.qty} ${i.unit} ${i.name}`).join(', ')
-        : '';
-      const aiDesc = action.ai_description?.trim() || `Khẩu phần tiêu chuẩn: ${cleanFoodName}${ingSummaryText ? ` (${ingSummaryText})` : ''}. Ước tính cung cấp khoảng ${calo} kcal.`;
-
-      const meal = await MealLog.create({
-        user_id: userId,
-        food_name: cleanFoodName,
-        meal_tier: tier,
-        hp_restored: hp,
-        consumed_at: actionDate,
-        calo,
-        protein: Number(action.protein) || 0,
-        fat: Number(action.fat) || 0,
-        carbs: Number(action.carbs) || 0,
-        sugar: Number(action.sugar) || 0,
-        cost: totalMealCost,
-        ai_status: 'completed',
-        ai_description: aiDesc,
-        ...(ingSummaryText ? { ingredients_text: ingSummaryText } : {}),
-        source: isHomeCook ? 'home' : 'eat_out',
-        ingredients_used: isHomeCook && processedIngredientsUsed ? processedIngredientsUsed : undefined,
-        transaction_id: txId,
-        wallet_id: cashAmount > 0 ? (resolvedWallet?._id || action.wallet_id) : undefined
-      });
-
-      const user = await User.findById(userId);
-      if (user) {
-        user.current_hp = Math.min(user.max_hp, user.current_hp + hp);
-        await user.save();
-      }
-
-      executedResults.push({
-        type: 'meal',
-        id: meal._id,
-        food_name: meal.food_name,
-        source: meal.source,
-        amount: totalMealCost,
-        hp,
-        ingredients_used: processedIngredientsUsed,
-        walletName: resolvedWallet?.name || action.walletName
-      });
-      continue;
-    }
-
-    // 1B. DELETE MEAL (Hoàn tác bữa ăn: xóa lịch sử ăn + hoàn lại nguyên liệu về kho hoặc hoàn tiền về ví)
-    if (actionType === 'delete_meal') {
-      let meal: any = null;
-      if (action.meal_id && mongoose.Types.ObjectId.isValid(String(action.meal_id))) {
-        meal = await MealLog.findOne({ _id: action.meal_id, user_id: userId }).catch(() => null);
-      }
-      if (!meal && action.food_name) {
-        const cleanName = cleanTemporalWords(action.food_name);
-        meal = await MealLog.findOne({
-          user_id: userId,
-          food_name: new RegExp(cleanName || action.food_name.trim(), 'i')
-        }).sort({ consumed_at: -1 });
-      }
-      if (!meal) {
-        meal = await MealLog.findOne({ user_id: userId }).sort({ consumed_at: -1 });
-      }
-
-      if (meal) {
-        const restoredItems: any[] = [];
-        if (meal.transaction_id) {
-          const oldTx = await Transaction.findById(meal.transaction_id);
-          if (oldTx) {
-            if (oldTx.wallet_id) {
-              await Wallet.findOneAndUpdate(
-                { _id: oldTx.wallet_id, user_id: userId },
-                { $inc: { balance: oldTx.amount } }
-              );
-            }
-            await Transaction.findByIdAndDelete(oldTx._id);
-          }
-        }
-        if (meal.source === 'home' && Array.isArray(meal.ingredients_used)) {
-          for (const ing of meal.ingredients_used) {
-            let item = ing.invId && mongoose.Types.ObjectId.isValid(String(ing.invId))
-              ? await Inventory.findOne({ _id: ing.invId, user_id: userId })
-              : null;
-            if (!item && ing.name) {
-              const normTarget = normalizeIngredientMatchName(ing.name);
-              const userInv = await Inventory.find({ user_id: userId });
-              item = userInv.find(i => normalizeIngredientMatchName(i.name) === normTarget) || null;
-            }
-            if (item) {
-              const rawQty = Math.max(0, Number(ing.qty) || 0);
-              const convertedQty = convertQtyToInventoryUnit(
-                rawQty,
-                ing.unit,
-                item.unit,
-                Number(item.originalQuantity || item.quantity) || undefined
-              );
-              const curQty = Number(item.quantity) || 0;
-              const origQty = Number(item.originalQuantity) || 0;
-
-              let restoreQty = convertedQty;
-              // Phát hiện nếu bữa ăn cũ bị lỗi trừ số thập phân (vd: 300 - 0.15 = 299.85 g) kèm 1 lần trừ 150g trước đó
-              if (rawQty > 0 && rawQty !== convertedQty && curQty % 1 !== 0 && Math.abs((curQty + rawQty) % 1) < 0.001) {
-                const hasSeparateRestoreInBatch = actions.some(
-                  a => a.actionType === 'update_inventory' && String(a.inv_id || a.invId) === String(item._id)
-                );
-                if (!hasSeparateRestoreInBatch && origQty > 0 && curQty + rawQty + convertedQty <= origQty + 0.001) {
-                  restoreQty = Number((rawQty + convertedQty).toFixed(4));
-                } else {
-                  restoreQty = rawQty;
-                }
-              }
-
-              let restoreVal = Math.max(0, Number(ing.cost) || 0);
-              if (restoreVal <= 0) {
-                let baseValue = item.originalValue || 0;
-                if (!baseValue && item.transaction_id) {
-                  const tx = await Transaction.findById(item.transaction_id);
-                  if (tx) baseValue = tx.amount;
-                }
-                if (baseValue > 0 && origQty > 0) {
-                  restoreVal = Math.round((baseValue / origQty) * restoreQty);
-                } else if (curQty > 0 && (Number(item.totalValue) || 0) > 0) {
-                  restoreVal = Math.round(((Number(item.totalValue) || 0) / curQty) * restoreQty);
-                }
-              }
-
-              item.quantity = Number((curQty + restoreQty).toFixed(4));
-              item.totalValue = Math.round((Number(item.totalValue) || 0) + restoreVal);
-              if (origQty > 0 && item.quantity > origQty) {
-                item.originalQuantity = item.quantity;
-              }
-              await item.save();
-
-              restoredItems.push({
-                invId: item._id,
-                name: item.name,
-                qty: restoreQty,
-                unit: item.unit
-              });
-            }
-          }
-        }
-
-        const hpToRevert = Number(meal.hp_restored) || 0;
-        if (hpToRevert > 0) {
+      // 11. RECORD WEIGHT / HEALTH
+      if (actionType === 'record_weight') {
+        const weight = Number(action.weight);
+        if (weight && weight > 0) {
           const user = await User.findById(userId);
           if (user) {
-            user.current_hp = Math.max(0, user.current_hp - hpToRevert);
-            await user.save();
-          }
-        }
-
-        const deletedFoodName = meal.food_name;
-        const deletedId = meal._id;
-        await MealLog.findByIdAndDelete(meal._id);
-
-        executedResults.push({
-          type: 'delete_meal',
-          id: deletedId,
-          food_name: deletedFoodName,
-          restored_ingredients: restoredItems
-        });
-      }
-      continue;
-    }
-
-    // 2. EXPENSE
-    if (actionType === 'expense') {
-      const amount = Number(action.amount) || 0;
-      if (amount <= 0) continue;
-
-      const rawDesc = action.description || 'Chi tiêu';
-      const cleanDesc = capitalizeFirst(cleanTemporalWords(rawDesc)) || 'Chi tiêu';
-      const resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
-
-      if (resolvedWallet) {
-        await Wallet.findOneAndUpdate(
-          { _id: resolvedWallet._id, user_id: userId },
-          { $inc: { balance: -amount } }
-        );
-      }
-
-      const tx = await Transaction.create({
-        user_id: userId,
-        type: 'expense',
-        amount,
-        date: actionDate,
-        description: cleanDesc,
-        category: action.category || 'other',
-        wallet_id: resolvedWallet?._id || action.wallet_id || undefined,
-        walletName: resolvedWallet?.name || action.walletName || 'Ví không xác định'
-      });
-
-      executedResults.push({
-        type: 'expense',
-        id: tx._id,
-        amount,
-        description: tx.description,
-        walletName: tx.walletName
-      });
-      continue;
-    }
-
-    // 3. INCOME
-    if (actionType === 'income') {
-      const amount = Number(action.amount) || 0;
-      if (amount <= 0) continue;
-
-      const rawDesc = action.description || 'Thu nhập';
-      const cleanDesc = capitalizeFirst(cleanTemporalWords(rawDesc)) || 'Thu nhập';
-      const resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
-
-      if (resolvedWallet) {
-        await Wallet.findOneAndUpdate(
-          { _id: resolvedWallet._id, user_id: userId },
-          { $inc: { balance: amount } }
-        );
-      }
-
-      const tx = await Transaction.create({
-        user_id: userId,
-        type: 'income',
-        amount,
-        date: actionDate,
-        description: cleanDesc,
-        category: action.category || 'other',
-        wallet_id: resolvedWallet?._id || action.wallet_id || undefined,
-        walletName: resolvedWallet?.name || action.walletName || 'Ví không xác định'
-      });
-
-      executedResults.push({
-        type: 'income',
-        id: tx._id,
-        amount,
-        description: tx.description,
-        walletName: tx.walletName
-      });
-      continue;
-    }
-
-    // 3b. TRANSFER (Chuyển tiền giữa các ví nội bộ)
-    if (actionType === 'transfer') {
-      const amount = Number(action.amount) || 0;
-      if (amount <= 0) continue;
-
-      const sourceWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
-      const destWallet = await resolveUserWallet(
-        userId,
-        action.to_wallet_id || action.toWalletId,
-        action.toWalletName || action.to_wallet_name
-      );
-
-      if (!sourceWallet || !destWallet) {
-        throw new Error('Không tìm thấy ví nguồn hoặc ví đích để thực hiện chuyển khoản');
-      }
-      if (sourceWallet._id.toString() === destWallet._id.toString()) {
-        throw new Error('Ví nguồn và ví đích phải khác nhau khi chuyển khoản');
-      }
-
-      const deductedSource = await Wallet.findOneAndUpdate(
-        { _id: sourceWallet._id, user_id: userId, balance: { $gte: amount } },
-        { $inc: { balance: -amount } },
-        { returnDocument: 'after' }
-      );
-      if (!deductedSource) {
-        throw new Error(`Số dư ví "${sourceWallet.name}" không đủ để chuyển ${amount.toLocaleString('vi-VN')}đ`);
-      }
-
-      const creditedDest = await Wallet.findOneAndUpdate(
-        { _id: destWallet._id, user_id: userId },
-        { $inc: { balance: amount } },
-        { returnDocument: 'after' }
-      );
-      if (!creditedDest) {
-        await Wallet.findByIdAndUpdate(sourceWallet._id, { $inc: { balance: amount } });
-        throw new Error('Ví đích không tồn tại, đã hoàn lại số dư ví nguồn');
-      }
-
-      const rawDesc = action.description || `Chuyển khoản: ${sourceWallet.name} -> ${destWallet.name}`;
-      const cleanDesc = capitalizeFirst(cleanTemporalWords(rawDesc)) || `Chuyển khoản: ${sourceWallet.name} -> ${destWallet.name}`;
-      const combinedWalletName = `${sourceWallet.name} -> ${destWallet.name}`;
-
-      const tx = await Transaction.create({
-        user_id: userId,
-        type: 'transfer',
-        amount,
-        date: actionDate,
-        description: cleanDesc,
-        wallet_id: sourceWallet._id,
-        to_wallet_id: destWallet._id,
-        walletName: combinedWalletName
-      });
-
-      executedResults.push({
-        type: 'transfer',
-        id: tx._id,
-        amount,
-        description: tx.description,
-        walletName: combinedWalletName
-      });
-      continue;
-    }
-
-    // 4. DEBT LENT (Cho vay / Trả hộ)
-    if (actionType === 'debt_lent') {
-      const amount = Number(action.amount) || 0;
-      if (amount <= 0) continue;
-
-      const cleanDesc = cleanTemporalWords(action.description || '');
-      const resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
-
-      if (resolvedWallet) {
-        await Wallet.findOneAndUpdate(
-          { _id: resolvedWallet._id, user_id: userId },
-          { $inc: { balance: -amount } }
-        );
-        await Transaction.create({
-          user_id: userId,
-          type: 'expense',
-          amount,
-          date: actionDate,
-          description: `Trả hộ / Cho vay: ${action.person || 'Khác'}${cleanDesc ? ` - ${cleanDesc}` : ''}`,
-          category: 'other',
-          wallet_id: resolvedWallet._id,
-          walletName: resolvedWallet.name
-        });
-      }
-
-      const debt = await Debt.create({
-        user_id: userId,
-        personName: action.person || 'Người quen',
-        type: 'lent',
-        status: 'unpaid',
-        totalAmount: amount,
-        remainingAmount: amount,
-        history: [{
-          date: actionDate,
-          amount,
-          type: 'borrow_more',
-          walletName: resolvedWallet?.name || action.walletName || 'Tiền mặt'
-        }]
-      });
-
-      executedResults.push({
-        type: 'debt_lent',
-        id: debt._id,
-        amount,
-        person: debt.personName,
-        walletName: resolvedWallet?.name || action.walletName
-      });
-      continue;
-    }
-
-    // 5. DEBT BORROWED (Đi vay)
-    if (actionType === 'debt_borrowed') {
-      const amount = Number(action.amount) || 0;
-      if (amount <= 0) continue;
-
-      const cleanDesc = cleanTemporalWords(action.description || '');
-      const resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName);
-
-      if (resolvedWallet) {
-        await Wallet.findOneAndUpdate(
-          { _id: resolvedWallet._id, user_id: userId },
-          { $inc: { balance: amount } }
-        );
-        await Transaction.create({
-          user_id: userId,
-          type: 'income',
-          amount,
-          date: actionDate,
-          description: `Đi vay: ${action.person || 'Khác'}${cleanDesc ? ` - ${cleanDesc}` : ''}`,
-          category: 'other',
-          wallet_id: resolvedWallet._id,
-          walletName: resolvedWallet.name
-        });
-      }
-
-      const debt = await Debt.create({
-        user_id: userId,
-        personName: action.person || 'Chủ nợ',
-        type: 'borrowed',
-        status: 'unpaid',
-        totalAmount: amount,
-        remainingAmount: amount,
-        history: [{
-          date: actionDate,
-          amount,
-          type: 'borrow_more',
-          walletName: resolvedWallet?.name || action.walletName || 'Tiền mặt'
-        }]
-      });
-
-      executedResults.push({
-        type: 'debt_borrowed',
-        id: debt._id,
-        amount,
-        person: debt.personName,
-        walletName: resolvedWallet?.name || action.walletName
-      });
-      continue;
-    }
-
-    // 5b. PAY DEBT (Thu nợ / Trả bớt / Tất toán sổ nợ có sẵn)
-    if (actionType === 'pay_debt') {
-      const payAmount = Number(action.amount) || 0;
-      if (payAmount <= 0) {
-        throw new Error('Số tiền thu/trả nợ phải lớn hơn 0');
-      }
-
-      const debt = await findTargetDebt(userId, action);
-      if (!debt) {
-        throw new Error(`Không tìm thấy khoản nợ chưa tất toán với "${action.person || 'đối tượng'}"`);
-      }
-      if (payAmount > debt.remainingAmount) {
-        throw new Error(
-          `Số tiền ${payAmount.toLocaleString('vi-VN')}đ vượt quá số nợ còn lại với ${debt.personName} (${debt.remainingAmount.toLocaleString('vi-VN')}đ)`
-        );
-      }
-
-      const wallet = await resolveUserWallet(userId, action.wallet_id, action.walletName, true);
-      if (!wallet) {
-        throw new Error('Vui lòng chọn hoặc nêu rõ ví để thu/trả nợ');
-      }
-
-      let transactionType: 'income' | 'expense';
-      let txDesc: string;
-
-      if (debt.type === 'lent') {
-        await Wallet.findOneAndUpdate(
-          { _id: wallet._id, user_id: userId },
-          { $inc: { balance: payAmount } }
-        );
-        transactionType = 'income';
-        txDesc = `${debt.personName} trả tiền nợ`;
-      } else {
-        const deducted = await Wallet.findOneAndUpdate(
-          { _id: wallet._id, user_id: userId, balance: { $gte: payAmount } },
-          { $inc: { balance: -payAmount } },
-          { returnDocument: 'after' }
-        );
-        if (!deducted) {
-          throw new Error(`Số dư ví "${wallet.name}" không đủ để trả nợ ${payAmount.toLocaleString('vi-VN')}đ`);
-        }
-        transactionType = 'expense';
-        txDesc = `Trả tiền nợ cho ${debt.personName}`;
-      }
-
-      debt.remainingAmount = Math.max(0, debt.remainingAmount - payAmount);
-      if (debt.remainingAmount === 0) {
-        debt.status = 'paid';
-        debt.completedDate = actionDate;
-      } else {
-        debt.status = 'partial';
-      }
-      debt.history.push({
-        date: actionDate,
-        amount: payAmount,
-        type: 'pay_back',
-        walletName: wallet.name
-      } as any);
-      await debt.save();
-
-      await Transaction.create({
-        user_id: userId,
-        type: transactionType,
-        amount: payAmount,
-        date: actionDate,
-        description: txDesc,
-        category: 'other',
-        wallet_id: wallet._id,
-        walletName: wallet.name
-      });
-
-      executedResults.push({
-        type: 'pay_debt',
-        id: debt._id,
-        person: debt.personName,
-        debt_type: debt.type,
-        amount: payAmount,
-        remainingAmount: debt.remainingAmount,
-        status: debt.status,
-        walletName: wallet.name
-      });
-      continue;
-    }
-
-    // 5c. UPSERT BUDGET (Đặt / Sửa hạn mức chi tiêu tháng)
-    if (actionType === 'upsert_budget') {
-      const category = FINANCE_CATEGORY_DEFAULT_NAMES[action.category] ? action.category : 'other';
-      const limit = Number(action.limit);
-      if (isNaN(limit) || limit < 0) {
-        throw new Error('Hạn mức ngân sách không hợp lệ');
-      }
-
-      const month = typeof action.month === 'string' && /^\d{4}-\d{2}$/.test(action.month.trim())
-        ? action.month.trim()
-        : getVnDateStr(now).slice(0, 7);
-      const defaultName = FINANCE_CATEGORY_DEFAULT_NAMES[category] || 'Ngân sách';
-      const cleanName = action.name?.trim() || defaultName;
-
-      const existing = await Budget.findOne({ user_id: userId, category, month });
-      let budget: any;
-      if (existing) {
-        existing.limit = limit;
-        if (action.name?.trim()) existing.name = action.name.trim();
-        budget = await existing.save();
-      } else {
-        budget = await Budget.create({
-          user_id: userId,
-          name: cleanName,
-          category,
-          month,
-          limit
-        });
-      }
-
-      executedResults.push({
-        type: 'upsert_budget',
-        id: budget._id,
-        name: budget.name,
-        category: budget.category,
-        month: budget.month,
-        limit: budget.limit
-      });
-      continue;
-    }
-
-    // 5d. UPDATE TRANSACTION (Sửa giao dịch gần đây + cân chỉnh lại số dư ví an toàn)
-    if (actionType === 'update_transaction') {
-      if (typeof action.transaction_id !== 'string' || !mongoose.Types.ObjectId.isValid(action.transaction_id)) {
-        throw new Error('Không xác định được giao dịch cần sửa');
-      }
-      const oldTx = await Transaction.findOne({ _id: action.transaction_id, user_id: userId });
-      if (!oldTx) {
-        throw new Error('Giao dịch không tồn tại hoặc đã bị xóa');
-      }
-
-      const newAmount = action.amount !== undefined ? Number(action.amount) : oldTx.amount;
-      if (isNaN(newAmount) || newAmount <= 0) {
-        throw new Error('Số tiền giao dịch mới phải lớn hơn 0');
-      }
-
-      const newDesc = action.description
-        ? capitalizeFirst(cleanTemporalWords(action.description)) || oldTx.description
-        : oldTx.description;
-      const newCategory = action.category !== undefined ? action.category : oldTx.category;
-      const newDate = action.custom_time ? (parseVnDateTime(action.custom_time, '12:00:00') ?? oldTx.date) : oldTx.date;
-
-      const targetWallet = await resolveUserWallet(userId, action.wallet_id ?? oldTx.wallet_id?.toString(), action.walletName);
-      const targetToWallet = oldTx.type === 'transfer'
-        ? await resolveUserWallet(userId, action.to_wallet_id ?? oldTx.to_wallet_id?.toString(), action.toWalletName)
-        : null;
-
-      if (oldTx.type === 'transfer') {
-        if (!targetWallet || !targetToWallet || targetWallet._id.toString() === targetToWallet._id.toString()) {
-          throw new Error('Thông tin ví nguồn/đích của giao dịch chuyển khoản không hợp lệ');
-        }
-      }
-
-      const reverted = await revertTransactionWalletEffect(userId, oldTx);
-      if (!reverted) {
-        throw new Error('Không thể sửa do số dư ví hiện tại không đủ để hoàn tác giao dịch cũ');
-      }
-
-      let newWalletName = oldTx.walletName;
-      if (oldTx.type === 'income' && targetWallet) {
-        const w = await Wallet.findOneAndUpdate(
-          { _id: targetWallet._id, user_id: userId },
-          { $inc: { balance: newAmount } },
-          { returnDocument: 'after' }
-        );
-        if (!w) {
-          await rollbackTransactionWalletRevert(userId, oldTx);
-          throw new Error('Không tìm thấy ví áp dụng');
-        }
-        newWalletName = w.name;
-      } else if (oldTx.type === 'expense' && targetWallet) {
-        const w = await Wallet.findOneAndUpdate(
-          { _id: targetWallet._id, user_id: userId, balance: { $gte: newAmount } },
-          { $inc: { balance: -newAmount } },
-          { returnDocument: 'after' }
-        );
-        if (!w) {
-          await rollbackTransactionWalletRevert(userId, oldTx);
-          throw new Error(`Số dư ví "${targetWallet.name}" không đủ cho mức tiền mới ${newAmount.toLocaleString('vi-VN')}đ`);
-        }
-        newWalletName = w.name;
-      } else if (oldTx.type === 'transfer' && targetWallet && targetToWallet) {
-        const src = await Wallet.findOneAndUpdate(
-          { _id: targetWallet._id, user_id: userId, balance: { $gte: newAmount } },
-          { $inc: { balance: -newAmount } },
-          { returnDocument: 'after' }
-        );
-        if (!src) {
-          await rollbackTransactionWalletRevert(userId, oldTx);
-          throw new Error(`Số dư ví "${targetWallet.name}" không đủ`);
-        }
-        const dst = await Wallet.findOneAndUpdate(
-          { _id: targetToWallet._id, user_id: userId },
-          { $inc: { balance: newAmount } },
-          { returnDocument: 'after' }
-        );
-        if (!dst) {
-          await Wallet.findByIdAndUpdate(targetWallet._id, { $inc: { balance: newAmount } });
-          await rollbackTransactionWalletRevert(userId, oldTx);
-          throw new Error('Ví đích không tồn tại');
-        }
-        newWalletName = `${src.name} -> ${dst.name}`;
-      }
-
-      oldTx.amount = newAmount;
-      oldTx.description = newDesc;
-      oldTx.category = newCategory;
-      oldTx.date = newDate;
-      if (targetWallet) oldTx.wallet_id = targetWallet._id;
-      if (targetToWallet) oldTx.to_wallet_id = targetToWallet._id;
-      oldTx.walletName = newWalletName;
-      await oldTx.save();
-
-      executedResults.push({
-        type: 'update_transaction',
-        id: oldTx._id,
-        amount: oldTx.amount,
-        description: oldTx.description,
-        walletName: oldTx.walletName
-      });
-      continue;
-    }
-
-    // 5e. DELETE TRANSACTION (Xóa giao dịch và hoàn trả số dư ví)
-    if (actionType === 'delete_transaction') {
-      if (typeof action.transaction_id !== 'string' || !mongoose.Types.ObjectId.isValid(action.transaction_id)) {
-        throw new Error('Không xác định được giao dịch cần xóa');
-      }
-      const tx = await Transaction.findOne({ _id: action.transaction_id, user_id: userId });
-      if (!tx) {
-        throw new Error('Giao dịch không tồn tại hoặc đã bị xóa');
-      }
-
-      const reverted = await revertTransactionWalletEffect(userId, tx);
-      if (!reverted) {
-        throw new Error('Không thể hủy do ví không đủ số dư để hoàn trả giao dịch này');
-      }
-
-      await Transaction.deleteOne({ _id: tx._id, user_id: userId });
-
-      executedResults.push({
-        type: 'delete_transaction',
-        id: tx._id,
-        amount: tx.amount,
-        description: tx.description
-      });
-      continue;
-    }
-
-    // 6. CREATE TASK / QUEST
-    if (actionType === 'create_task') {
-      const rawTitle = action.title?.trim() || 'Nhiệm vụ mới';
-      const cleanTitle = capitalizeFirst(cleanTemporalWords(rawTitle)) || 'Nhiệm vụ mới';
-      const questRank = ['S', 'A', 'B', 'C', 'D'].includes(action.quest_rank) ? action.quest_rank : 'C';
-      const defaultDue = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const dueDate = parseVnDateTime(action.due_date, '23:59:00') ?? defaultDue;
-
-      const task = await Task.create({
-        user_id: userId,
-        title: cleanTitle,
-        description: action.description || '',
-        quest_rank: questRank,
-        due_date: dueDate,
-        status: 'PENDING',
-      });
-
-      executedResults.push({
-        type: 'create_task',
-        id: task._id,
-        title: task.title,
-        quest_rank: task.quest_rank
-      });
-      continue;
-    }
-
-    // 7. COMPLETE TASK / QUEST
-    if (actionType === 'complete_task') {
-      const task = await findTargetTask(userId, action);
-      if (!task) {
-        throw new Error(`Không tìm thấy Quest "${action.title || ''}" để hoàn thành`);
-      }
-
-      if (task.status !== 'COMPLETED') {
-        const { rewardExp, leveledUp } = await applyTaskCompletionReward(userId, task, actionDate);
-        executedResults.push({
-          type: 'complete_task',
-          id: task._id,
-          title: task.title,
-          exp: rewardExp,
-          leveledUp
-        });
-      }
-      continue;
-    }
-
-    // 7b. UPDATE TASK / QUEST (Sửa tiêu đề, rank, deadline, chuyển trạng thái hoặc hoàn tác)
-    if (actionType === 'update_task') {
-      const task = await findTargetTask(userId, action);
-      if (!task) {
-        throw new Error(`Không tìm thấy Quest "${action.original_title || action.title || ''}" để cập nhật`);
-      }
-
-      const prevStatus = task.status;
-      const nextStatus = ['PENDING', 'IN_PROGRESS', 'COMPLETED'].includes(action.status) ? action.status : undefined;
-
-      if (action.title && action.title.trim()) {
-        task.title = capitalizeFirst(cleanTemporalWords(action.title.trim())) || task.title;
-      }
-      if (action.description !== undefined) {
-        task.description = String(action.description);
-      }
-      if (['S', 'A', 'B', 'C', 'D'].includes(action.quest_rank)) {
-        task.quest_rank = action.quest_rank;
-      }
-      if (action.due_date) {
-        const newDue = parseVnDateTime(action.due_date, '23:59:00');
-        if (newDue) {
-          task.due_date = newDue;
-          if (!nextStatus && task.status === 'OVERDUE' && newDue > now) {
-            task.status = 'PENDING';
-          }
-        }
-      }
-
-      let exp = 0;
-      let leveledUp = false;
-
-      if (nextStatus === 'COMPLETED' && prevStatus !== 'COMPLETED') {
-        const reward = await applyTaskCompletionReward(userId, task, actionDate);
-        exp = reward.rewardExp;
-        leveledUp = reward.leveledUp;
-      } else if (nextStatus === 'PENDING' && prevStatus === 'COMPLETED') {
-        await applyTaskUndoPenalty(userId, task);
-      } else {
-        if (nextStatus) task.status = nextStatus;
-        await task.save();
-      }
-
-      executedResults.push({
-        type: 'update_task',
-        id: task._id,
-        title: task.title,
-        status: task.status,
-        quest_rank: task.quest_rank,
-        ...(exp > 0 ? { exp, leveledUp } : {})
-      });
-      continue;
-    }
-
-    // 7c. DELETE TASK / QUEST
-    if (actionType === 'delete_task') {
-      const task = await findTargetTask(userId, action);
-      if (!task) {
-        throw new Error(`Không tìm thấy Quest "${action.title || ''}" để xóa`);
-      }
-      await Task.deleteOne({ _id: task._id, user_id: userId });
-
-      executedResults.push({
-        type: 'delete_task',
-        id: task._id,
-        title: task.title
-      });
-      continue;
-    }
-
-    // 8. CREATE CALENDAR EVENT (Hỗ trợ cả sự kiện đơn lẫn lịch lặp định kỳ)
-    if (actionType === 'create_calendar_event') {
-      const rawTitle = action.title?.trim() || 'Sự kiện mới';
-      const cleanTitle = capitalizeFirst(cleanTemporalWords(rawTitle)) || 'Sự kiện mới';
-      const startTime = parseVnDateTime(action.start_time, '09:00:00') ?? now;
-      let endTime = parseVnDateTime(action.end_time, '10:00:00');
-      if (!endTime || endTime.getTime() <= startTime.getTime()) {
-        endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
-      }
-
-      const isRecurring = Boolean(action.is_recurring);
-      const recurrenceType = isRecurring && ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'].includes(action.recurrence_type)
-        ? action.recurrence_type
-        : (isRecurring ? 'WEEKLY' : undefined);
-      const recurrenceDays = isRecurring && Array.isArray(action.recurrence_days)
-        ? action.recurrence_days.map((d: any) => Number(d)).filter((d: number) => Number.isInteger(d) && d >= 0 && d <= 6)
-        : undefined;
-      const recurrenceEnd = isRecurring && action.recurrence_end
-        ? (parseVnDateTime(action.recurrence_end, '23:59:59') ?? undefined)
-        : undefined;
-
-      const event = await CalendarEvent.create({
-        user_id: userId,
-        title: cleanTitle,
-        description: action.description || '',
-        start_time: startTime,
-        end_time: endTime,
-        color_code: action.color_code || '#00f0ff',
-        is_recurring: isRecurring,
-        ...(recurrenceType ? { recurrence_type: recurrenceType } : {}),
-        ...(recurrenceDays && recurrenceDays.length > 0 ? { recurrence_days: recurrenceDays } : {}),
-        ...(recurrenceEnd ? { recurrence_end: recurrenceEnd } : {})
-      });
-
-      executedResults.push({
-        type: 'create_calendar_event',
-        id: event._id,
-        title: event.title,
-        start_time: event.start_time,
-        is_recurring: event.is_recurring
-      });
-      continue;
-    }
-
-    // 8b. UPDATE CALENDAR EVENT (Dời giờ/ngày, đổi tên, sửa 1 buổi ngoại lệ hoặc cả chuỗi lặp)
-    if (actionType === 'update_calendar_event') {
-      const resolved = await resolveCalendarTarget(userId, action);
-      if (!resolved) {
-        throw new Error(`Không tìm thấy sự kiện "${action.title || ''}" trong lịch trình để cập nhật`);
-      }
-      const { baseDoc, occurrenceStart } = resolved;
-      const isSingleOccurrenceOverride =
-        baseDoc.is_recurring &&
-        action.scope !== 'series' &&
-        occurrenceStart !== null;
-
-      if (isSingleOccurrenceOverride && occurrenceStart) {
-        const origDuration = new Date(baseDoc.end_time).getTime() - new Date(baseDoc.start_time).getTime();
-        const occEndDefault = new Date(occurrenceStart.getTime() + origDuration);
-        const newStart = action.start_time
-          ? (parseVnDateTime(action.start_time, '09:00:00') ?? occurrenceStart)
-          : occurrenceStart;
-        let newEnd = action.end_time
-          ? parseVnDateTime(action.end_time, '10:00:00')
-          : (action.start_time ? new Date(newStart.getTime() + origDuration) : occEndDefault);
-        if (!newEnd || newEnd.getTime() <= newStart.getTime()) {
-          newEnd = new Date(newStart.getTime() + Math.max(origDuration, 60 * 60 * 1000));
-        }
-
-        const newTitle = action.title?.trim()
-          ? (capitalizeFirst(cleanTemporalWords(action.title.trim())) || baseDoc.title)
-          : baseDoc.title;
-
-        const existingException = await CalendarEvent.findOne({
-          user_id: userId,
-          parent_event_id: baseDoc._id,
-          exception_date: occurrenceStart
-        });
-
-        let savedEx: any;
-        if (existingException) {
-          existingException.title = newTitle;
-          if (action.description !== undefined) existingException.description = action.description;
-          existingException.start_time = newStart;
-          existingException.end_time = newEnd;
-          if (action.color_code) existingException.color_code = action.color_code;
-          existingException.is_cancelled = false;
-          savedEx = await existingException.save();
-        } else {
-          savedEx = await CalendarEvent.create({
-            user_id: userId,
-            title: newTitle,
-            description: action.description !== undefined ? action.description : (baseDoc.description || ''),
-            start_time: newStart,
-            end_time: newEnd,
-            color_code: action.color_code || baseDoc.color_code || '#00f0ff',
-            is_recurring: false,
-            parent_event_id: baseDoc._id,
-            exception_date: occurrenceStart,
-            is_cancelled: false
-          });
-        }
-
-        executedResults.push({
-          type: 'update_calendar_event',
-          id: savedEx._id,
-          title: savedEx.title,
-          start_time: savedEx.start_time,
-          scope: 'single'
-        });
-      } else {
-        const origDuration = new Date(baseDoc.end_time).getTime() - new Date(baseDoc.start_time).getTime();
-        if (action.title?.trim()) {
-          baseDoc.title = capitalizeFirst(cleanTemporalWords(action.title.trim())) || baseDoc.title;
-        }
-        if (action.description !== undefined) baseDoc.description = action.description;
-        if (action.color_code) baseDoc.color_code = action.color_code;
-
-        if (action.start_time) {
-          const parsedStart = parseVnDateTime(action.start_time, '09:00:00');
-          if (parsedStart) {
-            baseDoc.start_time = parsedStart;
-            if (!action.end_time) {
-              baseDoc.end_time = new Date(parsedStart.getTime() + Math.max(origDuration, 60 * 60 * 1000));
+            if (action.height && Number(action.height) > 0) {
+              user.height = Number(action.height);
             }
+
+            const recordDate = actionDate;
+            const vnDateKey = getVnDateStr(recordDate);
+            const startOfDay = new Date(`${vnDateKey}T00:00:00+07:00`);
+            const endOfDay = new Date(`${vnDateKey}T23:59:59.999+07:00`);
+
+            await WeightLog.findOneAndDelete({
+              user_id: userId,
+              date: { $gte: startOfDay, $lte: endOfDay }
+            });
+
+            const weightLog = await WeightLog.create({
+              user_id: userId,
+              weight,
+              date: recordDate
+            });
+
+            const heightInM = (user.height || 170) / 100;
+            const bmi = weight / (heightInM * heightInM);
+            const isNormalBmi = bmi >= 18.5 && bmi <= 24.9;
+
+            const rewardExp = 100;
+            user.current_exp += rewardExp;
+
+            let requiredExp = getExpForNextLevel(user.level);
+            let leveledUp = false;
+            while (user.current_exp >= requiredExp) {
+              user.current_exp -= requiredExp;
+              user.level += 1;
+              user.max_hp += 50;
+              user.max_mp += 20;
+              leveledUp = true;
+              requiredExp = getExpForNextLevel(user.level);
+            }
+
+            if (isNormalBmi) {
+              user.max_hp += 100;
+              user.current_hp = user.max_hp;
+            }
+
+            await user.save();
+
+            executedResults.push({
+              type: 'record_weight',
+              id: weightLog._id,
+              weight,
+              bmi: parseFloat(bmi.toFixed(1)),
+              isNormalBmi,
+              rewardExp,
+              leveledUp
+            });
           }
         }
-        if (action.end_time) {
-          const parsedEnd = parseVnDateTime(action.end_time, '10:00:00');
-          if (parsedEnd) baseDoc.end_time = parsedEnd;
-        }
-        if (new Date(baseDoc.end_time).getTime() <= new Date(baseDoc.start_time).getTime()) {
-          baseDoc.end_time = new Date(new Date(baseDoc.start_time).getTime() + 60 * 60 * 1000);
-        }
-
-        await baseDoc.save();
-        executedResults.push({
-          type: 'update_calendar_event',
-          id: baseDoc._id,
-          title: baseDoc.title,
-          start_time: baseDoc.start_time,
-          scope: baseDoc.is_recurring ? 'series' : 'single'
-        });
-      }
-      continue;
-    }
-
-    // 8c. DELETE CALENDAR EVENT (Xóa sự kiện hoặc tạm nghỉ 1 buổi của lịch lặp)
-    if (actionType === 'delete_calendar_event') {
-      const resolved = await resolveCalendarTarget(userId, action);
-      if (!resolved) {
-        throw new Error(`Không tìm thấy sự kiện "${action.title || ''}" trong lịch trình để hủy`);
-      }
-      const { baseDoc, occurrenceStart } = resolved;
-
-      if (baseDoc.is_recurring && action.scope !== 'series' && occurrenceStart) {
-        // Nghỉ 1 buổi của lịch lặp -> tạo exception is_cancelled = true khớp chính xác timestamp ảo
-        const origDuration = new Date(baseDoc.end_time).getTime() - new Date(baseDoc.start_time).getTime();
-        const existingException = await CalendarEvent.findOne({
-          user_id: userId,
-          parent_event_id: baseDoc._id,
-          exception_date: occurrenceStart
-        });
-        if (existingException) {
-          existingException.is_cancelled = true;
-          await existingException.save();
-        } else {
-          await CalendarEvent.create({
-            user_id: userId,
-            title: 'Cancelled Exception',
-            start_time: occurrenceStart,
-            end_time: new Date(occurrenceStart.getTime() + Math.max(origDuration, 60 * 60 * 1000)),
-            is_recurring: false,
-            parent_event_id: baseDoc._id,
-            exception_date: occurrenceStart,
-            is_cancelled: true
-          });
-        }
-
-        executedResults.push({
-          type: 'delete_calendar_event',
-          id: baseDoc._id,
-          title: baseDoc.title,
-          scope: 'single'
-        });
-      } else if (baseDoc.is_recurring) {
-        // Dừng cả chuỗi lặp (khớp behavior của DELETE /api/calendar/[id])
-        const yesterday = new Date(now.getTime() - 86400000);
-        baseDoc.recurrence_end = yesterday;
-        await baseDoc.save();
-
-        executedResults.push({
-          type: 'delete_calendar_event',
-          id: baseDoc._id,
-          title: baseDoc.title,
-          scope: 'series'
-        });
-      } else if (baseDoc.parent_event_id) {
-        // Nếu đang là bản ghi exception của lịch lặp -> đánh dấu is_cancelled = true thay vì xóa vật lý (tránh occurrence gốc mọc lại)
-        baseDoc.is_cancelled = true;
-        await baseDoc.save();
-
-        executedResults.push({
-          type: 'delete_calendar_event',
-          id: baseDoc._id,
-          title: baseDoc.title,
-          scope: 'single'
-        });
-      } else {
-        await CalendarEvent.deleteOne({ _id: baseDoc._id, user_id: userId });
-
-        executedResults.push({
-          type: 'delete_calendar_event',
-          id: baseDoc._id,
-          title: baseDoc.title,
-          scope: 'single'
-        });
-      }
-      continue;
-    }
-
-    // 9. CREATE SHOPPING ITEM
-    if (actionType === 'create_shopping_item') {
-      const rawName = action.name?.trim() || 'Món đồ';
-      const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Món đồ';
-      const quantity = Math.max(1, Number(action.quantity) || 1);
-      const unit = action.unit?.trim() || 'món';
-      const category = ['food', 'household', 'other'].includes(action.category) ? action.category : 'food';
-
-      const item = await ShoppingItem.create({
-        user_id: userId,
-        name: cleanName,
-        quantity,
-        unit,
-        category,
-        checked: false
-      });
-
-      executedResults.push({
-        type: 'create_shopping_item',
-        id: item._id,
-        name: item.name,
-        quantity: item.quantity,
-        unit: item.unit
-      });
-      continue;
-    }
-
-    // 9b. PURCHASE SHOPPING (Tick đã mua ShoppingItem -> Cất vào Kho đồ -> Trừ ví & ghi Transaction nếu có tiền)
-    if (actionType === 'purchase_shopping') {
-      const rawName = action.name?.trim() || 'Món đồ';
-      const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Món đồ';
-      const quantity = Math.max(0.01, Number(action.quantity) || 1);
-      const unit = action.unit?.trim() || 'món';
-      const invCategory = ['food', 'spices', 'utilities'].includes(action.inventory_category)
-        ? action.inventory_category
-        : 'food';
-      const addToInventory = action.add_to_inventory !== false;
-      const amount = Math.max(0, Number(action.amount) || 0);
-      const expiryDate = parseVnDateTime(action.expiryDate, '12:00:00') ?? undefined;
-
-      let resolvedWallet: any = null;
-      let txId: any = undefined;
-
-      if (amount > 0) {
-        resolvedWallet = await resolveUserWallet(userId, action.wallet_id, action.walletName, true);
-        if (!resolvedWallet) {
-          throw new Error(`Vui lòng chọn hoặc nêu rõ ví thanh toán cho "${cleanName}"`);
-        }
-
-        const deducted = await Wallet.findOneAndUpdate(
-          { _id: resolvedWallet._id, user_id: userId, balance: { $gte: amount } },
-          { $inc: { balance: -amount } },
-          { returnDocument: 'after' }
-        );
-        if (!deducted) {
-          throw new Error(`Số dư ví "${resolvedWallet.name}" không đủ để thanh toán ${amount.toLocaleString('vi-VN')}đ`);
-        }
-
-        const tx = await Transaction.create({
-          user_id: userId,
-          type: 'expense',
-          amount,
-          date: actionDate,
-          description: addToInventory ? `Mua dự trữ: ${cleanName}` : `Mua sắm: ${cleanName}`,
-          category: invCategory === 'food' || invCategory === 'spices' ? 'food' : 'shopping',
-          wallet_id: resolvedWallet._id,
-          walletName: resolvedWallet.name
-        });
-        txId = tx._id;
+        continue;
       }
 
-      // Tick ShoppingItem tương ứng (nếu có trong danh sách)
-      let shoppingItem: any = null;
-      if (typeof action.shopping_item_id === 'string' && mongoose.Types.ObjectId.isValid(action.shopping_item_id)) {
-        shoppingItem = await ShoppingItem.findOneAndUpdate(
-          { _id: action.shopping_item_id, user_id: userId },
-          { $set: { checked: true } },
-          { new: true }
-        );
-      }
-      if (!shoppingItem) {
-        const unchecked = await ShoppingItem.find({ user_id: userId, checked: false });
-        const matched = matchByNormalizedName(unchecked, cleanName, (s) => s.name);
-        if (matched) {
-          matched.checked = true;
-          shoppingItem = await matched.save();
-        }
-      }
+      // 12. CREATE RECIPE
+      if (actionType === 'create_recipe') {
+        const rawName = action.name?.trim() || 'Công thức mới';
+        const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Công thức mới';
+        const ingredients: string[] = Array.isArray(action.ingredients)
+          ? action.ingredients.map((i: any) => String(i).trim()).filter(Boolean)
+          : (typeof action.ingredients === 'string'
+            ? action.ingredients.split(',').map((s: string) => s.trim()).filter(Boolean)
+            : []);
+        const instructions = action.instructions ? String(action.instructions).trim() : undefined;
 
-      let invItem: any = null;
-      if (addToInventory) {
-        invItem = await Inventory.create({
+        const recipe = await Recipe.create({
           user_id: userId,
           name: cleanName,
-          category: invCategory,
-          quantity,
-          originalQuantity: quantity,
-          unit,
-          purchaseDate: actionDate,
-          expiryDate,
-          isGift: false,
-          totalValue: amount > 0 ? amount : undefined,
-          originalValue: amount > 0 ? amount : undefined,
-          wallet_id: amount > 0 ? resolvedWallet?._id : undefined,
-          walletName: amount > 0 ? resolvedWallet?.name : undefined,
-          transaction_id: txId
+          ingredients,
+          ...(instructions ? { instructions } : {})
         });
-      }
 
-      executedResults.push({
-        type: 'purchase_shopping',
-        id: invItem?._id || shoppingItem?._id || txId,
-        name: cleanName,
-        amount,
-        addedToInventory: addToInventory,
-        checkedShopping: Boolean(shoppingItem),
-        walletName: resolvedWallet?.name || action.walletName
-      });
-      continue;
+        executedResults.push({
+          type: 'create_recipe',
+          id: recipe._id,
+          name: recipe.name,
+          ingredientsCount: ingredients.length,
+          ingredients
+        });
+        continue;
+      }
     }
 
-    // 10. CREATE INVENTORY ITEM
-    if (actionType === 'create_inventory') {
-      const rawName = action.name?.trim() || 'Vật phẩm';
-      const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Vật phẩm';
-      const parsedQty = Number(action.quantity);
-      const quantity = parsedQty > 0 ? Number(parsedQty.toFixed(4)) : 1;
-      const unit = action.unit?.trim() || 'món';
-      const category = action.category?.trim() || 'food';
-      const expiryDate = parseVnDateTime(action.expiryDate, '12:00:00') ?? undefined;
-
-      const item = await Inventory.create({
-        user_id: userId,
-        name: cleanName,
-        category,
-        quantity,
-        originalQuantity: quantity,
-        unit,
-        purchaseDate: actionDate,
-        expiryDate,
-        isGift: false
-      });
-
-      executedResults.push({
-        type: 'create_inventory',
-        id: item._id,
-        name: item.name,
-        quantity: item.quantity,
-        unit: item.unit
-      });
-      continue;
-    }
-
-    // 10b. UPDATE INVENTORY ITEM (Tiêu hao, bỏ đồ hỏng, thêm/điều chỉnh số lượng hoặc HSD trong Kho)
-    if (actionType === 'update_inventory') {
-      let item: any = null;
-      const targetInvId = action.inv_id || action.invId;
-      if (typeof targetInvId === 'string' && mongoose.Types.ObjectId.isValid(targetInvId)) {
-        item = await Inventory.findOne({ _id: targetInvId, user_id: userId });
-      }
-      if (!item && action.name) {
-        const activeInv = await Inventory.find({ user_id: userId, quantity: { $gt: 0 } });
-        item = matchByNormalizedName(activeInv, action.name, (i) => i.name);
-        if (!item) {
-          const allInv = await Inventory.find({ user_id: userId });
-          item = matchByNormalizedName(allInv, action.name, (i) => i.name);
-        }
-      }
-      if (!item) {
-        throw new Error(`Không tìm thấy "${action.name || 'món đồ'}" trong kho để cập nhật`);
-      }
-
-      const rawOp = String(action.operation || '').toLowerCase();
-      const rawMode = String(action.mode || '').toLowerCase();
-      const op = ['set', 'deduct', 'add', 'discard'].includes(rawOp)
-        ? rawOp
-        : rawMode === 'subtract'
-          ? 'deduct'
-          : rawMode === 'add'
-            ? 'add'
-            : rawMode === 'set'
-              ? 'set'
-              : 'set';
-
-      const oldQty = Number(item.quantity) || 0;
-      const origQty = Number(item.originalQuantity) || oldQty;
-      let newQty = oldQty;
-
-      if (op === 'discard') {
-        newQty = 0;
-      } else if (op === 'deduct') {
-        const rawDelta = Math.max(0, Number(action.delta_quantity ?? action.quantity ?? action.qty ?? 0));
-        const convertedDelta = convertQtyToInventoryUnit(
-          rawDelta,
-          action.unit,
-          item.unit,
-          oldQty > 0 ? oldQty : (origQty > 0 ? origQty : undefined)
-        );
-        if (convertedDelta > 0) {
-          newQty = Math.max(0, Number((oldQty - convertedDelta).toFixed(4)));
-        }
-      } else if (op === 'add') {
-        const rawDelta = Math.max(0, Number(action.delta_quantity ?? action.quantity ?? action.qty ?? 0));
-        const convertedDelta = convertQtyToInventoryUnit(
-          rawDelta,
-          action.unit,
-          item.unit,
-          origQty > 0 ? origQty : undefined
-        );
-        newQty = Number((oldQty + convertedDelta).toFixed(4));
-      } else if (action.quantity !== undefined) {
-        const rawTarget = Math.max(0, Number(action.quantity) || 0);
-        const convertedTarget = convertQtyToInventoryUnit(
-          rawTarget,
-          action.unit,
-          item.unit,
-          origQty > 0 ? origQty : undefined
-        );
-        newQty = Math.max(0, Number(convertedTarget.toFixed(4)));
-      }
-
-      if (newQty === 0) {
-        item.totalValue = 0;
-      } else if (newQty !== oldQty) {
-        if (oldQty > 0 && item.totalValue && item.totalValue > 0) {
-          const unitPrice = item.totalValue / oldQty;
-          item.totalValue = Math.max(0, Math.round(unitPrice * newQty));
-        } else if (oldQty === 0 && newQty > 0) {
-          let baseValue = item.originalValue || 0;
-          if (!baseValue && item.transaction_id) {
-            const tx = await Transaction.findById(item.transaction_id);
-            if (tx) baseValue = tx.amount;
-          }
-          if (baseValue > 0 && item.originalQuantity > 0) {
-            const unitPrice = baseValue / item.originalQuantity;
-            item.totalValue = Math.round(unitPrice * newQty);
-          }
-        }
-      }
-
-      item.quantity = newQty;
-      if (newQty > item.originalQuantity) {
-        item.originalQuantity = newQty;
-      }
-      if (action.expiryDate) {
-        const parsedExp = parseVnDateTime(action.expiryDate, '12:00:00');
-        if (parsedExp) item.expiryDate = parsedExp;
-      }
-      await item.save();
-
-      executedResults.push({
-        type: 'update_inventory',
-        id: item._id,
-        name: item.name,
-        quantity: item.quantity,
-        unit: item.unit,
-        operation: op
-      });
-      continue;
-    }
-
-    // 11. RECORD WEIGHT / HEALTH
-    if (actionType === 'record_weight') {
-      const weight = Number(action.weight);
-      if (weight && weight > 0) {
-        const user = await User.findById(userId);
-        if (user) {
-          if (action.height && Number(action.height) > 0) {
-            user.height = Number(action.height);
-          }
-
-          const recordDate = actionDate;
-          const vnDateKey = getVnDateStr(recordDate);
-          const startOfDay = new Date(`${vnDateKey}T00:00:00+07:00`);
-          const endOfDay = new Date(`${vnDateKey}T23:59:59.999+07:00`);
-
-          await WeightLog.findOneAndDelete({
-            user_id: userId,
-            date: { $gte: startOfDay, $lte: endOfDay }
-          });
-
-          const weightLog = await WeightLog.create({
-            user_id: userId,
-            weight,
-            date: recordDate
-          });
-
-          const heightInM = (user.height || 170) / 100;
-          const bmi = weight / (heightInM * heightInM);
-          const isNormalBmi = bmi >= 18.5 && bmi <= 24.9;
-
-          const rewardExp = 100;
-          user.current_exp += rewardExp;
-
-          let requiredExp = getExpForNextLevel(user.level);
-          let leveledUp = false;
-          while (user.current_exp >= requiredExp) {
-            user.current_exp -= requiredExp;
-            user.level += 1;
-            user.max_hp += 50;
-            user.max_mp += 20;
-            leveledUp = true;
-            requiredExp = getExpForNextLevel(user.level);
-          }
-
-          if (isNormalBmi) {
-            user.max_hp += 100;
-            user.current_hp = user.max_hp;
-          }
-
-          await user.save();
-
-          executedResults.push({
-            type: 'record_weight',
-            id: weightLog._id,
-            weight,
-            bmi: parseFloat(bmi.toFixed(1)),
-            isNormalBmi,
-            rewardExp,
-            leveledUp
-          });
-        }
-      }
-      continue;
-    }
-
-    // 12. CREATE RECIPE
-    if (actionType === 'create_recipe') {
-      const rawName = action.name?.trim() || 'Công thức mới';
-      const cleanName = capitalizeFirst(cleanTemporalWords(rawName)) || 'Công thức mới';
-      const ingredients: string[] = Array.isArray(action.ingredients)
-        ? action.ingredients.map((i: any) => String(i).trim()).filter(Boolean)
-        : (typeof action.ingredients === 'string'
-          ? action.ingredients.split(',').map((s: string) => s.trim()).filter(Boolean)
-          : []);
-      const instructions = action.instructions ? String(action.instructions).trim() : undefined;
-
-      const recipe = await Recipe.create({
-        user_id: userId,
-        name: cleanName,
-        ingredients,
-        ...(instructions ? { instructions } : {})
-      });
-
-      executedResults.push({
-        type: 'create_recipe',
-        id: recipe._id,
-        name: recipe.name,
-        ingredientsCount: ingredients.length,
-        ingredients
-      });
-      continue;
-    }
+    return executedResults;
   }
-
-  return executedResults;
-}

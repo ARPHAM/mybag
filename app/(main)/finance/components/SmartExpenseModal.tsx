@@ -201,6 +201,8 @@ export default function SmartExpenseModal({
                 const isDebtBorrow = t === 'debt_borrowed';
                 const isPayDebt = t === 'pay_debt';
                 const isPayDebtIn = isPayDebt && act.debt_type === 'lent';
+                const isBorrowMoreDebt = t === 'borrow_more_debt';
+                const isBorrowMoreIn = isBorrowMoreDebt && act.debt_type === 'borrowed';
                 const isBudget = t === 'upsert_budget';
                 const isUpdateTx = t === 'update_transaction';
                 const isDeleteTx = t === 'delete_transaction';
@@ -210,6 +212,7 @@ export default function SmartExpenseModal({
 
                 const titleText = (() => {
                   if (t === 'pay_debt') return `${isPayDebtIn ? 'Thu nợ từ' : 'Trả nợ cho'} ${act.person || 'đối tượng'}`;
+                  if (t === 'borrow_more_debt') return `${act.debt_type === 'lent' ? 'Cho vay thêm' : 'Vay thêm từ'} ${act.person || 'đối tượng'}`;
                   if (t === 'upsert_budget') return `Hạn mức: ${act.name || act.category}`;
                   if (t === 'update_transaction') return `Sửa GD: ${act.description || 'Giao dịch'}`;
                   if (t === 'delete_transaction') return `Xóa GD: ${act.description || 'Giao dịch'}`;
@@ -222,6 +225,7 @@ export default function SmartExpenseModal({
                   if (isDebtLent) return `Cho vay / Trả hộ: ${act.person || 'Người quen'}${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
                   if (isDebtBorrow) return `Đi vay: ${act.person || 'Chủ nợ'}${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
                   if (isPayDebt) return `${isPayDebtIn ? 'Nhận tiền trả nợ' : 'Trả tiền nợ'}${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
+                  if (isBorrowMoreDebt) return `${act.debt_type === 'lent' ? 'Cho vay thêm (chi ví)' : 'Vay thêm (thu vào ví)'}${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
                   if (isBudget) return `Danh mục: ${act.category}`;
                   if (isUpdateTx) return `Cập nhật giao dịch${act.walletName ? ` · Ví: ${act.walletName}` : ''}`;
                   if (isDeleteTx) return 'Xóa giao dịch & hoàn ví';
@@ -235,7 +239,7 @@ export default function SmartExpenseModal({
 
                 const displayValue = isBudget ? (act.limit ?? 0) : (act.amount || 0);
                 const showAmount = isBudget ? act.limit !== undefined : displayValue > 0;
-                const isPositive = isInc || isDebtBorrow || isPayDebtIn;
+                const isPositive = isInc || isDebtBorrow || isPayDebtIn || isBorrowMoreIn;
                 const isNeutral = isTransfer || isBudget || isUpdateTx || isDeleteTx;
 
                 return (
@@ -258,7 +262,7 @@ export default function SmartExpenseModal({
                       {isInc && <ArrowUpRight size={18} color="#00ffaa" />}
                       {isTransfer && <ArrowRightLeft size={18} color="#00f0ff" />}
                       {(isDebtLent || isDebtBorrow) && <Users size={18} color="#c084fc" />}
-                      {isPayDebt && <HandCoins size={18} color="#c084fc" />}
+                      {(isPayDebt || isBorrowMoreDebt) && <HandCoins size={18} color="#c084fc" />}
                       {isBudget && <CreditCard size={18} color="#38bdf8" />}
                       {isUpdateTx && <Pencil size={18} color="#fbbf24" />}
                       {isDeleteTx && <Trash2 size={18} color="#ff6666" />}

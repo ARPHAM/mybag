@@ -132,6 +132,7 @@ const WALLET_ACTION_TYPES = new Set([
   'debt_lent',
   'debt_borrowed',
   'pay_debt',
+  'borrow_more_debt',
   'purchase_shopping',
   'update_transaction'
 ]);
@@ -148,7 +149,7 @@ function getTitleFieldKey(actionType: string): string {
   if (['create_shopping_item', 'purchase_shopping', 'create_inventory', 'update_inventory', 'create_recipe'].includes(actionType)) {
     return 'name';
   }
-  if (['debt_lent', 'debt_borrowed', 'pay_debt'].includes(actionType)) {
+  if (['debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt'].includes(actionType)) {
     return 'person';
   }
   return 'description';
@@ -183,13 +184,13 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
   const titleKey = getTitleFieldKey(t);
   const titleVal = String(action?.[titleKey] ?? action?.description ?? '');
 
-  const showAmount = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'purchase_shopping', 'update_transaction'].includes(t);
+  const showAmount = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'update_transaction'].includes(t);
   const showWallet = WALLET_ACTION_TYPES.has(t) && wallets.length > 0;
   const isTransfer = t === 'transfer';
   const showCategory = CATEGORY_ACTION_TYPES.has(t);
   const showTaskFields = TASK_ACTION_TYPES.has(t);
   const showCalendarFields = CALENDAR_ACTION_TYPES.has(t);
-  const showCustomTime = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'purchase_shopping', 'create_inventory', 'update_inventory', 'record_weight', 'update_transaction'].includes(t);
+  const showCustomTime = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'create_inventory', 'update_inventory', 'record_weight', 'update_transaction'].includes(t);
 
   return (
     <div className={styles.inlineEditor}>
@@ -809,6 +810,8 @@ export default function YuiAssistant() {
         return <span className={`${styles.badge} ${styles.badgeDebt}`}>Đi vay</span>;
       case 'pay_debt':
         return <span className={`${styles.badge} ${a.debt_type === 'lent' ? styles.badgeIncome : styles.badgeDebt}`}>{a.debt_type === 'lent' ? 'Thu nợ' : 'Trả nợ'}</span>;
+      case 'borrow_more_debt':
+        return <span className={`${styles.badge} ${a.debt_type === 'lent' ? styles.badgeDebt : styles.badgeIncome}`}>{a.debt_type === 'lent' ? 'Cho vay thêm' : 'Vay thêm'}</span>;
       case 'upsert_budget':
         return <span className={`${styles.badge} ${styles.badgeBudget}`}>Hạn mức</span>;
       case 'update_transaction':
@@ -862,6 +865,7 @@ export default function YuiAssistant() {
       case 'debt_borrowed':
         return <Users size={15} color="#c084fc" />;
       case 'pay_debt':
+      case 'borrow_more_debt':
         return <HandCoins size={15} color="#c084fc" />;
       case 'upsert_budget':
         return <CreditCard size={15} color="#38bdf8" />;
@@ -919,6 +923,8 @@ export default function YuiAssistant() {
         return `Đi vay: ${a.person || 'Khác'} - ${a.description || ''}`;
       case 'pay_debt':
         return `${a.debt_type === 'lent' ? 'Thu nợ từ' : 'Trả nợ cho'}: ${a.person || 'Đối tượng'}`;
+      case 'borrow_more_debt':
+        return `${a.debt_type === 'lent' ? 'Cho vay thêm' : 'Vay thêm từ'}: ${a.person || 'Đối tượng'}${a.walletName ? ` (${a.walletName})` : ''}`;
       case 'upsert_budget':
         return `Ngân sách ${CATEGORY_LABELS[a.category] || a.name || a.category}`;
       case 'update_transaction':
@@ -964,7 +970,7 @@ export default function YuiAssistant() {
     }
   };
 
-  const getAmountBadgeProps = (a: any) => {
+  const getAmountBadgeProps = (a: any): { text: string; className: string } | null => {
     if (a?.actionType === 'upsert_budget' && a.limit !== undefined) {
       return { text: `${fmt(a.limit)}đ`, className: styles.planAmtTransfer };
     }
@@ -972,7 +978,7 @@ export default function YuiAssistant() {
 
     const val = fmt(a.amount);
     const t = a.actionType;
-    if (t === 'income' || t === 'debt_borrowed' || (t === 'pay_debt' && a.debt_type === 'lent')) {
+    if (t === 'income' || t === 'debt_borrowed' || (t === 'pay_debt' && a.debt_type === 'lent') || (t === 'borrow_more_debt' && a.debt_type === 'borrowed')) {
       return { text: `+${val}đ`, className: '' };
     }
     if (t === 'transfer' || t === 'update_transaction' || t === 'delete_transaction') {
