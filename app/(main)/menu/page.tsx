@@ -1244,7 +1244,7 @@ export default function MenuPage() {
       </div>
 
       <SaoTabs
-        tabs={MENU_TABS}
+        tabs={MENU_TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={18} /> }))}
         activeTab={activeTab}
         onChange={(id) => setActiveTab(id as MenuTabId)}
       />
