@@ -3,6 +3,9 @@ import axiosClient from '@/lib/axiosClient';
 export const getRecipes = (force = false) => axiosClient.get(`/api/recipes${force ? `?_t=${Date.now()}` : ''}`);
 export const getMeals = (force = false) => axiosClient.get(`/api/meals${force ? `?_t=${Date.now()}` : ''}`);
 export const getInventory = (force = false) => axiosClient.get(`/api/finance/inventory${force ? `?_t=${Date.now()}` : ''}`);
+export const createInventory = (data: any) => axiosClient.post('/api/finance/inventory', data);
+export const updateInventory = (id: string, data: any) => axiosClient.put(`/api/finance/inventory/${id}`, data);
+export const deleteInventory = (id: string) => axiosClient.delete(`/api/finance/inventory/${id}`);
 
 export const calculateMacros = (payload: any) => axiosClient.post('/api/ai/calculate-macros', payload);
 

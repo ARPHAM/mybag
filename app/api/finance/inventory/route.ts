@@ -16,10 +16,11 @@ export async function GET(req: Request) {
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
-    // Tự động dọn dẹp kho: xóa các món ăn có số lượng = 0 và đã không cập nhật từ 7 ngày trước
+    // Tự động dọn dẹp kho: xóa các món thực phẩm chính (không phải gia vị) có số lượng = 0 và đã không cập nhật từ 7 ngày trước
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     await Inventory.deleteMany({
       user_id: decoded.userId,
+      category: { $ne: 'spices' },
       quantity: { $lte: 0 },
       updatedAt: { $lt: oneWeekAgo }
     });
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const body = await req.json();
-    const { name, category, quantity, unit, purchaseDate, expiryDate, isGift, totalValue, wallet_id } = body;
+    const { name, category, quantity, unit, purchaseDate, expiryDate, isGift, totalValue, wallet_id, stock_status } = body;
 
     if (!name || !category || !unit || quantity === undefined || quantity < 0) {
       return NextResponse.json({ error: 'Thông tin không hợp lệ' }, { status: 400 });
@@ -89,6 +90,7 @@ export async function POST(req: Request) {
       user_id: decoded.userId,
       name,
       category,
+      stock_status: stock_status || (category === 'spices' ? (quantity <= 0 ? 'out' : quantity <= 2 ? 'low' : 'stable') : undefined),
       quantity,
       originalQuantity: quantity,
       unit,

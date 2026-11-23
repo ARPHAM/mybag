@@ -17,11 +17,27 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const body = await req.json();
-    const { name, category, quantity, unit, purchaseDate, expiryDate, isGift, totalValue, wallet_id, justUpdateQty } = body;
+    const { name, category, quantity, unit, purchaseDate, expiryDate, isGift, totalValue, wallet_id, justUpdateQty, justUpdateStockStatus, stock_status } = body;
     const { id } = await params;
 
     const item = await Inventory.findOne({ _id: id, user_id: decoded.userId });
     if (!item) return NextResponse.json({ error: 'Không tìm thấy đồ dự trữ' }, { status: 404 });
+
+    // Handle 1-tap stock status update for spices & secondary ingredients
+    if (justUpdateStockStatus) {
+      if (!['stable', 'low', 'out'].includes(stock_status)) {
+        return NextResponse.json({ error: 'Trạng thái không hợp lệ' }, { status: 400 });
+      }
+      item.stock_status = stock_status;
+      if (stock_status === 'out') {
+        item.quantity = 0;
+        item.totalValue = 0;
+      } else if (item.quantity === 0) {
+        item.quantity = stock_status === 'low' ? 1 : (item.originalQuantity || 1);
+      }
+      await item.save();
+      return NextResponse.json(item);
+    }
 
     // Handle simple quantity update (from +/- buttons)
     if (justUpdateQty) {
@@ -140,6 +156,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     item.name = name;
     item.category = category;
+    item.stock_status = stock_status || item.stock_status || (category === 'spices' ? 'stable' : undefined);
     item.quantity = quantity;
     item.unit = unit;
     item.purchaseDate = purchaseDate ? new Date(`${purchaseDate.split('T')[0]}T12:00:00.000Z`) : item.purchaseDate;

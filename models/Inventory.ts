@@ -4,6 +4,7 @@ export interface IInventory extends mongoose.Document {
   user_id: mongoose.Types.ObjectId;
   name: string;
   category: string;
+  stock_status?: 'stable' | 'low' | 'out';
   quantity: number;
   originalQuantity: number;
   unit: string;
@@ -23,6 +24,7 @@ const InventorySchema = new mongoose.Schema<IInventory>({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true },
   category: { type: String, required: true },
+  stock_status: { type: String, enum: ['stable', 'low', 'out'], default: 'stable' },
   quantity: { type: Number, required: true, min: 0 },
   originalQuantity: { type: Number, required: true, min: 0 },
   unit: { type: String, required: true },

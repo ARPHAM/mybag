@@ -1,4 +1,4 @@
-export type MenuTabId = 'recipes' | 'history';
+export type MenuTabId = 'history' | 'inventory' | 'recipes';
 
 export interface Recipe {
   _id: string;

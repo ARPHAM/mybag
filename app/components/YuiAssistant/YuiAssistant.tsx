@@ -32,6 +32,7 @@ import {
   Pencil,
   Trash2,
   ImagePlus,
+  Camera,
   Mic,
   MicOff,
   Bell,
@@ -48,6 +49,7 @@ import {
 } from '@/lib/vnTime';
 import { getYuiBriefing, parseYuiMessage, executeYuiActions } from './api';
 import styles from './YuiAssistant.module.css';
+import SaoMediaPickerButton from '../SaoMediaPickerButton/SaoMediaPickerButton';
 
 type Msg =
   | { role: 'user'; text: string; imagePreview?: string }
@@ -455,7 +457,6 @@ export default function YuiAssistant() {
 
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstanceLike | null>(null);
   const hydratedUserRef = useRef<string | null>(null);
 
@@ -558,12 +559,6 @@ export default function YuiAssistant() {
     } catch {
       setMsgs((m) => [...m, { role: 'yui', text: 'Ui, Yui không đọc được file ảnh này Papa ạ!' }]);
     }
-  };
-
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await attachImageFile(file);
-    e.target.value = '';
   };
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -1324,23 +1319,27 @@ export default function YuiAssistant() {
 
           {/* INPUT FORM */}
           <form className={styles.inputRow} onSubmit={send}>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              style={{ display: 'none' }}
-            />
-            <button
-              type="button"
-              className={styles.iconInputBtn}
-              onClick={() => imageInputRef.current?.click()}
+            <SaoMediaPickerButton
+              onSelectFile={attachImageFile}
               disabled={busy}
-              title="Đính kèm / Chụp ảnh (hóa đơn, món ăn, cân nặng)"
-              aria-label="Đính kèm ảnh"
-            >
-              <ImagePlus size={17} />
-            </button>
+              placement="top"
+              align="left"
+              enableClipboardOption={true}
+              title="Chụp ảnh hoặc chọn từ thư viện"
+              ariaLabel="Tùy chọn tải ảnh"
+              trigger={({ isOpen, toggle, disabled: btnDisabled }) => (
+                <button
+                  type="button"
+                  className={`${styles.iconInputBtn} ${isOpen ? styles.activeInputBtn : ''}`}
+                  onClick={toggle}
+                  disabled={btnDisabled}
+                  title="Chụp ảnh hoặc chọn từ thư viện"
+                  aria-label="Tải ảnh lên / Chụp camera"
+                >
+                  <Camera size={17} />
+                </button>
+              )}
+            />
             <button
               type="button"
               className={`${styles.iconInputBtn} ${listening ? styles.micActive : ''}`}

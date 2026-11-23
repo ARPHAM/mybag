@@ -2,6 +2,21 @@ import axiosClient from '@/lib/axiosClient';
 
 export const getWallets = (force = false) => axiosClient.get(`/api/finance/wallets${force ? `?_t=${Date.now()}` : ''}`);
 export const getTransactions = (force = false) => axiosClient.get(`/api/finance/transactions${force ? `?_t=${Date.now()}` : ''}`);
+export const getCategoryTransactions = (params: {
+  category?: string;
+  startDate?: string;
+  endDate?: string;
+  type?: string;
+  sort?: 'date' | 'amount' | 'date_asc';
+}) => {
+  const query = new URLSearchParams();
+  if (params.category) query.set('category', params.category);
+  if (params.startDate) query.set('startDate', params.startDate);
+  if (params.endDate) query.set('endDate', params.endDate);
+  if (params.type) query.set('type', params.type);
+  if (params.sort) query.set('sort', params.sort);
+  return axiosClient.get(`/api/finance/transactions?${query.toString()}`);
+};
 export const getBudgets = (force = false) => axiosClient.get(`/api/finance/budgets${force ? `?_t=${Date.now()}` : ''}`);
 export const getDebts = (force = false) => axiosClient.get(`/api/finance/debts${force ? `?_t=${Date.now()}` : ''}`);
 export const getInventory = (force = false) => axiosClient.get(`/api/finance/inventory${force ? `?_t=${Date.now()}` : ''}`);

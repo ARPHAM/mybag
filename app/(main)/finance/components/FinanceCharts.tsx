@@ -12,18 +12,29 @@ import {
   CartesianGrid,
   Cell
 } from 'recharts';
-import { TrendingUp, PieChart as PieChartIcon, Calendar } from 'lucide-react';
+import { TrendingUp, PieChart as PieChartIcon, Calendar, ChevronRight } from 'lucide-react';
 import SaoButton from '../../../components/SaoButton/SaoButton';
 import styles from '../finance.module.css';
 import type { Transaction } from '@/lib/types';
 import { FINANCE_CATEGORY_OPTIONS } from '@/lib/constants/finance';
+import CategoryDrilldownModal from './CategoryDrilldownModal';
 
 interface FinanceChartsProps {
   transactions: Transaction[];
   formatMoney: (n: number) => string;
 }
 
-const CATEGORY_LABEL_MAP: Record<string, string> = {};
+const CATEGORY_LABEL_MAP: Record<string, string> = {
+  food: 'Ăn uống',
+  housing: 'Nhà cửa & Sinh hoạt',
+  transport: 'Đi lại',
+  entertainment: 'Giải trí',
+  shopping: 'Mua sắm',
+  utilities: 'Đồ dùng',
+  spices: 'Gia vị',
+  health: 'Sức khoẻ',
+  other: 'Khác'
+};
 FINANCE_CATEGORY_OPTIONS.forEach(c => {
   CATEGORY_LABEL_MAP[c.value] = c.label;
 });
@@ -34,13 +45,29 @@ const CATEGORY_COLORS: Record<string, string> = {
   transport: '#f59e0b',
   entertainment: '#ec4899',
   shopping: '#a855f7',
-  health: '#10b981',
+  utilities: '#00f0ff',
+  spices: '#10b981',
+  health: '#22c55e',
   other: '#94a3b8'
 };
 
 export default function FinanceCharts({ transactions, formatMoney }: FinanceChartsProps) {
   const [viewMode, setViewMode] = useState<'comparison' | 'category'>('comparison');
   const [period, setPeriod] = useState<'30days' | '6months'>('30days');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    const endDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    const cutoffDate = new Date();
+    if (period === '30days') {
+      cutoffDate.setDate(cutoffDate.getDate() - 30);
+    } else {
+      cutoffDate.setMonth(cutoffDate.getMonth() - 6);
+    }
+    const startDate = new Date(cutoffDate.getTime() - cutoffDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    return { startDate, endDate };
+  }, [period]);
 
   // 1. Process Income vs Expense Comparison Data
   const comparisonData = useMemo(() => {
@@ -99,17 +126,10 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
   const categoryData = useMemo(() => {
     const categoryTotals: Record<string, number> = {};
     let totalExpense = 0;
-
-    const cutoffDate = new Date();
-    if (period === '30days') {
-      cutoffDate.setDate(cutoffDate.getDate() - 30);
-    } else {
-      cutoffDate.setMonth(cutoffDate.getMonth() - 6);
-    }
-    const cutoffStr = new Date(cutoffDate.getTime() - cutoffDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    const { startDate, endDate } = dateRange;
 
     transactions.forEach(tx => {
-      if (tx.type === 'expense' && tx.date >= cutoffStr) {
+      if (tx.type === 'expense' && tx.date >= startDate && tx.date <= endDate) {
         const cat = tx.category || 'other';
         categoryTotals[cat] = (categoryTotals[cat] || 0) + tx.amount;
         totalExpense += tx.amount;
@@ -117,13 +137,16 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
     });
 
     const result = Object.entries(categoryTotals)
-      .map(([key, amount]) => ({
-        categoryKey: key,
-        name: CATEGORY_LABEL_MAP[key] || key,
-        amount,
-        percentage: totalExpense > 0 ? Math.round((amount / totalExpense) * 100) : 0,
-        color: CATEGORY_COLORS[key] || '#00f0ff'
-      }))
+      .map(([key, amount]) => {
+        const normalizedKey = key.toLowerCase().trim();
+        return {
+          categoryKey: key,
+          name: CATEGORY_LABEL_MAP[normalizedKey] || CATEGORY_LABEL_MAP[key] || key,
+          amount,
+          percentage: totalExpense > 0 ? Math.round((amount / totalExpense) * 100) : 0,
+          color: CATEGORY_COLORS[normalizedKey] || CATEGORY_COLORS[key] || '#00f0ff'
+        };
+      })
       .sort((a, b) => b.amount - a.amount);
 
     return { items: result, totalExpense };
@@ -287,7 +310,17 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
                     />
                     <YAxis dataKey="name" type="category" width={75} stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 11 }} />
                     <Tooltip content={<CustomCategoryTooltip />} cursor={{ fill: 'rgba(0, 240, 255, 0.08)' }} />
-                    <Bar dataKey="amount" radius={[0, 4, 4, 0]} maxBarSize={20}>
+                    <Bar
+                      dataKey="amount"
+                      radius={[0, 4, 4, 0]}
+                      maxBarSize={20}
+                      style={{ cursor: 'pointer' }}
+                      onClick={(entry: any) => {
+                        if (entry && entry.categoryKey) {
+                          setSelectedCategory(entry.categoryKey);
+                        }
+                      }}
+                    >
                       {categoryData.items.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
@@ -310,21 +343,48 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
                   Tổng chi: <span style={{ color: '#ff4444', fontWeight: 'bold' }}>{formatMoney(categoryData.totalExpense)} VND</span>
                 </div>
                 {categoryData.items.map(item => (
-                  <div key={item.categoryKey} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <div
+                    key={item.categoryKey}
+                    className={styles.categoryItemRow}
+                    onClick={() => setSelectedCategory(item.categoryKey)}
+                    role="button"
+                    tabIndex={0}
+                    title="Bấm để bóc tách chi tiết các khoản chi"
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: item.color }} />
-                      <span style={{ color: '#fff' }}>{item.name}</span>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
+                      <span style={{ color: '#fff', fontWeight: 500 }}>{item.name}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ color: '#a0c4ff' }}>{formatMoney(item.amount)}</span>
-                      <span style={{ color: item.color, fontWeight: 'bold', width: '35px', textAlign: 'right' }}>{item.percentage}%</span>
+                      <span style={{ color: item.color, fontWeight: 'bold', minWidth: '32px', textAlign: 'right' }}>{item.percentage}%</span>
+                      <ChevronRight size={14} className={styles.categoryChevron} />
                     </div>
                   </div>
                 ))}
+                <div className={styles.categoryChartHint}>
+                  * Bấm vào từng danh mục hoặc cột biểu đồ để bóc tách chi tiết
+                </div>
               </div>
             </>
           )}
         </div>
+      )}
+
+      {/* CATEGORY DRILLDOWN MODAL */}
+      {selectedCategory && (
+        <CategoryDrilldownModal
+          isOpen={!!selectedCategory}
+          onClose={() => setSelectedCategory(null)}
+          categoryKey={selectedCategory}
+          categoryName={CATEGORY_LABEL_MAP[selectedCategory.toLowerCase().trim()] || CATEGORY_LABEL_MAP[selectedCategory] || selectedCategory}
+          categoryColor={CATEGORY_COLORS[selectedCategory.toLowerCase().trim()] || CATEGORY_COLORS[selectedCategory] || '#00f0ff'}
+          period={period}
+          startDate={dateRange.startDate}
+          endDate={dateRange.endDate}
+          formatMoney={formatMoney}
+          fallbackTransactions={transactions}
+        />
       )}
     </div>
   );

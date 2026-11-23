@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   Plus, Edit3, AlertTriangle,
-  Coffee, Home as HomeIcon, ShoppingBag, Gamepad2, Car, CreditCard
+  Coffee, Home as HomeIcon, ShoppingBag, Gamepad2, Car, CreditCard, Package
 } from 'lucide-react';
 import SaoButton from '../../../components/SaoButton/SaoButton';
 import styles from '../finance.module.css';
@@ -21,6 +21,7 @@ function getCategoryIcon(category: string) {
     case 'food': return <Coffee size={18} color="#00ffaa" />;
     case 'housing': return <HomeIcon size={18} color="#00ffaa" />;
     case 'shopping': return <ShoppingBag size={18} color="#00ffaa" />;
+    case 'utilities': return <Package size={18} color="#00f0ff" />;
     case 'entertainment': return <Gamepad2 size={18} color="#00ffaa" />;
     case 'transport': return <Car size={18} color="#00ffaa" />;
     default: return <CreditCard size={18} color="#00ffaa" />;

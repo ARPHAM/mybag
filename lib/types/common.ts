@@ -7,6 +7,7 @@ export interface InventoryItem {
   purchaseDate?: string;
   expiryDate?: string;
   category?: 'food' | 'spices' | 'utilities' | string;
+  stock_status?: 'stable' | 'low' | 'out';
   totalValue?: number;
   originalValue?: number;
   isGift?: boolean;

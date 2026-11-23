@@ -272,6 +272,45 @@
   width: 100%;
 }
 
+.categoryItemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 5px 8px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.categoryItemRow:hover {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.35);
+  transform: translateX(2px);
+}
+
+.categoryChevron {
+  color: #a0c4ff;
+  opacity: 0.6;
+  transition: all 0.15s ease;
+}
+
+.categoryItemRow:hover .categoryChevron {
+  opacity: 1;
+  color: #00f0ff;
+  transform: translateX(2px);
+}
+
+.categoryChartHint {
+  font-size: 0.72rem;
+  color: #a0c4ff;
+  font-style: italic;
+  margin-top: 6px;
+  text-align: center;
+}
+
 .overviewFab {
   border-radius: 50%;
   width: 50px;

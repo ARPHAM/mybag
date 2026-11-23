@@ -513,3 +513,289 @@
   }
 }
 
+/* =========================================================
+   INVENTORY TAB & SPICES STYLES IN MENU
+   ========================================================= */
+.invFilterBar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filterPill {
+  background: rgba(10, 25, 45, 0.6);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.25);
+  color: #a0c4ff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.filterPill:hover {
+  background: rgba(var(--sao-primary-rgb), 0.15);
+  color: #fff;
+  border-color: var(--sao-primary-hex);
+}
+
+.filterPillActive {
+  background: rgba(var(--sao-primary-rgb), 0.25);
+  color: #fff;
+  border-color: var(--sao-primary-hex);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
+}
+
+.inventoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.inventoryCard {
+  background: rgba(10, 25, 45, 0.6);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.2);
+  padding: 15px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  transition: all 0.25s ease;
+}
+
+.inventoryCard:hover {
+  background: rgba(15, 35, 60, 0.8);
+  border-color: rgba(var(--sao-primary-rgb), 0.5);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.2);
+}
+
+.inventoryCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+}
+
+.inventoryCard.stockHigh::before {
+  background: var(--sao-primary-hex);
+  box-shadow: 0 0 10px var(--sao-primary-hex);
+}
+
+.inventoryCard.stockLow::before {
+  background: #ffcc00;
+  box-shadow: 0 0 10px #ffcc00;
+}
+
+.inventoryCard.stockEmpty::before {
+  background: #ff4444;
+  box-shadow: 0 0 10px #ff4444;
+}
+
+.editBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #a0c4ff;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 2;
+  transition: color 0.2s;
+}
+
+.editBtn:hover {
+  color: var(--sao-primary-hex);
+}
+
+.inventoryContent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.inventoryName {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 25px;
+}
+
+.inventoryMeta {
+  font-size: 0.8rem;
+  color: #a0c4ff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inventoryWarning {
+  color: #ffcc00;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inventoryActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 6px 12px;
+  border-radius: 6px;
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.qtyBtn {
+  background: rgba(var(--sao-primary-rgb), 0.1);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  color: var(--sao-primary-hex);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qtyBtn:hover {
+  background: rgba(var(--sao-primary-rgb), 0.3);
+  box-shadow: 0 0 8px rgba(var(--sao-primary-rgb), 0.4);
+}
+
+.qtyValue {
+  font-size: 1.15rem;
+  font-weight: bold;
+  color: #fff;
+  min-width: 24px;
+  text-align: center;
+}
+
+.qtyUnit {
+  font-size: 0.78rem;
+  color: #a0c4ff;
+  margin-left: 3px;
+  font-weight: normal;
+}
+
+/* Quick Status Segment for Spices & Secondary Ingredients */
+.spiceStatusGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  border-radius: 6px;
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.spiceStatusBtn {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 6px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.spiceStatusBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+}
+
+.spiceStatusBtnStableActive {
+  background: rgba(0, 255, 170, 0.2) !important;
+  color: #00ffaa !important;
+  border: 1px solid rgba(0, 255, 170, 0.4);
+  box-shadow: 0 0 8px rgba(0, 255, 170, 0.25);
+}
+
+.spiceStatusBtnLowActive {
+  background: rgba(255, 204, 0, 0.2) !important;
+  color: #ffcc00 !important;
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  box-shadow: 0 0 8px rgba(255, 204, 0, 0.25);
+}
+
+.spiceStatusBtnOutActive {
+  background: rgba(255, 68, 68, 0.2) !important;
+  color: #ff6666 !important;
+  border: 1px solid rgba(255, 68, 68, 0.4);
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.25);
+}
+
+/* FAB in Inventory Tab */
+.inventoryFabGroup {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 12px;
+}
+
+.menuFabMain {
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  box-shadow: 0 0 16px rgba(var(--sao-primary-rgb), 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.scanFabLabel {
+  cursor: pointer;
+  display: block;
+}
+
+.scanFab, .manualAddFab {
+  background: rgba(10, 25, 45, 0.9);
+  border: 1px solid var(--sao-primary-hex);
+  color: var(--sao-primary-hex);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
+  transition: all 0.2s;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.scanFab:hover, .manualAddFab:hover {
+  background: var(--sao-primary-hex);
+  color: #000;
+  box-shadow: 0 0 15px var(--sao-primary-hex);
+}
+
+@media (max-width: 768px) {
+  .inventoryFabGroup {
+    bottom: 16px;
+    right: 16px;
+    gap: 10px;
+  }
+}
+
+

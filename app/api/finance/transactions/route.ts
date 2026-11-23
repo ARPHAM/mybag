@@ -17,7 +17,55 @@ export async function GET(req: Request) {
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
-    const transactions = await Transaction.find({ user_id: decoded.userId }).sort({ date: -1, createdAt: -1 });
+    const { searchParams } = new URL(req.url);
+    const category = searchParams.get('category');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const type = searchParams.get('type');
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : undefined;
+    const sort = searchParams.get('sort');
+
+    const query: any = { user_id: decoded.userId };
+
+    if (category) {
+      if (category === 'other') {
+        query.$or = [
+          { category: 'other' },
+          { category: null },
+          { category: '' },
+          { category: { $exists: false } }
+        ];
+      } else {
+        query.category = { $regex: new RegExp(`^${category}$`, 'i') };
+      }
+    }
+
+    if (type) {
+      query.type = type;
+    }
+
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) {
+        query.date.$gte = new Date(`${startDate}T00:00:00.000Z`);
+      }
+      if (endDate) {
+        query.date.$lte = new Date(`${endDate}T23:59:59.999Z`);
+      }
+    }
+
+    const sortOption: any = sort === 'amount'
+      ? { amount: -1, date: -1 }
+      : sort === 'date_asc'
+      ? { date: 1, createdAt: 1 }
+      : { date: -1, createdAt: -1 };
+
+    let queryBuilder = Transaction.find(query).sort(sortOption);
+    if (limit && limit > 0) {
+      queryBuilder = queryBuilder.limit(limit);
+    }
+
+    const transactions = await queryBuilder;
     return NextResponse.json(transactions, {
       headers: {
         'Cache-Control': 'private, max-age=15, stale-while-revalidate=30', // Cache 15s

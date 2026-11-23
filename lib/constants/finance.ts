@@ -5,8 +5,9 @@ export const FINANCE_CATEGORY_OPTIONS = [
   { value: 'food', label: 'Ăn uống' },
   { value: 'housing', label: 'Nhà cửa & Sinh hoạt' },
   { value: 'transport', label: 'Đi lại' },
-  { value: 'entertainment', label: 'Giải trí' },
   { value: 'shopping', label: 'Mua sắm' },
+  { value: 'utilities', label: 'Đồ dùng' },
+  { value: 'entertainment', label: 'Giải trí' },
   { value: 'health', label: 'Sức khoẻ' },
   { value: 'other', label: 'Khác' }
 ];
@@ -43,5 +44,4 @@ export const FINANCE_TABS: { id: FinanceTabId; label: string; icon: any }[] = [
   { id: 'budgets', label: 'Hạn mức', icon: CreditCard },
   { id: 'history', label: 'Lịch sử', icon: Clock },
   { id: 'debts', label: 'Sổ nợ', icon: Users },
-  { id: 'inventory', label: 'Dự trữ', icon: Package },
 ];

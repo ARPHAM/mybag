@@ -31,6 +31,8 @@ const FINANCE_CATEGORY_DEFAULT_NAMES: Record<string, string> = {
   transport: 'Đi lại',
   entertainment: 'Giải trí',
   shopping: 'Mua sắm',
+  utilities: 'Đồ dùng',
+  spices: 'Gia vị',
   health: 'Sức khoẻ',
   other: 'Khác'
 };
@@ -1120,6 +1122,12 @@ export async function buildUserSystemContext(
       item.expiryDate && new Date(item.expiryDate) <= threeDaysLater
     );
 
+    // Phân loại Gia vị & Nguyên liệu phụ (tiêu hao nhỏ lẻ)
+    const spicesItems = (inventoryItems as any[]).filter(item => item.category === 'spices');
+    const spicesStable = spicesItems.filter(s => s.stock_status === 'stable' || (!s.stock_status && (Number(s.quantity) || 0) > 2));
+    const spicesLow = spicesItems.filter(s => s.stock_status === 'low' || (!s.stock_status && (Number(s.quantity) || 0) > 0 && (Number(s.quantity) || 0) <= 2));
+    const spicesOut = spicesItems.filter(s => s.stock_status === 'out' || (!s.stock_status && (Number(s.quantity) || 0) <= 0));
+
     let recipeSection: Record<string, unknown> = {};
     if (shouldLoadRecipes) {
       const { nearReady, allAnalyzed } = classifyRecipesAgainstInventory(
@@ -1172,6 +1180,11 @@ export async function buildUserSystemContext(
           originalQuantity: i.originalQuantity
         }))
       } : {}),
+      spices_and_condiments: {
+        stable: spicesStable.map(s => `${s.name} (${s.quantity > 0 ? `${s.quantity} ${s.unit}` : 'ổn'})`),
+        low: spicesLow.map(s => `${s.name} (${s.quantity > 0 ? `${s.quantity} ${s.unit}` : 'sắp hết'})`),
+        out: spicesOut.map(s => s.name)
+      },
       ...recipeSection
     };
   }
@@ -1759,6 +1772,12 @@ QUY TẮC TƯ VẤN MUA SẮM & ĐỊNH HƯỚNG MÓN ĂN (LINH HOẠT THEO KHO 
   * Lúc đó mới đối chiếu trường "cong_thuc_da_luu_theo_kho" trong dữ liệu để chỉ ra đúng phần "con_thieu" của riêng món A, B được hỏi (so với đồ đã có trong kho) và lên action "create_shopping_item" nếu Papa yêu cầu thêm.
 - TRƯỜNG HỢP 3 — Khi Papa hỏi "Nấu được món gì từ kho?":
   * Tự do đề xuất đa dạng các món hợp lý chế biến từ "kho_do_hien_co" (kể cả món gợi ý tự nhiên ngoài sổ tay và món sẵn có trong "cong_thuc_tham_khao_gan_du_trong_kho" nếu phù hợp), không gò bó ép theo công thức đã lưu.
+
+QUY TẮC NGUYÊN LIỆU PHỤ & GIA VỊ (TIÊU HAO NHỎ LẺ: MUỐI, MẮM, ĐƯỜNG, TIÊU, TỎI, ỚT, DẦU ĂN, TƯƠNG ỚT...):
+- Trong "kho_do_va_cong_thuc.spices_and_condiments":
+  1. "stable" (Còn ổn, tương đối dài ngày): Đã có đủ dùng, TUYỆT ĐỐI KHÔNG đề xuất mua thêm.
+  2. "low" (Còn ít, sắp hết, đủ dùng trong vài bữa tới): Khi Papa hỏi tư vấn mua sắm chung hoặc chuẩn bị đi chợ, có thể nhắc nhẹ để Papa cân nhắc mua thêm nếu tiện.
+  3. "out" (Đã hết): QUY TẮC BẮT BUỘC: TUYỆT ĐỐI KHÔNG tự tiện đề xuất mua ngay khi vừa hết! CHỈ đề xuất mua nếu Papa nhờ Yui đề xuất ý tưởng món ăn / nguyên liệu chính mới hoặc nấu công thức mà BẢN THÂN món ăn đó CÓ GÓP MẶT nguyên liệu phụ này (VD: hết tương ớt thì khi nào ăn/nấu món cần chấm tương ớt mới đề xuất mua thêm, không phải cứ thấy hết là đề xuất mua luôn).
 
 QUY TẮC TẠO & LƯU CÔNG THỨC NẤU ĂN (RECIPE CREATION):
 - Khi Papa nhờ Yui tạo công thức nấu ăn, lên công thức món, hướng dẫn nấu hoặc lưu công thức (VD: "tạo công thức nấu ăn sườn xào chua ngọt phiên bản với cà chua", "lên công thức làm món X", "cho tôi công thức Y"):
