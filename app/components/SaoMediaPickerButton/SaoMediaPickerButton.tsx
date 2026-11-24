@@ -15,6 +15,7 @@ import {
   ClipboardPaste
 } from "lucide-react";
 import { compressImageFile } from "@/lib/imageClient";
+import { useI18n } from "@/lib/i18n";
 import styles from "./SaoMediaPickerButton.module.css";
 
 export interface MediaPickerCustomOption {
@@ -85,10 +86,10 @@ export default function SaoMediaPickerButton({
   onUploadSuccess,
   onUploadError,
   trigger,
-  label = "Thêm ảnh",
+  label,
   icon,
-  title = "Chọn ảnh hoặc chụp từ camera",
-  ariaLabel = "Menu chọn ảnh",
+  title,
+  ariaLabel,
   className = "",
   disabled = false,
   placement = "auto",
@@ -97,13 +98,23 @@ export default function SaoMediaPickerButton({
   enableClipboardOption = false,
   hideCamera = false,
   hideGallery = false,
-  cameraLabel = "Chụp ảnh trực tiếp",
-  cameraDescription = "Mở camera thiết bị hoặc webcam",
-  galleryLabel = "Chọn từ thư viện",
-  galleryDescription = "Tải tệp ảnh có sẵn từ máy",
+  cameraLabel,
+  cameraDescription,
+  galleryLabel,
+  galleryDescription,
   accept = "image/*",
   maxSizeBytes = 25 * 1024 * 1024 // 25MB raw limit
 }: SaoMediaPickerButtonProps) {
+  const { t } = useI18n();
+
+  const effLabel = label ?? t("media.addPhoto");
+  const effTitle = title ?? t("media.selectImage");
+  const effAriaLabel = ariaLabel ?? t("media.uploadOptions");
+  const effCameraLabel = cameraLabel ?? t("media.takePhoto");
+  const effCameraDescription = cameraDescription ?? t("media.takePhotoDesc");
+  const effGalleryLabel = galleryLabel ?? t("media.chooseFromLibrary");
+  const effGalleryDescription = galleryDescription ?? t("media.chooseFromLibraryDesc");
+
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{
@@ -236,7 +247,7 @@ export default function SaoMediaPickerButton({
 
     if (maxSizeBytes && file.size > maxSizeBytes) {
       const limitMb = Math.round(maxSizeBytes / (1024 * 1024));
-      const msg = `Ảnh quá lớn (tối đa ${limitMb}MB)`;
+      const msg = t("media.imageTooLarge").replace("{max}", limitMb.toString());
       setUploadErrorMsg(msg);
       setUploadStatus("error");
       onUploadError?.(new Error(msg));
@@ -267,7 +278,7 @@ export default function SaoMediaPickerButton({
             })
           });
 
-          if (!res.ok) throw new Error("Không thể tạo URL tải lên");
+          if (!res.ok) throw new Error(t("media.cannotCreateUrl"));
           const { presignedUrl, publicUrl, contentType } = await res.json();
 
           const uploadRes = await fetch(presignedUrl, {
@@ -278,7 +289,7 @@ export default function SaoMediaPickerButton({
             }
           });
 
-          if (!uploadRes.ok) throw new Error("Upload trực tiếp S3 thất bại");
+          if (!uploadRes.ok) throw new Error(t("media.uploadFailed"));
           uploadedUrl = publicUrl;
         } catch (s3Err) {
           // 2. Server-side base64 fallback
@@ -293,7 +304,7 @@ export default function SaoMediaPickerButton({
             })
           });
 
-          if (!fallbackRes.ok) throw new Error("Tải ảnh lên máy chủ thất bại");
+          if (!fallbackRes.ok) throw new Error(t("media.uploadFailed"));
           const fallbackData = await fallbackRes.json();
           uploadedUrl = fallbackData.publicUrl;
         }
@@ -305,7 +316,7 @@ export default function SaoMediaPickerButton({
     } catch (err: any) {
       console.error("Image processing error:", err);
       setUploadStatus("error");
-      const msg = err?.message || "Lỗi xử lý tải ảnh";
+      const msg = err?.message || t("media.uploadFailed");
       setUploadErrorMsg(msg);
       onUploadError?.(err);
     } finally {
@@ -346,7 +357,7 @@ export default function SaoMediaPickerButton({
       }
     } catch (err: any) {
       console.error("Camera stream error:", err);
-      setCameraError(err.message || "Không thể truy cập camera trên thiết bị");
+      setCameraError(err.message || t("media.cameraAccessDenied"));
     } finally {
       setIsCameraLoading(false);
     }
@@ -417,7 +428,7 @@ export default function SaoMediaPickerButton({
   const handleClipboardOptionClick = async () => {
     setIsMenuOpen(false);
     if (typeof navigator === "undefined" || !navigator.clipboard?.read) {
-      setUploadErrorMsg("Trình duyệt không hỗ trợ đọc clipboard");
+      setUploadErrorMsg(t("media.clipboardNotSupported"));
       setUploadStatus("error");
       return;
     }
@@ -434,11 +445,11 @@ export default function SaoMediaPickerButton({
           return;
         }
       }
-      setUploadErrorMsg("Không tìm thấy hình ảnh trong bộ nhớ tạm");
+      setUploadErrorMsg(t("media.noImageInClipboard"));
       setUploadStatus("error");
     } catch (err: any) {
       console.error("Clipboard read error:", err);
-      setUploadErrorMsg("Không thể dán ảnh từ clipboard (chưa cấp quyền)");
+      setUploadErrorMsg(t("media.clipboardAccessDenied"));
       setUploadStatus("error");
     }
   };
@@ -449,8 +460,8 @@ export default function SaoMediaPickerButton({
   if (enableClipboardOption) {
     allCustomOptions.push({
       id: "clipboard",
-      label: "Dán từ bộ nhớ tạm",
-      description: "Lấy ảnh đang sao chép trong clipboard",
+      label: t("media.pasteFromClipboard"),
+      description: t("media.pasteFromClipboardDesc"),
       icon: <ClipboardPaste size={17} />,
       onClick: handleClipboardOptionClick
     });
@@ -492,8 +503,8 @@ export default function SaoMediaPickerButton({
           className={`${styles.defaultTrigger} ${isMenuOpen ? styles.triggerActive : ""}`}
           onClick={toggleMenu}
           disabled={disabled || isUploading}
-          title={title}
-          aria-label={ariaLabel}
+          title={effTitle}
+          aria-label={effAriaLabel}
         >
           {isUploading ? (
             <Loader2 size={16} className={styles.spin} />
@@ -504,7 +515,7 @@ export default function SaoMediaPickerButton({
           ) : (
             icon || <Camera size={16} />
           )}
-          <span>{isUploading ? "Đang tải..." : label}</span>
+          <span>{isUploading ? t("media.uploading") : effLabel}</span>
           <ChevronDown size={14} className={`${styles.chevron} ${isMenuOpen ? styles.chevronOpen : ""}`} />
         </button>
       )}
@@ -528,7 +539,7 @@ export default function SaoMediaPickerButton({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className={styles.menuHeader}>Tùy chọn tải ảnh</div>
+          <div className={styles.menuHeader}>{t("media.uploadOptions")}</div>
 
           {/* Option 1: Camera */}
           {!hideCamera && (
@@ -542,10 +553,10 @@ export default function SaoMediaPickerButton({
               </div>
               <div className={styles.menuItemContent}>
                 <div className={styles.menuItemLabel}>
-                  {cameraLabel}
+                  {effCameraLabel}
                 </div>
-                {cameraDescription && (
-                  <div className={styles.menuItemDesc}>{cameraDescription}</div>
+                {effCameraDescription && (
+                  <div className={styles.menuItemDesc}>{effCameraDescription}</div>
                 )}
               </div>
             </button>
@@ -563,10 +574,10 @@ export default function SaoMediaPickerButton({
               </div>
               <div className={styles.menuItemContent}>
                 <div className={styles.menuItemLabel}>
-                  {galleryLabel}
+                  {effGalleryLabel}
                 </div>
-                {galleryDescription && (
-                  <div className={styles.menuItemDesc}>{galleryDescription}</div>
+                {effGalleryDescription && (
+                  <div className={styles.menuItemDesc}>{effGalleryDescription}</div>
                 )}
               </div>
             </button>
@@ -613,14 +624,14 @@ export default function SaoMediaPickerButton({
             <div className={styles.cameraModalHeader}>
               <div className={styles.cameraModalTitle}>
                 <Camera size={18} color="#00f0ff" />
-                <span>Camera Quan Sát</span>
+                <span>{t("media.cameraTitle")}</span>
               </div>
               <button
                 type="button"
                 className={styles.closeCameraBtn}
                 onClick={closeCameraModal}
-                title="Đóng camera"
-                aria-label="Đóng camera"
+                title={t("media.closeCamera")}
+                aria-label={t("media.closeCamera")}
               >
                 <X size={18} />
               </button>
@@ -648,7 +659,7 @@ export default function SaoMediaPickerButton({
               {isCameraLoading && (
                 <div className={styles.cameraLoadingState}>
                   <RefreshCw size={24} className={styles.spin} />
-                  <span>Đang kết nối camera...</span>
+                  <span>{t("media.connectingCamera")}</span>
                 </div>
               )}
 
@@ -662,7 +673,7 @@ export default function SaoMediaPickerButton({
                       className={styles.cameraRetryBtn}
                       onClick={() => startCameraStream(facingMode)}
                     >
-                      <RefreshCw size={14} /> Thử lại
+                      <RefreshCw size={14} /> {t("media.retry")}
                     </button>
                     <button
                       type="button"
@@ -672,7 +683,7 @@ export default function SaoMediaPickerButton({
                         cameraInputRef.current?.click();
                       }}
                     >
-                      <Camera size={14} /> Dùng camera hệ thống
+                      <Camera size={14} /> {t("media.useSystemCamera")}
                     </button>
                   </div>
                 </div>
@@ -685,8 +696,8 @@ export default function SaoMediaPickerButton({
                 className={styles.camToolBtn}
                 onClick={toggleCameraFacing}
                 disabled={isCameraLoading || !!cameraError}
-                title="Đổi camera trước / sau"
-                aria-label="Đổi camera"
+                title={t("media.switchCamera")}
+                aria-label={t("media.switchCamera")}
               >
                 <SwitchCamera size={20} />
               </button>
@@ -696,8 +707,8 @@ export default function SaoMediaPickerButton({
                 className={styles.camShutterBtn}
                 onClick={snapPhoto}
                 disabled={isCameraLoading || !!cameraError}
-                title="Chụp ảnh"
-                aria-label="Bấm chụp ảnh"
+                title={t("media.snapPhoto")}
+                aria-label={t("media.snapPhoto")}
               >
                 <div className={styles.shutterInner} />
               </button>
@@ -709,8 +720,8 @@ export default function SaoMediaPickerButton({
                   closeCameraModal();
                   fileInputRef.current?.click();
                 }}
-                title="Chọn ảnh từ tệp tin"
-                aria-label="Chọn ảnh từ tệp tin"
+                title={t("media.selectFromFile")}
+                aria-label={t("media.selectFromFile")}
               >
                 <ImagePlus size={19} />
               </button>

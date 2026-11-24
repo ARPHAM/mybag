@@ -8,6 +8,7 @@ import {
 import SaoButton from '../../../components/SaoButton/SaoButton';
 import styles from '../finance.module.css';
 import type { BudgetPocket } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 
 interface Props {
   budgets: BudgetPocket[];
@@ -29,6 +30,8 @@ function getCategoryIcon(category: string) {
 }
 
 export default function BudgetsTab({ budgets, formatMoney, onAdd, onEdit }: Props) {
+  const { t } = useI18n();
+
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div className={styles.budgetsGrid}>
@@ -51,7 +54,7 @@ export default function BudgetsTab({ budgets, formatMoney, onAdd, onEdit }: Prop
                   {pocket.name}
                 </div>
                 <div className={styles.budgetAmounts}>
-                  <span>{formatMoney(pocket.spent)}</span> / {formatMoney(pocket.limit)} <small>VND</small>
+                  <span>{formatMoney(pocket.spent)}</span> / {formatMoney(pocket.limit)} <small>{t('common.currency')}</small>
                 </div>
               </div>
 
@@ -62,7 +65,7 @@ export default function BudgetsTab({ budgets, formatMoney, onAdd, onEdit }: Prop
               {isOver && (
                 <div className={styles.overBudgetText}>
                   <AlertTriangle size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                  Đã vượt hạn mức {formatMoney(pocket.spent - pocket.limit)} VND!
+                  {t('finance.overBudgetText')} {formatMoney(pocket.spent - pocket.limit)} {t('common.currency')}!
                 </div>
               )}
             </div>
@@ -73,7 +76,7 @@ export default function BudgetsTab({ budgets, formatMoney, onAdd, onEdit }: Prop
       <SaoButton
         variant="primary"
         className={styles.overviewFab}
-        title="Thiết lập hạn mức mới"
+        title={t('finance.setupBudget')}
         onClick={onAdd}
       >
         <Plus size={28} />

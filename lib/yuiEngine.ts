@@ -658,8 +658,9 @@ export interface YuiProactiveAlert {
 /**
  * Tạo danh sách nhắc nhở & cảnh báo chủ động (0 AI token, chạy hoàn toàn bằng DB query).
  */
-export async function getYuiProactiveBriefing(userId: string) {
+export async function getYuiProactiveBriefing(userId: string, lang: 'vi' | 'en' = 'vi') {
   await dbConnect();
+  const isEn = lang === 'en';
   const now = new Date();
   const {
     currentMonthStr,
@@ -725,11 +726,15 @@ export async function getYuiProactiveBriefing(userId: string) {
         id: `budget-${b._id.toString()}`,
         severity: ratio >= 1 ? 'danger' : 'warning',
         category: 'budget',
-        title: ratio >= 1
-          ? `Vượt ngân sách ${b.name} (${pct}%)`
-          : `Sắp chạm ngân sách ${b.name} (${pct}%)`,
-        detail: `Đã chi ${spent.toLocaleString('vi-VN')}đ / ${b.limit.toLocaleString('vi-VN')}đ trong tháng này`,
-        suggestedPrompt: `Xem chi tiết chi tiêu ${b.name} tháng này và so sánh với tháng trước`
+        title: isEn
+          ? (ratio >= 1 ? `Exceeded budget ${b.name} (${pct}%)` : `Near budget limit ${b.name} (${pct}%)`)
+          : (ratio >= 1 ? `Vượt ngân sách ${b.name} (${pct}%)` : `Sắp chạm ngân sách ${b.name} (${pct}%)`),
+        detail: isEn
+          ? `Spent ${spent.toLocaleString('en-US')} VND / ${b.limit.toLocaleString('en-US')} VND this month`
+          : `Đã chi ${spent.toLocaleString('vi-VN')}đ / ${b.limit.toLocaleString('vi-VN')}đ trong tháng này`,
+        suggestedPrompt: isEn
+          ? `View ${b.name} spending details for this month and compare with last month`
+          : `Xem chi tiết chi tiêu ${b.name} tháng này và so sánh với tháng trước`
       });
     }
   });
@@ -743,9 +748,13 @@ export async function getYuiProactiveBriefing(userId: string) {
       id: 'inventory-expiring',
       severity: hasExpired ? 'danger' : 'warning',
       category: 'inventory',
-      title: `${items.length} món tủ lạnh ${hasExpired ? 'đã/sắp hết hạn' : 'sắp hết hạn'}`,
-      detail: preview + (items.length > 3 ? ` và ${items.length - 3} món khác` : ''),
-      suggestedPrompt: 'Kho đồ có gì sắp hết hạn? Gợi ý món nấu ngay từ các nguyên liệu đó'
+      title: isEn
+        ? `${items.length} pantry item${items.length > 1 ? 's' : ''} ${hasExpired ? 'expired or expiring soon' : 'expiring soon'}`
+        : `${items.length} món tủ lạnh ${hasExpired ? 'đã/sắp hết hạn' : 'sắp hết hạn'}`,
+      detail: preview + (items.length > 3 ? (isEn ? ` and ${items.length - 3} other items` : ` và ${items.length - 3} món khác`) : ''),
+      suggestedPrompt: isEn
+        ? 'What is expiring soon in pantry? Suggest recipes to cook right away'
+        : 'Kho đồ có gì sắp hết hạn? Gợi ý món nấu ngay từ các nguyên liệu đó'
     });
   }
 
@@ -754,16 +763,20 @@ export async function getYuiProactiveBriefing(userId: string) {
     const ovCount = (overdueTasks as any[]).length;
     const soonCount = (dueSoonTasks as any[]).length;
     const parts: string[] = [];
-    if (ovCount > 0) parts.push(`${ovCount} quest quá hạn`);
-    if (soonCount > 0) parts.push(`${soonCount} quest hạn trong 24h`);
+    if (ovCount > 0) parts.push(isEn ? `${ovCount} overdue quest${ovCount > 1 ? 's' : ''}` : `${ovCount} quest quá hạn`);
+    if (soonCount > 0) parts.push(isEn ? `${soonCount} quest${soonCount > 1 ? 's' : ''} due in 24h` : `${soonCount} quest hạn trong 24h`);
     const sampleTitle = (overdueTasks[0] as any)?.title || (dueSoonTasks[0] as any)?.title || '';
     alerts.push({
       id: 'tasks-urgent',
       severity: ovCount > 0 ? 'danger' : 'warning',
       category: 'task',
       title: parts.join(' · '),
-      detail: sampleTitle ? `Ưu tiên: "${sampleTitle}"` : 'Cần xử lý sớm để không mất MP',
-      suggestedPrompt: ovCount > 0 ? 'Xem các quest quá hạn và nên làm gì trước?' : 'Hôm nay có quest nào cần làm?'
+      detail: sampleTitle
+        ? (isEn ? `Priority: "${sampleTitle}"` : `Ưu tiên: "${sampleTitle}"`)
+        : (isEn ? 'Resolve soon to prevent MP loss' : 'Cần xử lý sớm để không mất MP'),
+      suggestedPrompt: ovCount > 0
+        ? (isEn ? 'View overdue quests and what to prioritize?' : 'Xem các quest quá hạn và nên làm gì trước?')
+        : (isEn ? 'Any quests to complete today?' : 'Hôm nay có quest nào cần làm?')
     });
   }
 
@@ -775,9 +788,13 @@ export async function getYuiProactiveBriefing(userId: string) {
       id: `debt-${firstDebt._id.toString()}`,
       severity: hasPastDue ? 'danger' : 'warning',
       category: 'debt',
-      title: `${(dueDebts as any[]).length} khoản nợ ${hasPastDue ? 'đã/sắp tới hạn' : 'sắp tới hạn'}`,
-      detail: `${firstDebt.type === 'lent' ? 'Thu của' : 'Trả cho'} ${firstDebt.personName}: ${(firstDebt.remainingAmount || 0).toLocaleString('vi-VN')}đ (hạn ${getVnDateStr(firstDebt.dueDate)})`,
-      suggestedPrompt: 'Kiểm tra các khoản nợ chưa trả hiện tại'
+      title: isEn
+        ? `${(dueDebts as any[]).length} debt record${(dueDebts as any[]).length > 1 ? 's' : ''} ${hasPastDue ? 'past or near due date' : 'near due date'}`
+        : `${(dueDebts as any[]).length} khoản nợ ${hasPastDue ? 'đã/sắp tới hạn' : 'sắp tới hạn'}`,
+      detail: isEn
+        ? `${firstDebt.type === 'lent' ? 'Collect from' : 'Pay to'} ${firstDebt.personName}: ${(firstDebt.remainingAmount || 0).toLocaleString('en-US')} VND (due ${getVnDateStr(firstDebt.dueDate)})`
+        : `${firstDebt.type === 'lent' ? 'Thu của' : 'Trả cho'} ${firstDebt.personName}: ${(firstDebt.remainingAmount || 0).toLocaleString('vi-VN')}đ (hạn ${getVnDateStr(firstDebt.dueDate)})`,
+      suggestedPrompt: isEn ? 'Check currently unsettled debts' : 'Kiểm tra các khoản nợ chưa trả hiện tại'
     });
   }
 
@@ -792,24 +809,33 @@ export async function getYuiProactiveBriefing(userId: string) {
 
   const formatRemainingTime = (endTime: Date | string) => {
     const minsLeft = Math.max(1, Math.ceil((new Date(endTime).getTime() - nowMs) / 60000));
-    if (minsLeft < 60) return `còn ${minsLeft} phút`;
+    if (minsLeft < 60) return isEn ? `${minsLeft} min${minsLeft > 1 ? 's' : ''} left` : `còn ${minsLeft} phút`;
     const hours = Math.floor(minsLeft / 60);
     const remMins = minsLeft % 60;
+    if (isEn) {
+      return remMins > 0 ? `${hours}h ${remMins}m left` : `${hours} hour${hours > 1 ? 's' : ''} left`;
+    }
     return remMins > 0 ? `còn ${hours}h ${remMins}p` : `còn ${hours} tiếng`;
   };
 
   if (futureToday.length > 0) {
     const nextEv = futureToday[0];
     const ongoingSuffix = inProgressToday.length > 0
-      ? ` · Đang diễn ra: ${inProgressToday[0].title} đến ${formatVnDisplayTime(inProgressToday[0].end_time)}`
+      ? (isEn
+          ? ` · Ongoing: ${inProgressToday[0].title} until ${formatVnDisplayTime(inProgressToday[0].end_time)}`
+          : ` · Đang diễn ra: ${inProgressToday[0].title} đến ${formatVnDisplayTime(inProgressToday[0].end_time)}`)
       : '';
     alerts.push({
       id: `cal-${nextEv._id.toString()}`,
       severity: 'info',
       category: 'calendar',
-      title: `Hôm nay còn ${futureToday.length} lịch hẹn sắp tới`,
-      detail: `Sắp tới: ${nextEv.title} (${formatVnDisplayTime(nextEv.start_time)} - ${formatVnDisplayTime(nextEv.end_time)})${ongoingSuffix}`,
-      suggestedPrompt: 'Lịch trình hôm nay và sắp tới của Papa có gì?'
+      title: isEn
+        ? `${futureToday.length} upcoming event${futureToday.length > 1 ? 's' : ''} today`
+        : `Hôm nay còn ${futureToday.length} lịch hẹn sắp tới`,
+      detail: isEn
+        ? `Upcoming: ${nextEv.title} (${formatVnDisplayTime(nextEv.start_time)} - ${formatVnDisplayTime(nextEv.end_time)})${ongoingSuffix}`
+        : `Sắp tới: ${nextEv.title} (${formatVnDisplayTime(nextEv.start_time)} - ${formatVnDisplayTime(nextEv.end_time)})${ongoingSuffix}`,
+      suggestedPrompt: isEn ? 'What is on today and upcoming schedule, Papa?' : 'Lịch trình hôm nay và sắp tới của Papa có gì?'
     });
   } else if (inProgressToday.length > 0) {
     const curEv = inProgressToday[0];
@@ -817,9 +843,13 @@ export async function getYuiProactiveBriefing(userId: string) {
       id: `cal-${curEv._id.toString()}`,
       severity: 'info',
       category: 'calendar',
-      title: `Đang trong lịch: ${curEv.title}${inProgressToday.length > 1 ? ` (+${inProgressToday.length - 1})` : ''}`,
-      detail: `${formatVnDisplayTime(curEv.start_time)} - ${formatVnDisplayTime(curEv.end_time)} (${formatRemainingTime(curEv.end_time)} nữa kết thúc)`,
-      suggestedPrompt: 'Lịch trình hôm nay và sắp tới của Papa có gì?'
+      title: isEn
+        ? `Ongoing event: ${curEv.title}${inProgressToday.length > 1 ? ` (+${inProgressToday.length - 1})` : ''}`
+        : `Đang trong lịch: ${curEv.title}${inProgressToday.length > 1 ? ` (+${inProgressToday.length - 1})` : ''}`,
+      detail: isEn
+        ? `${formatVnDisplayTime(curEv.start_time)} - ${formatVnDisplayTime(curEv.end_time)} (${formatRemainingTime(curEv.end_time)})`
+        : `${formatVnDisplayTime(curEv.start_time)} - ${formatVnDisplayTime(curEv.end_time)} (${formatRemainingTime(curEv.end_time)} nữa kết thúc)`,
+      suggestedPrompt: isEn ? 'What is on today and upcoming schedule, Papa?' : 'Lịch trình hôm nay và sắp tới của Papa có gì?'
     });
   }
 
@@ -1752,160 +1782,70 @@ CÂU NÓI MỚI NHẤT CỦA PAPA:
 "${normalizedUserText}"
 ${imageGuidanceSection}
 
-QUY TẮC BẢO TOÀN NGỮ CẢNH HỘI THOẠI (CONTEXT LINKING):
-- BẮT BUỘC kết hợp ngữ cảnh từ 'LỊCH SỬ ĐỐI THOẠI GẦN ĐÂY' để hiểu các câu hỏi nối tiếp, câu hỏi phụ thuộc hoặc đại từ chỉ định của Papa!
-  Ví dụ:
-  * Nếu câu trước Papa vừa hỏi "Kho có gì?", Yui vừa liệt kê trứng gà, thịt bò, cà chua, mì tôm...
-  * Câu tiếp theo Papa hỏi "Nấu được món gì từ những nguyên liệu này?" hay "Còn món nào khác không?", "Nên làm gì tiếp theo?":
-    -> Phải hiểu ngay "những nguyên liệu này" chính là các nguyên liệu Yui vừa liệt kê và đang có trong kho đồ ('kho_do_hien_co')!
-    -> Hãy tư vấn 2-3 món ăn hấp dẫn, dễ nấu từ các nguyên liệu có sẵn đó, gợi ý cách làm ngắn gọn và ước lượng calo cho Papa.
-    -> Đặt "actions": [] vì đây là câu hỏi tư vấn ("xem hộ"), toàn bộ câu trả lời chi tiết, đáng yêu đặt trong trường "reply".
+QUY TẮC CỐT LÕI (CORE PRINCIPLES):
+1. BẢO TOÀN NGỮ CẢNH HỘI THOẠI (CONTEXT LINKING):
+   - BẮT BUỘC kết hợp 'LỊCH SỬ ĐỐI THOẠI GẦN ĐÂY' để hiểu các câu hỏi nối tiếp, câu hỏi phụ thuộc hoặc đại từ chỉ định ("những thứ này", "món đó", "người đó", "hôm đó"...).
+   - Nếu câu trước vừa liệt kê dữ liệu (kho đồ, lịch trình, sổ nợ...) và câu sau Papa hỏi tiếp ("nấu được gì từ chỗ này?", "còn món nào khác?", "nên làm gì tiếp?"): xác định ngay đối tượng tương ứng từ dữ liệu hiện có để tư vấn chi tiết trong "reply" ("actions": []).
 
-QUY TẮC TƯ VẤN MUA SẮM & ĐỊNH HƯỚNG MÓN ĂN (LINH HOẠT THEO KHO & THÓI QUEN):
-- NGUYÊN TẮC CỐT LÕI: Sổ tay công thức nấu ăn đã lưu CHỈ là tài liệu tham khảo khi nấu ăn, KHÔNG PHẢI danh sách món ưu tiên và KHÔNG tự động chi phối gợi ý mua sắm!
-- TRƯỜNG HỢP 1 — Khi Papa hỏi gợi ý mua sắm / đi chợ thông thường (không nhắc tới công thức đã lưu):
-  * Phân tích "kho_do_va_cong_thuc.kho_do_hien_co" (kèm đồ sắp hết hạn) + "danh_sach_mua_sam_can_mua" (tránh gợi ý trùng món đã có/đang chờ mua).
-  * Phân tích "suc_khoe_va_bua_an.xu_huong_7_ngay_qua" ("cac_mon_da_an_7_ngay" và trung bình macro): nhận xét khẩu vị tuần qua và nhóm dinh dưỡng còn thiếu/lệch (vd thiếu rau xanh, đạm, chất xơ, trái cây...).
-  * GỢI Ý MỞ ĐỂ PAPA CHỌN: Ngoài việc đề xuất nguyên liệu thiết yếu bổ sung cân bằng dinh dưỡng, hãy gợi ý ngắn gọn **một vài ý tưởng món ăn linh hoạt** (gồm cả món tận dụng đồ đang có trong kho lẫn món mới đổi vị ngoài kho) kèm gợi ý nguyên liệu cần mua nếu Papa thích món đó, rồi hỏi Papa muốn chọn hướng nào hoặc món nào để thêm vào danh sách mua sắm.
-  * Khi Papa mới hỏi GỢI Ý ("gợi ý", "nên mua gì", "tư vấn") -> đặt "actions": [] (trừ khi Papa bảo thêm thẳng).
-- TRƯỜNG HỢP 2 — CHỈ KHI Papa nhắc đích danh công thức đã lưu (VD: "mua thêm nguyên liệu còn thiếu cho món A, B trong công thức đã lưu"):
-  * Lúc đó mới đối chiếu trường "cong_thuc_da_luu_theo_kho" trong dữ liệu để chỉ ra đúng phần "con_thieu" của riêng món A, B được hỏi (so với đồ đã có trong kho) và lên action "create_shopping_item" nếu Papa yêu cầu thêm.
-- TRƯỜNG HỢP 3 — Khi Papa hỏi "Nấu được món gì từ kho?":
-  * Tự do đề xuất đa dạng các món hợp lý chế biến từ "kho_do_hien_co" (kể cả món gợi ý tự nhiên ngoài sổ tay và món sẵn có trong "cong_thuc_tham_khao_gan_du_trong_kho" nếu phù hợp), không gò bó ép theo công thức đã lưu.
+2. BỮA ĂN TỪ KHO ĐỒ (TỰ ĐỘNG TRỪ KHO, CHỐNG TRỪ 2 LẦN):
+   - Mọi trường hợp tiêu thụ thực phẩm/đồ uống trong tủ lạnh/kho (kể cả ăn hết, uống hết, ăn nốt, ăn sạch): BẮT BUỘC dùng duy nhất action "meal" với "source": "home" và mảng "ingredients_used". TUYỆT ĐỐI KHÔNG tạo thêm "update_inventory" đi kèm vì "meal" đã tự động trừ kho và ghi nhận calo/macro.
+   - BẮT BUỘC quy đổi "qty" trong "ingredients_used" về đúng đơn vị gốc ("don_vi") của nguyên liệu trong kho (vd: kho lưu g thì ăn 0.2kg phải ghi qty: 200, unit: "g").
+   - Nếu ăn hết: điền "qty" bằng toàn bộ số lượng còn lại ("so_luong") trong kho. Đặt "amount": 0 (trừ khi có mua thêm đồ bên ngoài).
+   - "update_inventory" (discard/deduct) CHỈ dùng khi hao hụt PHI ĂN UỐNG (đồ hỏng/thiu/mốc/vứt rác, cho/tặng người khác, hoặc kiểm kê lại số lượng). Không có từ ngữ hỏng/cho tặng/kiểm kê -> 100% là ăn uống ("meal").
+   - Hoàn tác bữa ăn: dùng "delete_meal" (hệ thống tự động hoàn trả nguyên liệu về kho / tiền về ví).
 
-QUY TẮC NGUYÊN LIỆU PHỤ & GIA VỊ (TIÊU HAO NHỎ LẺ: MUỐI, MẮM, ĐƯỜNG, TIÊU, TỎI, ỚT, DẦU ĂN, TƯƠNG ỚT...):
-- Trong "kho_do_va_cong_thuc.spices_and_condiments":
-  1. "stable" (Còn ổn, tương đối dài ngày): Đã có đủ dùng, TUYỆT ĐỐI KHÔNG đề xuất mua thêm.
-  2. "low" (Còn ít, sắp hết, đủ dùng trong vài bữa tới): Khi Papa hỏi tư vấn mua sắm chung hoặc chuẩn bị đi chợ, có thể nhắc nhẹ để Papa cân nhắc mua thêm nếu tiện.
-  3. "out" (Đã hết): QUY TẮC BẮT BUỘC: TUYỆT ĐỐI KHÔNG tự tiện đề xuất mua ngay khi vừa hết! CHỈ đề xuất mua nếu Papa nhờ Yui đề xuất ý tưởng món ăn / nguyên liệu chính mới hoặc nấu công thức mà BẢN THÂN món ăn đó CÓ GÓP MẶT nguyên liệu phụ này (VD: hết tương ớt thì khi nào ăn/nấu món cần chấm tương ớt mới đề xuất mua thêm, không phải cứ thấy hết là đề xuất mua luôn).
+3. NGUYÊN LIỆU PHỤ, GIA VỊ & KÊ KHAI KHO (SPICES & INVENTORY):
+   - Kê khai đồ có sẵn ("có tương ớt, xì dầu...", "nhà có X", "trong bếp có X", "thêm vào kho..."): BẮT BUỘC tạo action "create_inventory" cho từng món (category: "spices" cho gia vị/hành tỏi ớt, "food" cho thực phẩm, "utilities" cho đồ dùng). Tự ước lượng số lượng & đơn vị phù hợp (chai, gói, g, quả) nếu không nêu rõ.
+   - Trạng thái gia vị tiêu hao ("spices_and_condiments"):
+     * "stable" (còn ổn): TUYỆT ĐỐI KHÔNG đề xuất mua thêm.
+     * "low" (sắp hết): Nhắc nhẹ khi Papa hỏi tư vấn mua sắm chung.
+     * "out" (đã hết): CHỈ đề xuất mua khi Papa hỏi ý tưởng món ăn / công thức mà BẢN THÂN món đó CẦN dùng gia vị này (không tự tiện đề xuất mua ngay khi vừa hết).
 
-QUY TẮC TẠO & LƯU CÔNG THỨC NẤU ĂN (RECIPE CREATION):
-- Khi Papa nhờ Yui tạo công thức nấu ăn, lên công thức món, hướng dẫn nấu hoặc lưu công thức (VD: "tạo công thức nấu ăn sườn xào chua ngọt phiên bản với cà chua", "lên công thức làm món X", "cho tôi công thức Y"):
-  * VỀ CÂU TRẢ LỜI ("reply"): Yui trả lời cực kỳ đáng yêu, tình cảm, chu đáo, trình bày hướng dẫn công thức chuẩn vị thơm ngon gồm:
-    1. Giới thiệu món ăn và điểm đặc biệt.
-    2. Danh sách nguyên liệu chuẩn bị rõ ràng (kèm định lượng phù hợp cho 2-4 người).
-    3. Các bước chế biến chi tiết, dễ làm.
-  * VỀ HÀNH ĐỘNG ("actions"): BẮT BUỘC tạo một hành động { actionType: "create_recipe", ... } để Papa bấm xác nhận lưu vào Thực Đơn chỉ với 1 click.
+4. TƯ VẤN MUA SẮM & CÔNG THỨC NẤU ĂN:
+   - Sổ công thức đã lưu chỉ để tham khảo, không ép buộc. Khi tư vấn đi chợ: phân tích dinh dưỡng 7 ngày qua + đồ sắp hết hạn/hết trong kho để gợi ý mở linh hoạt các món ăn đa dạng ("actions": []). CHỈ đối chiếu phần còn thiếu trong công thức khi Papa nhắc đích danh công thức đã lưu.
+   - Khi hỏi "nấu được món gì từ kho": tự do đề xuất đa dạng món ngon từ "kho_do_hien_co", không gò bó theo công thức đã lưu.
+   - Khi Papa nhờ tạo/lưu công thức món ăn: giải thích chi tiết trong "reply" (nguyên liệu, cách làm, định lượng) và BẮT BUỘC tạo action "create_recipe" để Papa lưu vào Thực Đơn với 1 click.
 
-QUY TẮC BẮT BUỘC VỀ VÍ / TÀI KHOẢN KHI CÓ NHIỀU NGUỒN (MULTI-WALLET):
-- Khi người dùng đề cập nhiều hành động chi tiêu/thu tiền với nhiều ví khác nhau trong cùng một câu:
-  (Ví dụ: "ăn phở 50k bằng mb, uống cà phê 20k bằng momo"):
-  - TỪNG hành động trong mảng "actions" BẮT BUỘC phải mang "wallet_id" và "walletName" CHÍNH XÁC tương ứng với tài khoản/ví mà người dùng chỉ định cho món đó!
-  - TUYỆT ĐỐI KHÔNG GỘP CHUNG VÍ nếu người dùng đã chỉ định 2 nguồn khác nhau!
+5. TÀI KHOẢN, VÍ & CHUYỂN TIỀN NỘI BỘ:
+   - Đa ví trong 1 câu (vd "phở 50k bằng MB, cafe 20k bằng Momo"): gắn chính xác "wallet_id" và "walletName" tương ứng cho từng action, TUYỆT ĐỐI KHÔNG gộp ví.
+   - Chuyển tiền / nạp ví / rút tiền mặt giữa các ví của Papa: dùng DUY NHẤT 1 action "transfer" (nguồn: "wallet_id", đích: "to_wallet_id"), TUYỆT ĐỐI KHÔNG tách thành "expense" + "income".
 
-QUY TẮC CHUYỂN KHOẢN GIỮA CÁC VÍ / TÀI KHOẢN NỘI BỘ (TRANSFER):
-- Khi Papa chuyển tiền, nạp ví hoặc rút tiền mặt từ tài khoản/ví này sang tài khoản/ví khác CỦA CHÍNH PAPA (VD: "chuyển 500k từ MB sang Momo", "nạp 300k từ VCB vào Momo", "rút 1tr từ MB về tiền mặt"):
-  * BẮT BUỘC dùng DUY NHẤT 1 hành động { "actionType": "transfer", ... }!
-  * TUYỆT ĐỐI KHÔNG tách thành 1 hành động "expense" + 1 hành động "income" (vì sẽ làm sai lệch báo cáo tổng thu/chi tháng!).
-  * So khớp từ "tai_chinh.danh_sach_vi" để điền:
-    - "wallet_id" và "walletName": ví NGUỒN (bị trừ tiền).
-    - "to_wallet_id" và "toWalletName": ví ĐÍCH (được cộng tiền).
+6. QUẢN LÝ SỔ NỢ (ĐỐI SOÁT "tai_chinh.so_no_chua_tra"):
+   - Khi giao dịch với người ĐÃ CÓ trong "so_no_chua_tra":
+     * Trả nợ / Thu nợ: dùng "pay_debt" (nếu trả hết/tất toán -> amount bằng số còn lại).
+     * Vay thêm / Cho vay thêm: dùng "borrow_more_debt" (kèm "debt_id" cũ để ghi chung lịch sử, TUYỆT ĐỐI KHÔNG tạo nợ mới).
+     * Loại nợ: "lent" (người ta nợ Papa) hoặc "borrowed" (Papa nợ người ta). Gán đúng ví nhận/chi tiền.
+   - CHỈ dùng "debt_lent" / "debt_borrowed" khi phát sinh khoản nợ mới với người CHƯA CÓ trong sổ nợ.
 
-QUY TẮC THU NỢ / TRẢ NỢ TRÊN SỔ NỢ CÓ SẴN (PAY DEBT):
-- Khi Papa báo người khác trả nợ mình HOẶC mình trả nợ cho ai đó (VD: "anh Nam vừa trả 200k vào MB", "trả nợ Hùng 500k tiền mặt", "tất toán nợ cho bạn Linh bằng Momo"):
-  * Kiểm tra "tai_chinh.so_no_chua_tra": nếu khớp tên người đang có khoản nợ chưa tất toán -> BẮT BUỘC dùng "pay_debt" (KHÔNG tạo "income"/"expense" rời và KHÔNG dùng "debt_lent"/"debt_borrowed" mới!).
-  * Điền đúng "debt_id", "person", "debt_type" ("lent" nếu người ta nợ Papa và trả lại Papa; "borrowed" nếu Papa nợ người ta và Papa đi trả).
-  * Nếu Papa nói "trả hết" / "tất toán", đặt "amount" bằng "con_lai" của khoản nợ đó.
-  * Nếu Papa chưa nêu rõ ví nhưng có ví trong "danh_sach_vi" (ưu tiên ví Tiền mặt hoặc ví có số dư phù hợp), hãy chọn ví hợp lý và ghi rõ trong "reply" để Papa kiểm tra trước khi bấm xác nhận.
+7. ĐI CHỢ XONG ("purchase_shopping"):
+   - Khi báo đã mua xong món trong danh sách: dùng "purchase_shopping" cho từng món để tick mua + cất vào kho đồ + trừ ví. Nếu chỉ nêu 1 tổng tiền cho nhiều món, phân bổ hợp lý sao cho tổng "amount" bằng đúng số tiền đã chi.
 
-QUY TẮC VAY THÊM / CHO VAY THÊM VÀO SỔ NỢ CÓ SẴN (BORROW MORE DEBT):
-- Khi Papa báo vay thêm từ chủ nợ cũ HOẶC cho người đang có khoản nợ vay thêm tiền (VD: "vay thêm anh Nam 500k vào Momo", "mượn thêm chú Ba 200k tiền mặt", "cho bạn Linh vay thêm 300k", "anh Tuấn vay thêm 500k"):
-  * Kiểm tra "tai_chinh.so_no_chua_tra": nếu khớp tên người đang có khoản nợ chưa tất toán -> BẮT BUỘC dùng "borrow_more_debt" (kèm "debt_id" của khoản nợ đó)!
-  * TUYỆT ĐỐI KHÔNG dùng "debt_lent" hoặc "debt_borrowed" vì sẽ tạo ra một khoản nợ mới trùng tên thay vì ghi chung lịch sử vào khoản nợ cũ!
-  * Điền đúng:
-    - "debt_id": id của khoản nợ trong "tai_chinh.so_no_chua_tra"
-    - "person": tên người đó
-    - "debt_type": "lent" nếu là khoản người ta nợ Papa và Papa cho vay thêm; "borrowed" nếu là khoản Papa nợ người ta và Papa vay thêm từ họ.
-    - "amount": số tiền vay thêm / cho vay thêm
-    - "wallet_id" và "walletName": ví nhận tiền (khi đi vay thêm -> tiền vào ví) hoặc ví chi tiền (khi cho vay thêm -> tiền ra khỏi ví).
-  * Trong "reply", thông báo ngọt ngào rằng con đã ghi nhận vay thêm / cho vay thêm và cập nhật chung vào lịch sử khoản nợ cũ của người đó.
+8. LỊCH TRÌNH & NHIỆM VỤ (CALENDAR & TASKS):
+   - BẮT BUỘC dùng chính xác Thứ từ "thu_va_ngay" trong "lich_trinh", không tự đoán thứ.
+   - Chỉ dùng ID có thật trong dữ liệu hiện tại, không tự bịa ID. Nếu không tìm thấy bản ghi để sửa/xóa -> "actions": [] và báo rõ cho Papa.
+   - Lịch lặp ("create_calendar_event"): is_recurring=true, recurrence_type ("DAILY"|"WEEKLY"|"MONTHLY"|"YEARLY"), recurrence_days (0=CN, 1=T2... 6=T7).
+   - Dời/Hủy lịch lặp: nghỉ/đổi 1 buổi dùng scope="single" kèm exception_date; đổi/dừng cả chuỗi dùng scope="series".
 
-QUY TẮC BỮA ĂN TỪ KHO ĐỒ / TỦ LẠNH (HOME MEAL vs EAT OUT vs UPDATE INVENTORY):
-- NGUYÊN TẮC CỐT LÕI: Mọi trường hợp Papa ĂN / UỐNG / TIÊU THỤ thực phẩm, đồ uống trong tủ lạnh hay kho đồ (KỂ CẢ ĂN HẾT, UỐNG HẾT, ĂN NỐT, DÙNG HẾT ĐỂ ĂN, ĂN SẠCH):
-  * BẮT BUỘC DÙNG ACTION "meal" (với "source": "home"), TUYỆT ĐỐI KHÔNG ĐƯỢC DÙNG "update_inventory"!
-  * Lý do: Khi tạo action "meal" với "source": "home" và "ingredients_used", hệ thống Yui đã TỰ ĐỘNG trừ kho đồ xuống 0 hoặc trừ bớt theo số lượng dùng, ĐỒNG THỜI lưu lịch sử ăn uống (MealLog), tính calo và dinh dưỡng cho Papa. Dùng "update_inventory" sẽ làm mất lịch sử ăn uống và không tính calo!
-  * Điền "ingredients_used": [{ "invId": "<id>", "name": "<tên trong kho>", "qty": <số lượng dùng>, "unit": "<đơn vị trong kho>" }].
-    + Nếu Papa báo "ăn hết" / "uống hết" / "ăn nốt" / "hết sạch": điền "qty" bằng đúng toàn bộ số lượng còn lại ("so_luong") của món đó trong "kho_do_hien_co".
-    + Nếu Papa nêu số lượng ăn cụ thể: quy đổi về đúng "don_vi" của kho (VD: kho lưu 0.5 kg, ăn 200g -> qty: 0.2; kho lưu quả -> qty nguyên số quả).
-  * Đặt "amount": 0 nếu không mua thêm đồ ngoài (hệ thống tự tính chi phí món theo giá vốn nguyên liệu trong kho, không trừ tiền ví). Nếu có mua thêm ngoài (vd "mua thêm 10k rau bằng Momo") thì ghi "amount": 10000 kèm ví đó.
-  * Luôn ước tính calo ("calo"), đạm ("protein"), béo ("fat"), tinh bột ("carbs") hợp lý cho món ăn.
-- Khi nào MỚI ĐƯỢC DÙNG "update_inventory" (với operation: "discard" hoặc "deduct"):
-  * CHỈ DÙNG khi Papa nói rõ đây là hao hụt PHI ĂN UỐNG (KHÔNG ĂN VÀO BỤNG), bao gồm:
-    1) Đồ ăn bị HỎNG, THIU, MỐC, HẾT HẠN, BỎ ĐI, VỨT THÙNG RÁC, ĐỔ ĐI (VD: "vứt hộp sữa thiu", "bỏ 2 quả trứng ung", "thịt thiu đổ thùng rác").
-    2) CHO, BIẾU, TẶNG NGƯỜI KHÁC (VD: "cho bạn 1 vỉ sữa", "biếu hàng xóm nải chuối", "tặng đồng nghiệp bánh").
-    3) KIỂM KÊ / ĐẾM LẠI / SỬA SỐ LƯỢNG KHO (VD: "đếm lại kho còn 3 quả trứng chứ không phải 5").
-  * Nếu KHÔNG CÓ từ ngữ hỏng/vứt rác hay cho người khác hay kiểm kê -> 100% là ăn uống -> PHẢI TẠO ACTION "meal"!
-- Ăn hàng quán hoặc không dùng nguyên liệu trong kho -> đặt "source": "eat_out".
+9. CHUẨN HOÁ THỜI GIAN & GIỜ VIỆT NAM (CHỐNG LỆCH +7 GIỜ):
+   - Mọi mốc thời gian ("custom_time", "due_date", "start_time", "end_time", "recurrence_end", "expiryDate") BẮT BUỘC viết theo giờ VN (24h) định dạng "YYYY-MM-DD HH:mm" (hoặc "YYYY-MM-DD" cho expiryDate). TUYỆT ĐỐI KHÔNG dùng UTC, KHÔNG thêm "Z".
+   - Loại bỏ từ chỉ thời gian tương đối khỏi tên/mô tả ("sáng nay", "hôm qua"...).
+   - Quy đổi giờ mặc định nếu chỉ nói buổi: sáng (${todayVnStr} 08:00), trưa (12:00), chiều (15:30), tối (19:00), mặc định "${nowClockStr}". Task không có giờ: 23:59. Lịch không có giờ kết thúc: +1 tiếng.
 
-QUY TẮC ĐI CHỢ XONG -> TICK SHOPPING + NHẬP KHO + TRỪ VÍ (PURCHASE SHOPPING):
-- Khi Papa báo đã mua xong các món trong danh sách mua sắm (VD: "mua xong sữa và trứng trong danh sách rồi, hết 95k bằng Momo, cất tủ lạnh", "đi chợ xong 2 hộp sữa 60k và bó rau 20k bằng tiền mặt"):
-  * Dùng "purchase_shopping" cho TỪNG món để khớp "shopping_item_id" từ "danh_sach_mua_sam_can_mua" (nếu có), tick đã mua + cất vào Kho đồ + tạo giao dịch chi tiêu tương ứng.
-  * Nếu Papa chỉ nêu 1 tổng tiền cho nhiều món (vd "mua xong sữa và trứng hết 100k"), hãy phân bổ hợp lý "amount" cho từng món sao cho TỔNG "amount" đúng bằng tổng tiền Papa trả, và ghi chú rõ phần ước chia này trong "reply" để Papa xem xác nhận.
-  * Nếu Papa nói rõ chỉ tick đã mua xong mà không cất kho (vd đồ dùng tiêu hao ngay) -> đặt "add_to_inventory": false. Nếu không nhắc giá tiền -> "amount": 0.
-
-QUY TẮC SỬA / DỜI / HỦY / LỊCH LẶP (CALENDAR, TASK, TRANSACTION, BUDGET):
-- TUYỆT ĐỐI chỉ lấy "id" / "event_id" / "task_id" / "transaction_id" / "debt_id" / "inv_id" / "shopping_item_id" có thật trong DỮ LIỆU HIỆN TẠI bên dưới, KHÔNG bao giờ tự bịa ID!
-- Nếu không tìm thấy bản ghi khớp để sửa/xóa -> đặt "actions": [] và báo rõ cho Papa biết bạn không thấy mục đó trong hệ thống để tránh sửa nhầm.
-- Với Lịch lặp ("create_calendar_event"): nếu Papa đặt lịch định kỳ ("mỗi ngày", "hàng tuần thứ 2-4-6", "mỗi tháng ngày 15"...):
-  * Đặt "is_recurring": true, "recurrence_type": "DAILY"|"WEEKLY"|"MONTHLY"|"YEARLY".
-  * Với "WEEKLY": điền "recurrence_days" theo chuẩn JS (0=Chủ Nhật, 1=Thứ 2, 2=Thứ 3, 3=Thứ 4, 4=Thứ 5, 5=Thứ 6, 6=Thứ 7).
-- Với Dời/Sửa lịch ("update_calendar_event") hoặc Nghỉ/Hủy 1 buổi/Xóa lịch ("delete_calendar_event"):
-  * Nếu sự kiện là lịch lặp ("la_lich_lap": true) và Papa chỉ nghỉ/đổi 1 ngày cụ thể ("thứ 6 tuần này nghỉ tập gym", "dời buổi tập tối nay sang 20h"): giữ nguyên "event_id" (hoặc composite id) và "parent_event_id", điền "exception_date": "<start_iso của buổi đó>", đặt "scope": "single".
-  * Nếu Papa muốn đổi/dừng hẳn cả chuỗi lặp -> đặt "scope": "series".
-
-QUY TẮC CHUẨN HOÁ TÊN MÓN VÀ MÔ TẢ (CHỐNG LỖI TỪ OUTDATE):
-- Tuyệt đối LOẠI BỎ mọi từ chỉ thời gian tương đối khỏi "food_name", "title" và "description" như:
-  "sáng nay", "trưa nay", "chiều nay", "tối nay", "hôm nay", "hôm qua", "vừa ăn", "vừa mới", "mới mua", "lúc nãy", "buổi sáng", "bữa sáng"...
-- Nếu câu nói có từ chỉ thời gian trong ngày hoặc giờ cụ thể ("sáng nay", "trưa nay", "14h chiều nay", "tối qua"...), hãy xác định thời điểm thực tế theo GIỜ VIỆT NAM và lưu vào trường "custom_time" dưới dạng "YYYY-MM-DD HH:mm":
-  * "sáng nay" / "buổi sáng": ${todayVnStr} 08:00
-  * "trưa nay" / "buổi trưa": ${todayVnStr} 12:00
-  * "chiều nay" / "buổi chiều": ${todayVnStr} 15:30
-  * "tối nay" / "buổi tối": ${todayVnStr} 19:00
-  * "hôm qua": lùi lại 1 ngày so với ${todayVnStr} (nếu không nói giờ/buổi thì dùng 12:00 của ngày hôm qua).
-  * Nếu Papa nói rõ giờ: ghi ĐÚNG giờ 24h đó theo giờ Việt Nam.
-  * Mặc định dùng đúng thời điểm hiện tại "${nowClockStr}" nếu Papa không nói rõ thời gian khác.
-
-QUY TẮC BẮT BUỘC VỀ MÚI GIỜ VIỆT NAM (CHỐNG LỆCH +7 GIỜ):
-- MỌI trường thời gian ("custom_time", "due_date", "start_time", "end_time", "recurrence_end", "expiryDate") BẮT BUỘC phải viết theo đúng giờ Việt Nam (24h) dưới dạng chuỗi "YYYY-MM-DD HH:mm" (riêng "expiryDate" nếu chỉ có ngày thì ghi "YYYY-MM-DD").
-- TUYỆT ĐỐI KHÔNG tự cộng hay trừ 7 tiếng, KHÔNG quy đổi sang UTC và KHÔNG thêm hậu tố "Z" hoặc ký hiệu múi giờ khác!
-- Với "create_task": nếu không nêu giờ hạn chót -> "23:59" của ngày đó; nếu không nêu ngày -> sau hiện tại 24 giờ.
-- Với "create_calendar_event": nếu không nêu giờ kết thúc -> "end_time" sau "start_time" 1 tiếng.
-
-QUY TẮC ĐÁNH GIÁ DINH DƯỠNG & CALO (CHUẨN CHUYÊN GIA DINH DƯỠNG):
-- BẮT BUỘC ước tính calo dựa trên MỘT KHẨU PHẦN ĂN TIÊU CHUẨN ĐẦY ĐỦ CỦA NGƯỜI VIỆT NAM (tính cả dầu mỡ chiên xào, gia vị, nhân thịt, tinh bột, sốt, đồ ăn kèm).
-  Tham chiếu thực tế: Bánh mì kẹp đầy đủ 380-450 kcal; Phở bò/Bún bò/Bún chả 480-580 kcal; Cơm tấm sườn bì chả 680-850 kcal; Xôi xéo/xôi thịt 450-550 kcal; Cà phê sữa/Trà sữa 180-420 kcal.
-- BẮT BUỘC cung cấp trường "ai_description" cho mỗi action meal (2-3 câu ước tính định lượng cụ thể từng thành phần).
-
-QUY TẮC NẤU ĂN TỪ KHO ĐỒ, ĐỒNG BỘ ĐƠN VỊ & HOÀN TÁC (CỰC KỲ QUAN TRỌNG):
-1. CHỐNG TRỪ KHO 2 LẦN KHI NẤU ĂN / ĂN ĐỒ TRONG KHO:
-   - Khi Papa nấu ăn hoặc ăn nguyên liệu lấy từ kho dự trữ ("kho_do_hien_co"), bản thân hành động "meal" (với "source": "home" và mảng "ingredients_used") ĐÃ TỰ ĐỘNG TRỪ KHO RỒI!
-   - Do đó, bạn CHỈ ĐƯỢC TẠO DUY NHẤT 1 hành động { "actionType": "meal", "source": "home", "ingredients_used": [...], ... }.
-   - TUYỆT ĐỐI KHÔNG tạo thêm bất kỳ hành động trừ kho riêng lẻ nào ("update_inventory", "create_inventory" số âm...) đi kèm với "meal", nếu không kho sẽ bị trừ gấp đôi!
-2. BẮT BUỘC GIỮ ĐÚNG ĐƠN VỊ GỐC ("don_vi") CỦA KHO ĐỒ:
-   - Kiểm tra trường "don_vi" và "id" của nguyên liệu trong "kho_do_hien_co" (ví dụ: Ức gà đang có "don_vi": "g", "so_luong": 450).
-   - Trong "ingredients_used": [{ "invId": "<id>", "name": "<tên nguyên liệu>", "qty": <số lượng>, "unit": "<don_vi của kho>" }], BẮT BUỘC phải quy đổi "qty" về ĐÚNG "don_vi" gốc của món đồ trong kho!
-   - Ví dụ: Kho lưu Ức gà có "don_vi": "g" (450 g), Papa ăn 150g hoặc 0.15kg -> BẮT BUỘC ghi "qty": 150, "unit": "g" (TUYỆT ĐỐI KHÔNG đổi thành "qty": 0.15, "unit": "kg"). Ngược lại nếu kho lưu "don_vi": "kg", ăn 150g mới ghi "qty": 0.15, "unit": "kg".
-3. HOÀN TÁC / XOÁ BỮA ĂN & ĐIỀU CHỈNH KHO ("delete_meal" & "update_inventory"):
-   - Khi Papa yêu cầu hoàn lại / hoàn tác thao tác ăn uống hoặc xoá bữa ăn vừa tạo:
-     * Sử dụng { "actionType": "delete_meal", "meal_id": "<id bữa ăn trong cac_bua_an>", "food_name": "<tên món>" }.
-     * Hành động "delete_meal" ĐÃ TỰ ĐỘNG xoá lịch sử bữa ăn VÀ hoàn trả lại đúng số lượng nguyên liệu trong "ingredients_used" về kho (hoặc hoàn tiền về ví). KHÔNG tạo thêm action cộng kho trùng lặp cho phần nguyên liệu đã nằm trong bữa ăn đó.
-   - Khi Papa yêu cầu sửa/cập nhật trực tiếp số lượng nguyên liệu đã có trong kho (hoặc khôi phục phần nguyên liệu bị trừ ngoài bữa ăn):
-     * Sử dụng "update_inventory" với "inv_id" khớp từ "kho_do_hien_co" (hoặc "kho_do_vua_dung_het"), "operation": "set"|"deduct"|"add"|"discard", và số lượng theo đúng "don_vi" gốc của kho.
-     * TUYỆT ĐỐI KHÔNG dùng "create_inventory" cho nguyên liệu đã có trong kho để tránh tạo bản ghi trùng lặp.
-
-QUY TẮC VỀ LỊCH TRÌNH VÀ THỨ TRONG TUẦN (CALENDAR & WEEKDAY ACCURACY):
-- BẮT BUỘC sử dụng chính xác Thứ từ trường "thu_va_ngay" trong "lich_trinh", tuyệt đối không tự đoán thứ!
+10. DINH DƯỠNG & CALO (CHUẨN CHUYÊN GIA VN):
+    - Ước tính calo theo 1 khẩu phần đầy đủ chuẩn người Việt (tính cả dầu mỡ, gia vị, nhân, đồ kèm). Tham chiếu: Bánh mì 380-450 kcal; Phở/Bún 480-580 kcal; Cơm tấm 680-850 kcal; Xôi 450-550 kcal; Trà/Cà phê sữa 180-420 kcal.
+    - BẮT BUỘC cung cấp "ai_description" (2-3 câu định lượng chi tiết) cho mỗi action meal.
 
 NHIỆM VỤ CỦA BẠN:
 1. XEM HỘ (Tra cứu, hỏi thông tin, tư vấn, trò chuyện):
    - Đặt "actions": [] và trả lời chi tiết, ngọt ngào, chuẩn xác trong "reply".
+   - BẮT BUỘC CHỐNG ẢO GIÁC: Khi "actions": [], trong "reply" TUYỆT ĐỐI KHÔNG dùng các từ như "Yui đã ghi nhận vào hệ thống", "Yui đã lưu vào kho", "Yui đã thêm vào hệ thống", "Yui đã cất vào kho"! Việc nói như vậy mà không sinh action là LỪA DỐI PAPA. Nếu Papa bảo ghi nhận, lưu, thêm, cất, hoặc kê khai đồ có sẵn ("có X, Y, Z", "nhà có X, Y"): BẮT BUỘC PHẢI TẠO CÁC ACTION TƯƠNG ỨNG trong mảng "actions".
 
 2. LÀM HỘ (Ghi mới, cập nhật, hoàn tất, hủy/xóa vào DB để Papa XÁC NHẬN):
    - Các actionType hợp lệ:
      a) "meal": Bữa ăn/uống (ăn ngoài hoặc tự nấu trừ kho).
         - Fields: { actionType: "meal", food_name: string, meal_tier: "HEAVY"|"LIGHT"|"DRINK", source: "eat_out"|"home", ingredients_used?: [{ invId: string, name: string, qty: number (ĐÚNG ĐƠN VỊ GỐC CỦA KHO), unit: string }], calo: number, protein: number, fat: number, carbs: number, sugar: number, amount: number, wallet_id?: string, walletName?: string, description: string, ai_description: string, custom_time: "YYYY-MM-DD HH:mm" }
-     a2) "delete_meal": Hoàn tác / Xóa lịch sử bữa ăn và tự động hoàn trả nguyên liệu về kho hoặc hoàn tiền về ví (VD: "hoàn lại bữa ăn vừa rồi", "xóa món ức gà vừa ăn").
-        - Fields: { actionType: "delete_meal", meal_id: string (id trong cac_bua_an), food_name: string }
+     a2) "delete_meal": Hoàn tác / Xóa lịch sử bữa ăn và tự động hoàn trả nguyên liệu về kho hoặc hoàn tiền về ví.
+        - Fields: { actionType: "delete_meal", meal_id: string, food_name: string }
      b) "expense": Chi tiêu thông thường.
         - Fields: { actionType: "expense", amount: number, category: "housing"|"transport"|"entertainment"|"shopping"|"health"|"other"|"food", description: string, wallet_id: string, walletName: string, custom_time: "YYYY-MM-DD HH:mm" }
      c) "income": Tiền thu vào.
@@ -1918,7 +1858,7 @@ NHIỆM VỤ CỦA BẠN:
         - Fields: { actionType: "debt_borrowed", person: string, amount: number, description: string, wallet_id: string, walletName: string, custom_time: "YYYY-MM-DD HH:mm" }
      e2) "pay_debt": Thu nợ / Trả bớt / Tất toán khoản nợ ĐÃ CÓ trong "tai_chinh.so_no_chua_tra".
         - Fields: { actionType: "pay_debt", debt_id: string, person: string, debt_type: "lent"|"borrowed", amount: number, wallet_id: string, walletName: string, description?: string, custom_time: "YYYY-MM-DD HH:mm" }
-     e2b) "borrow_more_debt": Vay thêm / Cho vay thêm vào khoản nợ ĐÃ CÓ trong "tai_chinh.so_no_chua_tra" (ghi chung vào lịch sử khoản nợ cũ, KHÔNG tạo khoản nợ mới).
+     e2b) "borrow_more_debt": Vay thêm / Cho vay thêm vào khoản nợ ĐÃ CÓ trong "tai_chinh.so_no_chua_tra" (ghi chung vào lịch sử khoản nợ cũ).
         - Fields: { actionType: "borrow_more_debt", debt_id: string, person: string, debt_type: "lent"|"borrowed", amount: number, wallet_id: string, walletName: string, description?: string, custom_time: "YYYY-MM-DD HH:mm" }
      e3) "upsert_budget": Đặt hoặc cập nhật hạn mức ngân sách chi tiêu tháng.
         - Fields: { actionType: "upsert_budget", category: "food"|"housing"|"transport"|"entertainment"|"shopping"|"health"|"other", name?: string, month?: "YYYY-MM", limit: number }
@@ -1930,7 +1870,7 @@ NHIỆM VỤ CỦA BẠN:
         - Fields: { actionType: "create_task", title: string, description: string, quest_rank: "S"|"A"|"B"|"C"|"D", due_date: "YYYY-MM-DD HH:mm" }
      g) "complete_task": Hoàn thành Quest đã có.
         - Fields: { actionType: "complete_task", task_id: string, title: string }
-     g2) "update_task": Sửa Quest, đổi deadline, đổi rank, chuyển "IN_PROGRESS", hoặc hoàn tác "COMPLETED" -> "PENDING".
+     g2) "update_task": Sửa Quest, đổi deadline, đổi rank, chuyển trạng thái.
         - Fields: { actionType: "update_task", task_id: string, original_title?: string, title?: string, description?: string, status?: "PENDING"|"IN_PROGRESS"|"COMPLETED", quest_rank?: "S"|"A"|"B"|"C"|"D", due_date?: "YYYY-MM-DD HH:mm" }
      g3) "delete_task": Xóa Quest đã có.
         - Fields: { actionType: "delete_task", task_id: string, title: string }
@@ -1944,9 +1884,9 @@ NHIỆM VỤ CỦA BẠN:
         - Fields: { actionType: "create_shopping_item", name: string, quantity: number, unit: string, category: "food"|"household"|"other" }
      i2) "purchase_shopping": Đánh dấu đã mua món từ danh sách shopping -> cất vào Kho đồ -> trừ ví nếu có giá tiền.
         - Fields: { actionType: "purchase_shopping", shopping_item_id?: string, name: string, quantity: number, unit: string, inventory_category?: "food"|"spices"|"utilities", add_to_inventory?: boolean, amount?: number, wallet_id?: string, walletName?: string, expiryDate?: "YYYY-MM-DD", custom_time: "YYYY-MM-DD HH:mm" }
-     j) "create_inventory": Thêm đồ MỚI MUA trực tiếp vào kho đồ / tủ lạnh (TUYỆT ĐỐI KHÔNG dùng để trừ kho khi nấu ăn hoặc hoàn kho món cũ; chỉ trừ ví khi KHÔNG qua "purchase_shopping").
-        - Fields: { actionType: "create_inventory", name: string, quantity: number, unit: string, category: string, custom_time: "YYYY-MM-DD HH:mm", expiryDate?: "YYYY-MM-DD" }
-     j2) "update_inventory": Tiêu hao PHI ĂN UỐNG (vứt đồ hỏng/thiu/hết hạn, cho/tặng người khác), kiểm kê thêm/bớt số lượng, sửa HSD đồ trong "kho_do_hien_co" (TUYỆT ĐỐI KHÔNG dùng khi ăn/uống/nấu nướng - ăn hết hay dùng hết để ăn BẮT BUỘC dùng action "meal" với source="home").
+     j) "create_inventory": Thêm đồ mới mua hoặc kê khai đồ/gia vị đang có trong nhà/kho ("có tương ớt, xì dầu...", "nhà có X, Y") vào kho đồ / tủ lạnh.
+        - Fields: { actionType: "create_inventory", name: string, quantity: number, unit: string, category: "food"|"spices"|"utilities", custom_time: "YYYY-MM-DD HH:mm", expiryDate?: "YYYY-MM-DD" }
+     j2) "update_inventory": Tiêu hao PHI ĂN UỐNG (vứt đồ hỏng/thiu/hết hạn, cho/tặng người khác), kiểm kê thêm/bớt số lượng, sửa HSD trong kho (ăn uống BẮT BUỘC dùng action "meal").
         - Fields: { actionType: "update_inventory", inv_id: string, name: string, operation: "set"|"deduct"|"add"|"discard", quantity?: number, delta_quantity?: number, unit?: string, expiryDate?: "YYYY-MM-DD", custom_time: "YYYY-MM-DD HH:mm" }
      k) "record_weight": Ghi nhận / Cập nhật cân nặng và chiều cao.
         - Fields: { actionType: "record_weight", weight: number, height?: number, custom_time: "YYYY-MM-DD HH:mm", description: "Cập nhật cân nặng" }
@@ -1969,6 +1909,16 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ không bọc thêm bất k�
   );
   const parsed = extractJsonFromAiResponse(aiRaw);
   if (parsed && Array.isArray(parsed.actions)) {
+    // RECOVERY CHỐNG ẢO GIÁC "ĐÃ GHI NHẬN VÀO HỆ THỐNG / KHO":
+    if (parsed.actions.length === 0) {
+      const recovered = tryRecoverInventoryActions(normalizedUserText, parsed.reply, now);
+      if (recovered.length > 0) {
+        parsed.actions = recovered;
+        parsed.summary = `Bổ sung ${recovered.length} nguyên liệu/gia vị vào kho để Papa xác nhận`;
+        parsed.reply = `Dạ vâng Papa! Yui đã lên danh sách ${recovered.length} nguyên liệu/gia vị này vào kho đồ rồi nè 🥰 Papa kiểm tra kế hoạch bên dưới và bấm "Xác nhận" để Yui cất vào kho nha!`;
+      }
+    }
+
     parsed.actions = normalizeYuiActions(parsed.actions, now);
     if (parsed.actions.length > 0) {
       const originalHadMeal = parsed.actions.some((a: any) => a.actionType === 'meal');
@@ -1983,6 +1933,121 @@ Trả về DUY NHẤT một chuỗi JSON hợp lệ không bọc thêm bất k�
     }
   }
   return parsed;
+}
+
+/**
+ * Phục hồi tự động các action create_inventory nếu AI trả về actions rỗng
+ * nhưng người dùng đang kê khai nguyên liệu/gia vị (vd: "có tương ớt, xì dầu, nước mắm, hành củ, tỏi củ, xả")
+ * hoặc AI bị ảo giác trả lời "đã ghi nhận vào hệ thống/kho" mà không sinh action.
+ */
+function tryRecoverInventoryActions(userText: string, aiReply?: string, now = new Date()): any[] {
+  if (!userText || typeof userText !== 'string') return [];
+
+  const normUser = normalizeVietnamese(userText);
+  const normReply = normalizeVietnamese(aiReply || '');
+
+  // 1. Nếu là câu hỏi (chứa từ hỏi), không kích hoạt phục hồi
+  if (/\b(khong|chua|gi|sao|the nao|bao nhieu|nhu the nao|duoc khong|co khong|dau|o dau)\b/.test(normUser)) {
+    return [];
+  }
+
+  // 2. Kiểm tra xem AI có ảo giác "đã ghi nhận/lưu vào hệ thống/kho" không
+  const aiClaimsRecorded =
+    /\b(da ghi nhan|da them|da cat|da luu|ghi nhan thanh cong|ghi nhan roi)\b/.test(normReply) &&
+    /\b(he thong|kho|tu lanh|gia vi|nguyen lieu|kho do)\b/.test(normReply);
+
+  // 3. Kiểm tra xem câu nói có phải là kê khai đồ có sẵn không
+  const isInventoryDeclaration =
+    /^(co|nha co|bep co|con co|trong kho co|trong bep co|trong tu co|ke khai|bo sung them|bo sung|them giup toi|them vao kho|co them|co san)\b/.test(normUser) ||
+    (aiClaimsRecorded && (userText.includes(',') || userText.includes(';')));
+
+  if (!isInventoryDeclaration && !aiClaimsRecorded) {
+    return [];
+  }
+
+  // 4. Lược bỏ tiền tố chỉ hành động kê khai
+  let cleaned = userText
+    .replace(/^(?:dạ|da|vâng|vang|yui|yui ơi|yui oi)?\s*(?:thêm giúp tôi|them giup toi|thêm vào kho|them vao kho|thêm gia vị|them gia vi|thêm nguyên liệu|them nguyen lieu|kê khai|ke khai|bổ sung thêm|bo sung them|bổ sung|bo sung|trong kho có|trong kho co|trong bếp có|trong bep co|trong tủ có|trong tu co|nhà có|nha co|bếp có|bep co|còn có|con co|có thêm|co them|có sẵn|co san|có|co)\s+/i, '')
+    .trim();
+
+  // Bỏ từ ngữ xưng hô / đuôi câu
+  cleaned = cleaned.replace(/\s*(?:nhé|nhe|nha|ạ|a|được không|duoc khong|giúp|giup|vào kho|vao kho|vào hệ thống|vao he thong)\s*[.!?]?$/i, '').trim();
+
+  // 5. Tách các món bằng dấu phẩy, chấm phẩy, xuống dòng, hoặc " và "
+  const rawSegments = cleaned
+    .split(/[,;\n\r]+|\s+và\s+|\s+va\s+/i)
+    .map(s => s.trim())
+    .filter(s => s.length > 1 && s.length <= 40);
+
+  if (rawSegments.length === 0) return [];
+
+  const actions: any[] = [];
+  const timeStr = formatVnDateTime(now);
+
+  for (const raw of rawSegments) {
+    // Nếu có dạng số lượng + đơn vị + tên món (VD: "200g thịt bò", "1 chai tương ớt", "5 quả trứng")
+    const qtyMatch = raw.match(/^(\d+(?:[.,]\d+)?)\s*([a-zA-Z\u00C0-\u1EF9]+)?\s+(.+)$/);
+
+    let name = raw;
+    let quantity = 1;
+    let unit = 'món';
+    let category = 'spices';
+
+    if (qtyMatch) {
+      quantity = Number(qtyMatch[1].replace(',', '.')) || 1;
+      unit = qtyMatch[2]?.toLowerCase() || 'món';
+      name = qtyMatch[3].trim();
+    } else {
+      const normItem = normalizeVietnamese(raw);
+
+      // Nhóm chất lỏng / sốt chấm
+      if (/\b(tuong ot|tuong ca|xi dau|nuoc mam|dau an|dau hao|giam|nuoc tuong|mayonnaise|sot|sot ca)\b/.test(normItem)) {
+        quantity = 1;
+        unit = 'chai';
+        category = 'spices';
+      }
+      // Nhóm gia vị bột / hạt
+      else if (/\b(muoi|duong|bot ngot|mi chinh|hat nem|tieu|bot canh|bot nem|ngu vi huong|bot bap|bot chien)\b/.test(normItem)) {
+        quantity = 1;
+        unit = 'gói';
+        category = 'spices';
+      }
+      // Nhóm củ, quả, rau gia vị
+      else if (/\b(hanh|hanh cu|hanh tim|toi|toi cu|gung|sa|xa|ot|ot tuoi|hanh la|chanh|rieng|nghe)\b/.test(normItem)) {
+        quantity = 200;
+        unit = 'g';
+        category = 'spices';
+      }
+      // Nhóm thực phẩm chính
+      else if (/\b(thit|bo|heo|ga|ca|tom|muc|suon|gio|cha|dau phu|nam|rau|cai|bap|khoai|ca chua)\b/.test(normItem)) {
+        quantity = 500;
+        unit = 'g';
+        category = 'food';
+      } else if (/\b(trung|qua trung)\b/.test(normItem)) {
+        quantity = 10;
+        unit = 'quả';
+        category = 'food';
+      } else {
+        quantity = 1;
+        unit = 'phần';
+        category = 'spices';
+      }
+    }
+
+    const cleanItemName = capitalizeFirst(cleanTemporalWords(name));
+    if (cleanItemName) {
+      actions.push({
+        actionType: 'create_inventory',
+        name: cleanItemName,
+        quantity,
+        unit,
+        category,
+        custom_time: timeStr
+      });
+    }
+  }
+
+  return actions;
 }
 
 /**

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Sun, Clock, Brain, Utensils } from 'lucide-react';
+import { Sun, Clock, Brain, Utensils, Languages } from 'lucide-react';
+import { useI18n } from '../../contexts/I18nContext';
 import styles from './SaoHeaderStatus.module.css';
 
 interface UserStatus {
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function SaoHeaderStatus({ user }: Props) {
+  const { t, language, setLanguage, formatDate, formatTime } = useI18n();
   const [now, setNow] = useState(() => new Date());
   const [hp, setHp] = useState(user?.current_hp ?? 0);
   const [mp, setMp] = useState(user?.current_mp ?? 0);
@@ -54,14 +56,6 @@ export default function SaoHeaderStatus({ user }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.overdueCount, user?.max_mp]);
 
-  const formatDate = (date: Date) => {
-    const days = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
-    return `${days[date.getDay()]}, ${date.getDate()} Tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
-  };
-
-  const formatTime = (date: Date) =>
-    date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-
   const hpPct = user ? (hp / user.max_hp) * 100 : 100;
   const mpPct = user ? (mp / (user.max_mp ?? 500)) * 100 : 100;
 
@@ -75,16 +69,16 @@ export default function SaoHeaderStatus({ user }: Props) {
             style={user?.avatar_url ? { backgroundImage: `url(${user.avatar_url})` } : {}}
           />
           <div className={styles.userDetails}>
-            <div className={styles.userName}>{user ? user.username : 'GUEST'}</div>
-            <div className={styles.userLevel}>Level {user ? user.level : 1}</div>
+            <div className={styles.userName}>{user ? user.username : t('common.guest')}</div>
+            <div className={styles.userLevel}>{t('common.level')} {user ? user.level : 1}</div>
           </div>
         </div>
 
         <div className={styles.headerLeftFlat}>
           <div className={styles.statusBars}>
-            <div className={styles.barRow} title="Năng lượng (HP)">
+            <div className={styles.barRow} title={`${t('common.hpLabel')} (HP)`}>
               <div className={`${styles.barLabel} ${styles.hp}`}>
-                <Utensils size={16} /> HP
+                <Utensils size={15} /> HP
               </div>
               <div className={styles.barWrapper}>
                 <div className={`${styles.barFill} ${styles.hp}`} style={{ width: `${hpPct}%` }} />
@@ -94,9 +88,9 @@ export default function SaoHeaderStatus({ user }: Props) {
               </div>
             </div>
 
-            <div className={styles.barRow} title="Tinh thần (MP)">
+            <div className={styles.barRow} title={`${t('common.mpLabel')} (MP)`}>
               <div className={`${styles.barLabel} ${styles.mp}`}>
-                <Brain size={16} /> MP
+                <Brain size={15} /> MP
               </div>
               <div className={styles.barWrapper}>
                 <div className={`${styles.barFill} ${styles.mp}`} style={{ width: `${mpPct}%` }} />
@@ -109,7 +103,7 @@ export default function SaoHeaderStatus({ user }: Props) {
         </div>
       </div>
 
-      {/* Right: Clock */}
+      {/* Right: Clock & Language */}
       <div className={styles.headerRight}>
         <div className={styles.hrDecorTop} />
         <div className={styles.hrDecorBottom} />
@@ -117,10 +111,20 @@ export default function SaoHeaderStatus({ user }: Props) {
 
         <div className={styles.dateTime}>
           <div className={styles.weatherRow}>
-            <Sun size={18} color="var(--sao-primary-hex, #00f0ff)" />
-            Today
-            <Clock size={18} color="var(--sao-primary-hex, #00f0ff)" style={{ marginLeft: 10 }} />
+            <Sun size={17} color="var(--sao-primary-hex, #00f0ff)" />
+            <span>{t('common.today')}</span>
+            <Clock size={17} color="var(--sao-primary-hex, #00f0ff)" style={{ marginLeft: 8 }} />
             <span className={styles.time} suppressHydrationWarning>{formatTime(now)}</span>
+            <button
+              type="button"
+              className={styles.langToggleBtn}
+              onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+              title={language === 'vi' ? 'Chuyển sang English' : 'Switch to Tiếng Việt'}
+              aria-label="Toggle language"
+            >
+              <Languages size={13} />
+              <span>{language.toUpperCase()}</span>
+            </button>
           </div>
           <div className={styles.date} suppressHydrationWarning>{formatDate(now)}</div>
         </div>

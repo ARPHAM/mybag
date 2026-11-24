@@ -14,7 +14,7 @@ interface SaoImageUploadProps {
 
 export default function SaoImageUpload({
   onUploadSuccess,
-  label = "Tải ảnh lên",
+  label,
   extraOptions,
   placement = "auto",
   align = "left",

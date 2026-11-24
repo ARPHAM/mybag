@@ -14,12 +14,15 @@ async function getAuthenticatedUserId(): Promise<string | NextResponse> {
   return decoded.userId;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const auth = await getAuthenticatedUserId();
     if (auth instanceof NextResponse) return auth;
 
-    const briefing = await getYuiProactiveBriefing(auth);
+    const { searchParams } = new URL(req.url);
+    const lang = searchParams.get('lang') === 'en' ? 'en' : 'vi';
+
+    const briefing = await getYuiProactiveBriefing(auth, lang);
     return NextResponse.json({ success: true, data: briefing });
   } catch (error: unknown) {
     console.error('GET /api/ai/yui error:', error);

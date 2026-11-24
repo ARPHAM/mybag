@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { CheckSquare, Check, Plus, Edit2, Trash2, AlertTriangle } from 'lucide-react';
+import { CheckSquare, Check, Plus, Edit2, Trash2, AlertTriangle, X } from 'lucide-react';
 import styles from './tasks.module.css';
 import SaoModal from '../../components/SaoModal/SaoModal';
 import SaoLoading from '../../components/SaoLoading/SaoLoading';
@@ -10,6 +10,7 @@ import SaoSelect from '../../components/SaoSelect/SaoSelect';
 import SaoInput from '../../components/SaoInput/SaoInput';
 import SaoButton from '../../components/SaoButton/SaoButton';
 import { useSaoAlert } from '../../contexts/AlertContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { getTasks, createTask, updateTask, deleteTask } from './api';
 
 import { Task } from '@/lib/types';
@@ -20,6 +21,7 @@ export default function TasksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showAlert } = useSaoAlert();
+  const { t } = useI18n();
 
   useEffect(() => {
     fetchTasks();
@@ -64,9 +66,9 @@ export default function TasksPage() {
     try {
       const data: any = await updateTask(task._id, { status: newStatus });
       if (data.reward?.leveledUp) {
-          showAlert(`🎉 LEVEL UP! Bạn đã đạt Level ${data.reward.newLevel}`);
+          showAlert(`${t('tasks.levelUp')} ${data.reward.newLevel}!`);
         } else if (data.penalty?.leveledDown) {
-          showAlert(`⚠️ LEVEL DOWN! Exp bị trừ nên bạn bị rớt xuống Level ${data.penalty.newLevel}`);
+          showAlert(`${t('tasks.levelDown')} ${data.penalty.newLevel}!`);
         }
         window.dispatchEvent(new CustomEvent('sao-user-updated'));
         fetchTasks(true);
@@ -186,12 +188,12 @@ export default function TasksPage() {
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
           <CheckSquare className={styles.titleIcon} size={28} />
-          <h1 className={styles.title}>Nhật ký Nhiệm vụ</h1>
+          <h1 className={styles.title}>{t('tasks.title')}</h1>
         </div>
 
         <div className={styles.progressSection}>
           <span className={styles.progressText}>
-            Tiến độ: {completedCount}/{totalCount}
+            {t('tasks.progress')}: {completedCount}/{totalCount}
           </span>
           <div className={styles.progressBarWrapper}>
             <div 
@@ -216,14 +218,14 @@ export default function TasksPage() {
               <div className={styles.checkboxContainer}>
                 <div className={`${styles.checkbox} ${task.status === 'OVERDUE' ? styles.failedCheckbox : ''}`}>
                   {task.status === 'COMPLETED' && <Check size={16} className={styles.checkIcon} strokeWidth={3} />}
-                  {task.status === 'OVERDUE' && <span className="text-red-500 font-bold leading-none">X</span>}
+                  {task.status === 'OVERDUE' && <X size={15} className="text-red-500" strokeWidth={3} />}
                 </div>
               </div>
 
               <div className={styles.taskContent}>
                 <div className={`${styles.taskName} ${task.status === 'OVERDUE' ? 'text-red-400 line-through opacity-70' : ''}`}>[{task.quest_rank}] {task.title}</div>
                 <div className={`${styles.taskDesc} ${task.status === 'OVERDUE' ? 'text-red-500/70' : ''}`}>
-                  Hạn chót: {new Date(task.due_date).toLocaleString('vi-VN')} {task.status === 'OVERDUE' ? '(QUÁ HẠN)' : ''}
+                  {t('tasks.deadline')}: {new Date(task.due_date).toLocaleString('vi-VN')} {task.status === 'OVERDUE' ? `(${t('tasks.overdue').toUpperCase()})` : ''}
                 </div>
               </div>
 
@@ -232,7 +234,7 @@ export default function TasksPage() {
                 <SaoButton
                   variant="ghost"
                   onClick={(e) => openEditModal(e, task)}
-                  title="Sửa"
+                  title={t('common.edit')}
                 >
                   <Edit2 size={16} />
                 </SaoButton>
@@ -240,7 +242,7 @@ export default function TasksPage() {
                   variant="ghost"
                   ghostType="danger"
                   onClick={(e) => confirmDelete(e, task._id)}
-                  title="Xóa"
+                  title={t('common.delete')}
                 >
                   <Trash2 size={16} />
                 </SaoButton>
@@ -250,7 +252,7 @@ export default function TasksPage() {
         )}
 
         <SaoButton variant="dashed" onClick={openAddModal}>
-          <Plus size={20} /> Thêm nhiệm vụ mới
+          <Plus size={20} /> {t('tasks.addQuest')}
         </SaoButton>
       </div>
 
@@ -258,15 +260,15 @@ export default function TasksPage() {
       <SaoModal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingTask ? 'Chỉnh sửa nhiệm vụ' : 'Tạo nhiệm vụ mới'}
+        title={editingTask ? t('tasks.editQuest') : t('tasks.addQuest')}
         icon={editingTask ? <Edit2 size={20} /> : <Plus size={20} />}
       >
         <form onSubmit={handleSave}>
           <div className={styles.formGroup}>
-            <label>Tên nhiệm vụ</label>
+            <label>{t('tasks.taskName')}</label>
             <SaoInput
               type="text"
-              placeholder="Vd: Chạy bộ 3km..."
+              placeholder={t('tasks.taskNamePlaceholder')}
               value={formData.title}
               onChange={e => setFormData({...formData, title: e.target.value})}
               required
@@ -275,17 +277,17 @@ export default function TasksPage() {
           </div>
 
           <div className={styles.formGroup}>
-            <label>Mô tả chi tiết</label>
+            <label>{t('tasks.taskDesc')}</label>
             <SaoInput
               isTextarea
-              placeholder="Ghi chú thêm về nhiệm vụ này..."
+              placeholder={t('tasks.taskDescPlaceholder')}
               value={formData.description}
               onChange={e => setFormData({...formData, description: e.target.value})}
             />
           </div>
 
           <div className={styles.formGroup}>
-            <label>Độ khó (Rank)</label>
+            <label>{t('tasks.rank')}</label>
             <SaoSelect
               options={TASK_RANK_OPTIONS}
               initialValue={formData.quest_rank}
@@ -295,7 +297,7 @@ export default function TasksPage() {
 
           <div className="flex gap-4">
             <div className={styles.formGroup} style={{flex: 1}}>
-              <label>Ngày hạn chót</label>
+              <label>{t('tasks.dueDate')}</label>
               <SaoDatePicker 
                 value={formData.due_date_date}
                 onChange={(val) => setFormData({...formData, due_date_date: val})}
@@ -304,7 +306,7 @@ export default function TasksPage() {
             </div>
 
             <div className={styles.formGroup} style={{flex: 1}}>
-              <label>Giờ hạn chót</label>
+              <label>{t('tasks.dueTime')}</label>
               <div className="flex items-center gap-2 font-mono text-sm">
                 <div className="flex-1">
                   <SaoSelect 
@@ -329,10 +331,10 @@ export default function TasksPage() {
 
           <div className={styles.modalFooter}>
             <SaoButton variant="default" onClick={closeModal} type="button" disabled={isSubmitting}>
-              Hủy
+              {t('common.cancel')}
             </SaoButton>
             <SaoButton variant="primary" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Đang xử lý...' : (editingTask ? 'Cập nhật' : 'Tạo mới')}
+              {isSubmitting ? t('common.loading') : (editingTask ? t('common.save') : t('common.add'))}
             </SaoButton>
           </div>
         </form>
@@ -342,18 +344,18 @@ export default function TasksPage() {
       <SaoModal
         isOpen={!!taskToDelete}
         onClose={() => setTaskToDelete(null)}
-        title="Xác nhận xóa"
+        title={t('common.delete')}
         icon={<AlertTriangle size={20} />}
       >
         <div className={styles.confirmText}>
-          Bạn có chắc chắn muốn xóa nhiệm vụ này không? Hành động này không thể hoàn tác.
+          {t('tasks.deleteConfirm')}
         </div>
         <div className={styles.modalFooter}>
           <SaoButton variant="default" onClick={() => setTaskToDelete(null)} type="button">
-            Hủy
+            {t('common.cancel')}
           </SaoButton>
           <SaoButton variant="danger" onClick={handleDelete} type="button">
-            <Trash2 size={16} /> Xóa
+            <Trash2 size={16} /> {t('common.delete')}
           </SaoButton>
         </div>
       </SaoModal>

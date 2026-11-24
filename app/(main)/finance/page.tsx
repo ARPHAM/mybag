@@ -29,8 +29,13 @@ import {
   WALLET_TYPE_OPTIONS,
   INVENTORY_CATEGORY_OPTIONS,
   INVENTORY_UNIT_OPTIONS,
-  FINANCE_TABS
+  FINANCE_TABS,
+  getFinanceTabs,
+  getFinanceCategoryOptions,
+  getWalletTypeOptions,
+  getInventoryCategoryOptions
 } from '@/lib/constants';
+import { useI18n } from '@/lib/i18n';
 
 // Tab components
 import OverviewTab from './components/OverviewTab';
@@ -42,6 +47,7 @@ import InventoryTab from './components/InventoryTab';
 import SmartExpenseModal from './components/SmartExpenseModal';
 
 export default function FinancePage() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<FinanceTabId>('overview');
   const [isSmartModalOpen, setIsSmartModalOpen] = useState(false);
 
@@ -531,31 +537,31 @@ export default function FinancePage() {
         <form onSubmit={handleSaveTransaction}>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Loại giao dịch</label>
+              <label className={styles.formLabel}>{t('finance.txType')}</label>
               <div className={styles.formRadioGroup}>
                 <label className={styles.formRadioLabel}>
-                  <input type="radio" name="type" checked={txForm.type === 'expense'} onChange={() => setTxForm({ ...txForm, type: 'expense' })} /> Chi tiêu
+                  <input type="radio" name="type" checked={txForm.type === 'expense'} onChange={() => setTxForm({ ...txForm, type: 'expense' })} /> {t('finance.expense')}
                 </label>
                 <label className={styles.formRadioLabel}>
-                  <input type="radio" name="type" checked={txForm.type === 'income'} onChange={() => setTxForm({ ...txForm, type: 'income' })} /> Thu nhập
+                  <input type="radio" name="type" checked={txForm.type === 'income'} onChange={() => setTxForm({ ...txForm, type: 'income' })} /> {t('finance.income')}
                 </label>
                 <label className={styles.formRadioLabel}>
-                  <input type="radio" name="type" checked={txForm.type === 'transfer'} onChange={() => setTxForm({ ...txForm, type: 'transfer' })} /> Chuyển khoản
+                  <input type="radio" name="type" checked={txForm.type === 'transfer'} onChange={() => setTxForm({ ...txForm, type: 'transfer' })} /> {t('finance.transfer')}
                 </label>
               </div>
             </div>
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Số tiền (VND)</label>
-              <SaoInput type="number" placeholder="Nhập số tiền..." value={txForm.amount} onChange={e => setTxForm({ ...txForm, amount: e.target.value })} required />
+              <label className={styles.formLabel}>{t('finance.amountVnd')}</label>
+              <SaoInput type="number" placeholder={t('finance.amountPlaceholder')} value={txForm.amount} onChange={e => setTxForm({ ...txForm, amount: e.target.value })} required />
             </div>
             {txForm.type === 'expense' && (
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Danh mục</label>
+                <label className={styles.formLabel}>{t('finance.category')}</label>
                 <SaoSelect
                   initialValue={txForm.category}
-                  options={FINANCE_CATEGORY_OPTIONS}
+                  options={getFinanceCategoryOptions(t)}
                   onChange={v => setTxForm({ ...txForm, category: v })}
                 />
               </div>
@@ -565,19 +571,19 @@ export default function FinancePage() {
           {txForm.type === 'transfer' ? (
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Từ nguồn tiền (Trừ)</label>
+                <label className={styles.formLabel}>{t('finance.fromWallet')}</label>
                 <SaoSelect
                   initialValue={txForm.wallet_id}
-                  placeholder="Chọn nguồn tiền gửi"
+                  placeholder={t('finance.selectSenderWallet')}
                   options={wallets.map(w => ({ value: w.id, label: `${w.name} (${formatMoney(w.balance)})` }))}
                   onChange={v => setTxForm({ ...txForm, wallet_id: v })}
                 />
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Đến nguồn tiền (Cộng)</label>
+                <label className={styles.formLabel}>{t('finance.toWallet')}</label>
                 <SaoSelect
                   initialValue={txForm.to_wallet_id}
-                  placeholder="Chọn nguồn tiền nhận"
+                  placeholder={t('finance.selectReceiverWallet')}
                   options={wallets.map(w => ({ value: w.id, label: w.name }))}
                   onChange={v => setTxForm({ ...txForm, to_wallet_id: v })}
                 />
@@ -585,10 +591,10 @@ export default function FinancePage() {
             </div>
           ) : (
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Nguồn tiền</label>
+              <label className={styles.formLabel}>{t('finance.walletsTab')}</label>
               <SaoSelect
                 initialValue={txForm.wallet_id}
-                placeholder="Chọn nguồn tiền"
+                placeholder={t('finance.selectWalletPlaceholder')}
                 options={wallets.map(w => ({ value: w.id, label: `${w.name} (${formatMoney(w.balance)})` }))}
                 onChange={v => setTxForm({ ...txForm, wallet_id: v })}
               />
@@ -596,20 +602,20 @@ export default function FinancePage() {
           )}
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Ngày giao dịch</label>
+            <label className={styles.formLabel}>{t('finance.txDate')}</label>
             <SaoDatePicker value={txForm.date} onChange={v => setTxForm({ ...txForm, date: v })} required />
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Diễn giải</label>
-            <SaoInput isTextarea placeholder="Nhập diễn giải..." value={txForm.description} onChange={e => setTxForm({ ...txForm, description: e.target.value })} required></SaoInput>
+            <label className={styles.formLabel}>{t('finance.description')}</label>
+            <SaoInput isTextarea placeholder={t('finance.descPlaceholder')} value={txForm.description} onChange={e => setTxForm({ ...txForm, description: e.target.value })} required></SaoInput>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <SaoButton variant="primary" type="submit">
-              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm giao dịch'}
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.saveTransaction')}
             </SaoButton>
             {editingItem && (
               <SaoButton variant="danger" type="button" onClick={() => handleDeleteTransaction(editingItem.id)}>
-                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
+                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {t('common.delete')}
               </SaoButton>
             )}
           </div>
@@ -621,29 +627,29 @@ export default function FinancePage() {
       return (
         <form onSubmit={handleSaveWallet}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Tên nguồn tiền</label>
-            <SaoInput type="text" placeholder="VD: Vietcombank, Tiền mặt..." value={walletForm.name} onChange={e => setWalletForm({ ...walletForm, name: e.target.value })} required />
+            <label className={styles.formLabel}>{t('finance.walletName')}</label>
+            <SaoInput type="text" placeholder={t('finance.walletNamePlaceholder')} value={walletForm.name} onChange={e => setWalletForm({ ...walletForm, name: e.target.value })} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Loại</label>
+              <label className={styles.formLabel}>{t('finance.walletType')}</label>
               <SaoSelect
                 initialValue={walletForm.type}
-                options={WALLET_TYPE_OPTIONS}
+                options={getWalletTypeOptions(t)}
                 onChange={v => setWalletForm({ ...walletForm, type: v })}
               />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Màu sắc (Theme)</label>
+              <label className={styles.formLabel}>{t('finance.walletColor')}</label>
               <SaoInput type="color" style={{ padding: '0 5px' }} value={walletForm.color} onChange={e => setWalletForm({ ...walletForm, color: e.target.value })} required />
             </div>
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Số dư ban đầu (VND)</label>
+            <label className={styles.formLabel}>{t('finance.initialBalance')}</label>
             <SaoInput type="number" placeholder="0" value={walletForm.balance} onChange={e => setWalletForm({ ...walletForm, balance: e.target.value })} />
           </div>
           <SaoButton variant="primary" type="submit">
-            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm nguồn tiền'}
+            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.addWallet')}
           </SaoButton>
         </form>
       );
@@ -653,34 +659,34 @@ export default function FinancePage() {
       return (
         <form onSubmit={handleSaveBudget}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Tên hạn mức (Túi chi tiêu)</label>
-            <SaoInput type="text" placeholder="VD: Ăn uống, Giải trí..." value={budgetForm.name} onChange={e => setBudgetForm({ ...budgetForm, name: e.target.value })} required />
+            <label className={styles.formLabel}>{t('finance.budgetName')}</label>
+            <SaoInput type="text" placeholder={t('finance.budgetNamePlaceholder')} value={budgetForm.name} onChange={e => setBudgetForm({ ...budgetForm, name: e.target.value })} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Tháng áp dụng</label>
+              <label className={styles.formLabel}>{t('finance.budgetMonth')}</label>
               <SaoInput type="month" value={budgetForm.month} onChange={e => setBudgetForm({ ...budgetForm, month: e.target.value })} required />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Icon / Danh mục</label>
+              <label className={styles.formLabel}>{t('finance.budgetIconCat')}</label>
               <SaoSelect
                 initialValue={budgetForm.category}
-                options={FINANCE_CATEGORY_OPTIONS}
+                options={getFinanceCategoryOptions(t)}
                 onChange={v => setBudgetForm({ ...budgetForm, category: v })}
               />
             </div>
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Số tiền giới hạn (VND)</label>
+            <label className={styles.formLabel}>{t('finance.budgetLimit')}</label>
             <SaoInput type="number" placeholder="VD: 5000000" value={budgetForm.limit} onChange={e => setBudgetForm({ ...budgetForm, limit: e.target.value })} required />
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <SaoButton variant="primary" type="submit">
-              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thiết lập hạn mức'}
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.setupBudget')}
             </SaoButton>
             {editingItem && (
               <SaoButton variant="danger" type="button" onClick={() => handleDeleteBudget(editingItem.id)}>
-                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
+                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {t('common.delete')}
               </SaoButton>
             )}
           </div>
@@ -691,38 +697,38 @@ export default function FinancePage() {
     if (modalType === 'debt_action') {
       const isBorrowMore = debtActionType === 'borrow_more';
       const titleLabel = isBorrowMore
-        ? (editingItem?.type === 'lent' ? 'Cho Vay Thêm' : 'Vay Thêm')
-        : (editingItem?.type === 'lent' ? 'Thu Nợ' : 'Trả Nợ');
+        ? (editingItem?.type === 'lent' ? t('finance.lendMore') : t('finance.borrowMore'))
+        : (editingItem?.type === 'lent' ? t('finance.collectDebt') : t('finance.payDebt'));
 
       return (
         <form onSubmit={handleSaveDebtAction}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Giao dịch với: <span style={{ color: '#fff' }}>{editingItem?.personName}</span></label>
+            <label className={styles.formLabel}>{t('finance.transactWith')}: <span style={{ color: '#fff' }}>{editingItem?.personName}</span></label>
             <div style={{ padding: '10px', background: 'rgba(0, 240, 255, 0.1)', borderRadius: '8px', color: '#00f0ff', margin: '5px 0 15px' }}>
-              Hành động: <strong>{titleLabel}</strong>
+              {t('finance.actionLabel')}: <strong>{titleLabel}</strong>
             </div>
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Số tiền (VND)</label>
+              <label className={styles.formLabel}>{t('finance.amountVnd')}</label>
               <SaoInput type="number" placeholder="VD: 500000" value={debtActionForm.amount} onChange={e => setDebtActionForm({ ...debtActionForm, amount: e.target.value })} required />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Nguồn tiền</label>
+              <label className={styles.formLabel}>{t('finance.walletsTab')}</label>
               <SaoSelect
                 initialValue={debtActionForm.wallet_id}
-                placeholder="Chọn nguồn tiền..."
+                placeholder={t('finance.selectWalletPlaceholder')}
                 options={wallets.map(w => ({ value: w.id, label: w.name }))}
                 onChange={v => setDebtActionForm({ ...debtActionForm, wallet_id: v })}
               />
             </div>
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Ngày thực hiện</label>
+            <label className={styles.formLabel}>{t('finance.actionDate')}</label>
             <SaoDatePicker value={debtActionForm.date} onChange={v => setDebtActionForm({ ...debtActionForm, date: v })} required />
           </div>
           <SaoButton variant="primary" type="submit">
-            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> Ghi nhận giao dịch
+            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {t('finance.recordAction')}
           </SaoButton>
         </form>
       );
@@ -732,30 +738,30 @@ export default function FinancePage() {
       return (
         <form onSubmit={handleSaveDebt}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Người vay / Chủ nợ</label>
-            <SaoInput type="text" placeholder="Tên người đó..." value={debtForm.personName} onChange={e => setDebtForm({ ...debtForm, personName: e.target.value })} required />
+            <label className={styles.formLabel}>{t('finance.debtPerson')}</label>
+            <SaoInput type="text" placeholder={t('finance.debtPersonPlaceholder')} value={debtForm.personName} onChange={e => setDebtForm({ ...debtForm, personName: e.target.value })} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Loại nợ</label>
+              <label className={styles.formLabel}>{t('finance.debtType')}</label>
               <SaoSelect
                 initialValue={debtForm.type}
                 options={[
-                  { value: 'lent', label: 'Cho vay (Người ta nợ mình)' },
-                  { value: 'borrowed', label: 'Đi vay (Mình nợ người ta)' }
+                  { value: 'lent', label: t('finance.lentDesc') },
+                  { value: 'borrowed', label: t('finance.borrowedDesc') }
                 ]}
                 onChange={v => setDebtForm({ ...debtForm, type: v })}
               />
             </div>
             {editingItem && (
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Trạng thái</label>
+                <label className={styles.formLabel}>{t('finance.debtStatus')}</label>
                 <SaoSelect
                   initialValue={debtForm.status}
                   options={[
-                    { value: 'unpaid', label: 'Chưa trả' },
-                    { value: 'partial', label: 'Trả 1 phần' },
-                    { value: 'paid', label: 'Đã thanh toán' }
+                    { value: 'unpaid', label: t('finance.statusUnpaid') },
+                    { value: 'partial', label: t('finance.statusPartial') },
+                    { value: 'paid', label: t('finance.statusPaid') }
                   ]}
                   onChange={v => setDebtForm({ ...debtForm, status: v })}
                 />
@@ -764,21 +770,21 @@ export default function FinancePage() {
           </div>
           {!editingItem && (
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Số tiền (VND)</label>
+              <label className={styles.formLabel}>{t('finance.amountVnd')}</label>
               <SaoInput type="number" placeholder="VD: 1000000" value={debtForm.amount} onChange={e => setDebtForm({ ...debtForm, amount: e.target.value })} required />
             </div>
           )}
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Ngày đến hạn (Tùy chọn)</label>
+              <label className={styles.formLabel}>{t('finance.dueDate')}</label>
               <SaoDatePicker value={debtForm.dueDate} onChange={v => setDebtForm({ ...debtForm, dueDate: v })} />
             </div>
             {!editingItem && (
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Nguồn tiền Trừ/Cộng</label>
+                <label className={styles.formLabel}>{t('finance.walletTransfer')}</label>
                 <SaoSelect
                   initialValue={debtForm.wallet_id}
-                  placeholder="Chọn nguồn tiền"
+                  placeholder={t('finance.selectWalletPlaceholder')}
                   options={wallets.map(w => ({ value: w.id, label: w.name }))}
                   onChange={v => setDebtForm({ ...debtForm, wallet_id: v })}
                 />
@@ -787,11 +793,11 @@ export default function FinancePage() {
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <SaoButton variant="primary" type="submit">
-              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm sổ nợ'}
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.addDebt')}
             </SaoButton>
             {editingItem && (
               <SaoButton variant="danger" type="button" onClick={() => handleDeleteDebt(editingItem.id)}>
-                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
+                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {t('common.delete')}
               </SaoButton>
             )}
           </div>
@@ -803,39 +809,39 @@ export default function FinancePage() {
       return (
         <form onSubmit={handleSaveInventory}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Tên món đồ / Gia vị</label>
-            <SaoInput type="text" placeholder="VD: Gạo ST25, Mì tôm..." value={inventoryForm.name} onChange={e => setInventoryForm({ ...inventoryForm, name: e.target.value })} required />
+            <label className={styles.formLabel}>{t('finance.itemName')}</label>
+            <SaoInput type="text" placeholder={t('finance.itemNamePlaceholder')} value={inventoryForm.name} onChange={e => setInventoryForm({ ...inventoryForm, name: e.target.value })} required />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Ngày mua</label>
+              <label className={styles.formLabel}>{t('finance.purchaseDate')}</label>
               <SaoDatePicker value={inventoryForm.purchaseDate} onChange={v => setInventoryForm({ ...inventoryForm, purchaseDate: v })} required />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Hạn sử dụng (Tùy chọn)</label>
+              <label className={styles.formLabel}>{t('finance.expiryDateOptional')}</label>
               <SaoDatePicker value={inventoryForm.expiryDate} onChange={v => setInventoryForm({ ...inventoryForm, expiryDate: v })} />
             </div>
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Phân loại</label>
+              <label className={styles.formLabel}>{t('finance.classification')}</label>
               <SaoSelect
                 initialValue={inventoryForm.category}
-                options={INVENTORY_CATEGORY_OPTIONS}
+                options={getInventoryCategoryOptions(t)}
                 onChange={v => setInventoryForm({ ...inventoryForm, category: v })}
               />
             </div>
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Số lượng</label>
+              <label className={styles.formLabel}>{t('finance.quantity')}</label>
               <SaoInput type="number" min="1" step="1" placeholder="VD: 5" value={inventoryForm.quantity} onChange={e => setInventoryForm({ ...inventoryForm, quantity: e.target.value })} required />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Đơn vị</label>
+              <label className={styles.formLabel}>{t('finance.unit')}</label>
               <SaoSelect
                 initialValue={inventoryForm.unit}
-                placeholder="VD: kg, gói, chai..."
+                placeholder={t('finance.unitPlaceholder')}
                 allowCustom={true}
                 options={INVENTORY_UNIT_OPTIONS}
                 onChange={v => setInventoryForm({ ...inventoryForm, unit: v })}
@@ -853,13 +859,13 @@ export default function FinancePage() {
                 }}
                 style={{ width: 18, height: 18 }}
               />
-              Đây là đồ được cho/tặng (Không mất tiền ví)
+              {t('finance.isGiftFree')}
             </label>
           </div>
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Tổng tiền mua / Ước tính giá</label>
+              <label className={styles.formLabel}>{t('finance.totalCostEst')}</label>
               <SaoInput type="number" placeholder="VD: 200000" value={inventoryForm.totalValue} onChange={e => setInventoryForm({ ...inventoryForm, totalValue: e.target.value })} />
               {inventoryForm.quantity && inventoryForm.totalValue && Number(inventoryForm.quantity) > 0 && (
                 <small style={{ color: '#a0c4ff', marginTop: 6, display: 'block' }}>
@@ -869,10 +875,10 @@ export default function FinancePage() {
             </div>
             {!inventoryForm.isGift && (
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Nguồn chi tiền</label>
+                <label className={styles.formLabel}>{t('finance.walletDeduct')}</label>
                 <SaoSelect
                   initialValue={inventoryForm.wallet_id}
-                  placeholder="Chọn nguồn tiền"
+                  placeholder={t('finance.selectWalletPlaceholder')}
                   options={wallets.map(w => ({ value: w.id, label: w.name }))}
                   onChange={v => setInventoryForm({ ...inventoryForm, wallet_id: v })}
                 />
@@ -881,11 +887,11 @@ export default function FinancePage() {
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <SaoButton variant="primary" type="submit">
-              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? 'Lưu thay đổi' : 'Thêm vào kho'}
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.addToInventory')}
             </SaoButton>
             {editingItem && (
               <SaoButton variant="danger" type="button" onClick={() => handleDeleteInventory(editingItem.id)}>
-                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> Xóa
+                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {t('common.delete')}
               </SaoButton>
             )}
           </div>
@@ -900,16 +906,16 @@ export default function FinancePage() {
         <form onSubmit={handleSaveScannedBill}>
           <div className={styles.scannedItemsTable}>
             <div className={styles.tableHeader}>
-              <div className={styles.colName}>Tên món đồ</div>
-              <div className={styles.colQty}>SL</div>
-              <div className={styles.colPrice}>Giá tiền</div>
-              <div className={styles.colCategory}>Loại</div>
-              <div className={styles.colActions}>Tùy chọn</div>
+              <div className={styles.colName}>{t('finance.scannedItemsCount')}</div>
+              <div className={styles.colQty}>{t('finance.scannedQty')}</div>
+              <div className={styles.colPrice}>{t('finance.scannedPrice')}</div>
+              <div className={styles.colCategory}>{t('finance.scannedCategory')}</div>
+              <div className={styles.colActions}>{t('finance.scannedOptions')}</div>
             </div>
             {scannedBillItems.map((item, index) => (
               <div key={item.id} className={`${styles.tableRow} ${!item.keep ? styles.deletedRow : ''}`}>
                 <div className={styles.colName}>
-                  <span className={styles.mobileCellLabel}>Tên món đồ</span>
+                  <span className={styles.mobileCellLabel}>{t('finance.scannedItemsCount')}</span>
                   <SaoInput type="text" value={item.name} onChange={e => {
                     const newItems = [...scannedBillItems];
                     newItems[index].name = e.target.value;
@@ -917,7 +923,7 @@ export default function FinancePage() {
                   }} disabled={!item.keep} />
                 </div>
                 <div className={styles.colQty}>
-                  <span className={styles.mobileCellLabel}>Số lượng & Đơn vị</span>
+                  <span className={styles.mobileCellLabel}>{t('finance.scannedQty')}</span>
                   <div className={styles.qtyPair}>
                     <SaoInput type="number" value={item.quantity} onChange={e => {
                       const newItems = [...scannedBillItems];
@@ -932,7 +938,7 @@ export default function FinancePage() {
                   </div>
                 </div>
                 <div className={styles.colPrice}>
-                  <span className={styles.mobileCellLabel}>Giá tiền</span>
+                  <span className={styles.mobileCellLabel}>{t('finance.scannedPrice')}</span>
                   <SaoInput type="number" value={item.price} onChange={e => {
                     const newItems = [...scannedBillItems];
                     newItems[index].price = parseFloat(e.target.value) || 0;
@@ -940,8 +946,8 @@ export default function FinancePage() {
                   }} disabled={!item.keep || item.isGift} />
                 </div>
                 <div className={styles.colCategory}>
-                  <span className={styles.mobileCellLabel}>Phân loại</span>
-                  <SaoSelect options={[...INVENTORY_CATEGORY_OPTIONS, ...FINANCE_CATEGORY_OPTIONS.filter(c => c.value !== 'food' && c.value !== 'other'), { value: 'other', label: 'Khác' }]} initialValue={item.category} onChange={v => {
+                  <span className={styles.mobileCellLabel}>{t('finance.scannedCategory')}</span>
+                  <SaoSelect options={[...getInventoryCategoryOptions(t), ...getFinanceCategoryOptions(t).filter(c => c.value !== 'food' && c.value !== 'other'), { value: 'other', label: t('finance.categories.other') }]} initialValue={item.category} onChange={v => {
                     const newItems = [...scannedBillItems];
                     newItems[index].category = v;
                     setScannedBillItems(newItems);
@@ -976,14 +982,14 @@ export default function FinancePage() {
 
           <div className={styles.scannedSummaryBar}>
             <div>
-              <div className={styles.scannedSummaryTotal}>Tổng tiền: {formatMoney(totalAmount)} VND</div>
-              <div className={styles.scannedSummaryHint}>Đánh dấu &quot;Free&quot; hoặc xóa sẽ không tính tiền.</div>
+              <div className={styles.scannedSummaryTotal}>{t('finance.scannedTotal')}: {formatMoney(totalAmount)} VND</div>
+              <div className={styles.scannedSummaryHint}>{t('finance.scannedHint')}</div>
             </div>
             <div className={styles.scannedWalletBox}>
-              <label className={styles.formLabel}>Nguồn tiền</label>
+              <label className={styles.formLabel}>{t('finance.walletsTab')}</label>
               <SaoSelect
                 initialValue={billWalletId}
-                placeholder="Chọn nguồn tiền..."
+                placeholder={t('finance.selectWalletPlaceholder')}
                 options={wallets.map(w => ({ value: w.id, label: `${w.name} (${formatMoney(w.balance)})` }))}
                 onChange={v => setBillWalletId(v)}
               />
@@ -992,7 +998,7 @@ export default function FinancePage() {
 
           <div className={styles.scannedSubmitRow}>
             <SaoButton variant="primary" type="submit" style={{ width: '100%', justifyContent: 'center' }}>
-              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> Nhập kho &amp; Lưu chi tiêu
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {t('finance.saveStockExpense')}
             </SaoButton>
           </div>
         </form>
@@ -1008,7 +1014,7 @@ export default function FinancePage() {
         <div className={styles.header}>
           <div className={styles.titleWrapper}>
             <Wallet className={styles.titleIcon} size={28} />
-            <h1 className={styles.title}>Finance Center</h1>
+            <h1 className={styles.title}>{t('finance.title')}</h1>
           </div>
         </div>
         <SaoLoading fullPage />
@@ -1021,19 +1027,19 @@ export default function FinancePage() {
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
           <Wallet className={styles.titleIcon} size={28} />
-          <h1 className={styles.title}>Finance Center</h1>
+          <h1 className={styles.title}>{t('finance.title')}</h1>
         </div>
         <SaoButton
           variant="primary"
           onClick={() => setIsSmartModalOpen(true)}
           style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.85rem', boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)' }}
         >
-          <Sparkles size={16} /> <span className="hidden sm:inline">Ghi chép AI (Smart Command)</span><span className="sm:hidden">Ghi chép AI</span>
+          <Sparkles size={16} /> <span className="hidden sm:inline">{t('finance.smartCommandFull')}</span><span className="sm:hidden">{t('finance.smartCommand')}</span>
         </SaoButton>
       </div>
 
       <SaoTabs
-        tabs={FINANCE_TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={18} /> }))}
+        tabs={getFinanceTabs(t).map(tab => ({ id: tab.id, label: tab.label, icon: <tab.icon size={18} /> }))}
         activeTab={activeTab}
         onChange={(id) => setActiveTab(id as FinanceTabId)}
       />
@@ -1101,12 +1107,12 @@ export default function FinancePage() {
         onClose={closeModal}
         title={
           modalType === 'scan_bill_review'
-            ? 'Duyệt Hóa Đơn AI'
+            ? t('finance.scanBillReview')
             : modalType === 'debt_action'
-            ? 'Biến động Sổ Nợ'
+            ? t('finance.debtActionTitle')
             : editingItem
-              ? `Chỉnh sửa ${modalType === 'transaction' || modalType === 'history' ? 'Giao dịch' : modalType === 'wallets' ? 'Nguồn tiền' : modalType === 'budgets' ? 'Hạn mức' : modalType === 'debts' ? 'Sổ nợ' : 'Kho dự trữ'}`
-              : `Thêm ${modalType === 'transaction' ? 'Giao dịch' : modalType === 'wallets' ? 'Nguồn tiền' : modalType === 'budgets' ? 'Hạn mức' : modalType === 'debts' ? 'Sổ nợ' : 'Kho dự trữ'}`
+              ? `${t('common.edit')} ${modalType === 'transaction' || modalType === 'history' ? t('finance.expense') : modalType === 'wallets' ? t('finance.walletsTab') : modalType === 'budgets' ? t('finance.budgetsTab') : modalType === 'debts' ? t('finance.debtsTab') : t('finance.inventoryTab')}`
+              : `${t('common.add')} ${modalType === 'transaction' ? t('finance.expense') : modalType === 'wallets' ? t('finance.walletsTab') : modalType === 'budgets' ? t('finance.budgetsTab') : modalType === 'debts' ? t('finance.debtsTab') : t('finance.inventoryTab')}`
         }
       >
         {renderModalContent()}

@@ -1,5 +1,8 @@
+"use client";
+
 import React, { useMemo } from 'react';
 import { getLocalDateKey } from '../utils';
+import { useI18n } from '@/lib/i18n';
 
 interface SAOMonthViewProps {
   selectedDate: Date;
@@ -18,6 +21,7 @@ export default function SAOMonthView({
   onEventClick,
   onSwitchToDayView
 }: SAOMonthViewProps) {
+  const { t, language } = useI18n();
   const currentYear = selectedDate.getFullYear();
   const currentMonth = selectedDate.getMonth();
 
@@ -60,21 +64,27 @@ export default function SAOMonthView({
   };
 
   const today = new Date();
-  const weekDayHeaders = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  const weekDayHeaders = language === 'en' 
+    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] 
+    : ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+  const monthTitle = language === 'en'
+    ? `${new Date(currentYear, currentMonth, 1).toLocaleDateString('en-US', { month: 'long' })} ${currentYear}`
+    : `${t('calendar.monthLabel')} ${currentMonth + 1} / ${currentYear}`;
 
   return (
     <div className="h-full flex flex-col bg-zinc-900/90 border border-cyan-500/30 rounded-sm overflow-hidden font-mono shadow-[0_0_15px_rgba(0,0,0,0.5)]">
       {/* Month Title Header */}
       <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-950/60 flex items-center justify-between">
         <span className="text-sm font-bold text-[var(--sao-primary-hex)] uppercase tracking-wider">
-          Tháng {currentMonth + 1} / {currentYear}
+          {monthTitle}
         </span>
         {onSwitchToDayView && (
           <button
             onClick={onSwitchToDayView}
             className="text-xs text-cyan-400 hover:underline"
           >
-            Chuyển xem theo ngày →
+            {t('calendar.switchToDayView')}
           </button>
         )}
       </div>
@@ -101,7 +111,6 @@ export default function SAOMonthView({
             if (!t.due_date) return false;
             return getLocalDateKey(t.due_date) === targetDayKey;
           });
-
 
           return (
             <div
@@ -131,10 +140,10 @@ export default function SAOMonthView({
 
                 <div className="flex items-center gap-1">
                   {dayEvents.length > 0 && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--sao-primary-hex)]" title={`${dayEvents.length} sự kiện`} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--sao-primary-hex)]" title={`${dayEvents.length} ${t('calendar.eventsCount')}`} />
                   )}
                   {dayTasks.length > 0 && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title={`${dayTasks.length} nhiệm vụ`} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title={`${dayTasks.length} ${t('calendar.questsCount')}`} />
                   )}
                 </div>
               </div>
@@ -155,7 +164,7 @@ export default function SAOMonthView({
                 ))}
                 {dayEvents.length > 2 && (
                   <div className="text-[9px] text-zinc-500 italic pl-1">
-                    +{dayEvents.length - 2} khác
+                    +{dayEvents.length - 2} {t('calendar.andMore')}
                   </div>
                 )}
                 {dayEvents.length === 0 && dayTasks.length > 0 && (

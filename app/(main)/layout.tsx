@@ -16,18 +16,16 @@ import {
   X
 } from 'lucide-react';
 import { AlertProvider } from '../contexts/AlertContext';
+import { I18nProvider, useI18n } from '../contexts/I18nContext';
 import { getUserProfile } from './api';
 import SaoAlert from '../components/SaoAlert/SaoAlert';
 import YuiAssistant from '../components/YuiAssistant/YuiAssistant';
 import SaoHeaderStatus from '../components/SaoHeaderStatus/SaoHeaderStatus';
 import styles from './layout.module.css';
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function DashboardContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useI18n();
   const [user, setUser] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [mobileMorePathname, setMobileMorePathname] = useState<string | null>(null);
@@ -54,14 +52,14 @@ export default function DashboardLayout({
   };
 
   const menuItems = [
-    { id: 'profile', path: '/profile', icon: Home, label: 'Hồ sơ' },
-    { id: 'finance', path: '/finance', icon: Wallet, label: 'Tài chính' },
-    { id: 'health', path: '/health', icon: Activity, label: 'Sức khoẻ' },
-    { id: 'tasks', path: '/tasks', icon: CheckSquare, label: 'Nhiệm vụ' },
-    { id: 'calendar', path: '/calendar', icon: Calendar, label: 'Lịch trình' },
-    { id: 'menu', path: '/menu', icon: Utensils, label: 'Thực đơn' },
-    { id: 'shopping', path: '/shopping', icon: ShoppingCart, label: 'Mua sắm' },
-    { id: 'settings', path: '/settings', icon: Settings, label: 'Cài đặt' },
+    { id: 'profile', path: '/profile', icon: Home, label: t('nav.profile') },
+    { id: 'finance', path: '/finance', icon: Wallet, label: t('nav.finance') },
+    { id: 'health', path: '/health', icon: Activity, label: t('nav.health') },
+    { id: 'tasks', path: '/tasks', icon: CheckSquare, label: t('nav.tasks') },
+    { id: 'calendar', path: '/calendar', icon: Calendar, label: t('nav.calendar') },
+    { id: 'menu', path: '/menu', icon: Utensils, label: t('nav.menu') },
+    { id: 'shopping', path: '/shopping', icon: ShoppingCart, label: t('nav.shopping') },
+    { id: 'settings', path: '/settings', icon: Settings, label: t('nav.settings') },
   ];
 
   const mobilePrimaryIds = new Set(['finance', 'tasks', 'calendar', 'menu']);
@@ -111,145 +109,150 @@ export default function DashboardLayout({
           <div className={styles.saoLoaderRing}></div>
           <div className={styles.saoLoaderRing2}></div>
         </div>
-        <div className={styles.saoLoaderText}>AUTHENTICATING...</div>
-        <div className={styles.saoLoaderSubText}>LINK START</div>
+        <div className={styles.saoLoaderText}>{t('common.authenticating')}</div>
+        <div className={styles.saoLoaderSubText}>{t('common.linkStart')}</div>
       </div>
     );
   }
 
   return (
-    <AlertProvider>
-      <div className={styles.dashboardContainer}>
-        <div className={styles.topHeader}>
-          <div className={styles.topHeaderLine}></div>
+    <div className={styles.dashboardContainer}>
+      <div className={styles.topHeader}>
+        <div className={styles.topHeaderLine}></div>
 
-          {/* SaoHeaderStatus runs its own 1-second timer; only IT re-renders each tick */}
-          <SaoHeaderStatus user={user} />
-        </div>
+        {/* SaoHeaderStatus runs its own 1-second timer; only IT re-renders each tick */}
+        <SaoHeaderStatus user={user} />
+      </div>
 
-        <div className={styles.dashboardLayout}>
-          {/* SIDEBAR */}
-          <div className={styles.sidebarContainer}>
-            <div className={styles.sidebarLeftRail}></div>
-            <div className={styles.sidebarTopAccent}></div>
+      <div className={styles.dashboardLayout}>
+        {/* SIDEBAR */}
+        <div className={styles.sidebarContainer}>
+          <div className={styles.sidebarLeftRail}></div>
+          <div className={styles.sidebarTopAccent}></div>
 
-            <div className={styles.sidebarMenu}>
-              {menuItems.map((item) => {
-                const isActive = pathname === item.path || (pathname === '/' && item.id === 'profile');
+          <div className={styles.sidebarMenu}>
+            {menuItems.map((item) => {
+              const isActive = pathname === item.path || (pathname === '/' && item.id === 'profile');
 
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.path}
-                    className={`${styles.menuItem} ${isActive ? styles.active : ''}`}
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <div className={styles.menuItemInner}>
-                      <div className={styles.menuIcon}>
-                        <item.icon size={18} strokeWidth={2.5} />
-                      </div>
-                      <span className={styles.menuText}>{item.label}</span>
-                    </div>
-
-                    {isActive && (
-                      <div className={styles.activeDecorators}>
-                        <div className={styles.activeBorderTop}></div>
-                        <div className={styles.activeBorderRight}></div>
-                        <div className={styles.activeBorderBottom}></div>
-                        <div className={styles.activeBorderLeft}></div>
-                      </div>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-
-            <div className={styles.sidebarBottomAccent}>
-              <div className={styles.bottomAngledCut}></div>
-              <div className={styles.bottomTechLine}></div>
-            </div>
-          </div>
-
-          <div className={styles.mainContent}>
-            {children}
-          </div>
-        </div>
-
-        {/* MOBILE NAVIGATION & SECONDARY DRAWER */}
-        <div className={styles.mobileNavWrapper}>
-          {mobileMoreOpen && (
-            <>
-              <div
-                className={styles.mobileDrawerBackdrop}
-                onClick={() => setMobileMorePathname(null)}
-                aria-hidden="true"
-              />
-              <div className={styles.mobileMoreDrawer} role="dialog" aria-label="Menu mở rộng">
-                <div className={styles.mobileMoreHeader}>
-                  <span>SYSTEM MENU</span>
-                  <button
-                    type="button"
-                    className={styles.mobileMoreClose}
-                    onClick={() => setMobileMorePathname(null)}
-                    aria-label="Đóng menu"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-                <div className={styles.mobileMoreGrid}>
-                  {mobileSecondaryItems.map((item) => {
-                    const active = isItemActive(item);
-                    return (
-                      <Link
-                        key={item.id}
-                        href={item.path}
-                        className={`${styles.mobileMoreItem} ${active ? styles.mobileMoreItemActive : ''}`}
-                        onClick={() => setMobileMorePathname(null)}
-                      >
-                        <item.icon size={20} strokeWidth={2.2} />
-                        <span>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-
-          <nav className={styles.mobileBottomNav} aria-label="Điều hướng chính">
-            {mobilePrimaryItems.map((item) => {
-              const active = isItemActive(item);
               return (
                 <Link
                   key={item.id}
                   href={item.path}
-                  className={`${styles.mobileNavItem} ${active ? styles.mobileNavItemActive : ''}`}
+                  className={`${styles.menuItem} ${isActive ? styles.active : ''}`}
+                  style={{ textDecoration: 'none' }}
                 >
-                  <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
-                  <span>{item.label}</span>
+                  <div className={styles.menuItemInner}>
+                    <div className={styles.menuIcon}>
+                      <item.icon size={18} strokeWidth={2.5} />
+                    </div>
+                    <span className={styles.menuText}>{item.label}</span>
+                  </div>
+
+                  {isActive && (
+                    <div className={styles.activeDecorators}>
+                      <div className={styles.activeBorderTop}></div>
+                      <div className={styles.activeBorderRight}></div>
+                      <div className={styles.activeBorderBottom}></div>
+                      <div className={styles.activeBorderLeft}></div>
+                    </div>
+                  )}
                 </Link>
               );
             })}
-            <button
-              type="button"
-              className={`${styles.mobileNavItem} ${(mobileMoreOpen || isMobileSecondaryActive) ? styles.mobileNavItemActive : ''}`}
-              onClick={() => setMobileMorePathname((prev) => (prev === pathname ? null : pathname))}
-              aria-expanded={mobileMoreOpen}
-              aria-label="Mở thêm chức năng"
-            >
-              <div className={styles.mobileMoreIconWrap}>
-                {mobileMoreOpen ? <X size={20} strokeWidth={2.4} /> : <LayoutGrid size={20} strokeWidth={2.2} />}
-                {isMobileSecondaryActive && !mobileMoreOpen && <span className={styles.mobileMoreDot} />}
-              </div>
-              <span>Thêm</span>
-            </button>
-          </nav>
+          </div>
+        </div>
+
+        {/* MAIN CONTENT AREA */}
+        <div className={styles.mainContent}>
+          {children}
         </div>
       </div>
 
-      {/* Render ngoài dashboardContainer để không bị kẹt dưới stacking context của topHeader (z-index: 20) */}
-      <SaoAlert />
-      <YuiAssistant />
-    </AlertProvider>
+      {/* MOBILE BOTTOM NAVIGATION (ẨN TRÊN DESKTOP) */}
+      <div className={styles.mobileNavWrapper}>
+        {mobileMoreOpen && (
+          <>
+            <div
+              className={styles.mobileDrawerBackdrop}
+              onClick={() => setMobileMorePathname(null)}
+            />
+            <div className={styles.mobileMoreDrawer}>
+              <div className={styles.mobileMoreHeader}>
+                <span>{t('nav.more')}</span>
+                <button
+                  type="button"
+                  className={styles.mobileMoreClose}
+                  onClick={() => setMobileMorePathname(null)}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className={styles.mobileMoreGrid}>
+                {mobileSecondaryItems.map((item) => {
+                  const active = isItemActive(item);
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.path}
+                      className={`${styles.mobileMoreItem} ${active ? styles.mobileMoreItemActive : ''}`}
+                      onClick={() => setMobileMorePathname(null)}
+                    >
+                      <item.icon size={20} strokeWidth={2.2} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
+        <nav className={styles.mobileBottomNav} aria-label="Điều hướng chính">
+          {mobilePrimaryItems.map((item) => {
+            const active = isItemActive(item);
+            return (
+              <Link
+                key={item.id}
+                href={item.path}
+                className={`${styles.mobileNavItem} ${active ? styles.mobileNavItemActive : ''}`}
+              >
+                <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            className={`${styles.mobileNavItem} ${(mobileMoreOpen || isMobileSecondaryActive) ? styles.mobileNavItemActive : ''}`}
+            onClick={() => setMobileMorePathname((prev) => (prev === pathname ? null : pathname))}
+            aria-expanded={mobileMoreOpen}
+            aria-label="Mở thêm chức năng"
+          >
+            <div className={styles.mobileMoreIconWrap}>
+              {mobileMoreOpen ? <X size={20} strokeWidth={2.4} /> : <LayoutGrid size={20} strokeWidth={2.2} />}
+              {isMobileSecondaryActive && !mobileMoreOpen && <span className={styles.mobileMoreDot} />}
+            </div>
+            <span>{t('nav.more')}</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <I18nProvider>
+      <AlertProvider>
+        <DashboardContent>{children}</DashboardContent>
+        {/* Render ngoài dashboardContainer để không bị kẹt dưới stacking context của topHeader (z-index: 20) */}
+        <SaoAlert />
+        <YuiAssistant />
+      </AlertProvider>
+    </I18nProvider>
   );
 }

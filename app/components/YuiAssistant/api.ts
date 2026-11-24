@@ -1,6 +1,6 @@
 import axiosClient from '@/lib/axiosClient';
 
-export const getYuiBriefing = () => axiosClient.get('/api/ai/yui');
+export const getYuiBriefing = (lang: string = 'vi') => axiosClient.get(`/api/ai/yui?lang=${lang}`);
 
 export const parseYuiMessage = (text: string, history: any[] = [], imageData?: string) =>
   axiosClient.post('/api/ai/yui', {

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { Clock, ShieldAlert, Award } from 'lucide-react';
+import { Clock, ShieldAlert, Award, Check, X } from 'lucide-react';
+import { useI18n } from '../../../contexts/I18nContext';
 import { getLocalDateKey } from '../utils';
 
 interface SAOWeekViewProps {
@@ -29,6 +30,7 @@ export default function SAOWeekView({
   onEventClick,
   onTaskClick
 }: SAOWeekViewProps) {
+  const { t } = useI18n();
   // Lấy 7 ngày trong tuần chứa selectedDate (Thứ Hai -> Chủ Nhật)
   const weekDays = useMemo(() => {
     const day = selectedDate.getDay();
@@ -164,8 +166,14 @@ export default function SAOWeekView({
                         >
                           RANK {rank}
                         </span>
-                        <span className="text-[9px] text-zinc-400">
-                          {task.status === 'COMPLETED' ? '✓ Xong' : task.status === 'OVERDUE' ? '✕ Trễ' : 'Quest'}
+                        <span className="text-[9px] text-zinc-400 flex items-center gap-0.5">
+                          {task.status === 'COMPLETED' ? (
+                            <><Check size={10} className="text-emerald-400" /> {t('tasks.completed')}</>
+                          ) : task.status === 'OVERDUE' ? (
+                            <><X size={10} className="text-red-400" /> {t('tasks.overdue')}</>
+                          ) : (
+                            t('tasks.quest')
+                          )}
                         </span>
                       </div>
                       <div className="font-semibold text-zinc-200 truncate mt-1" title={task.title}>

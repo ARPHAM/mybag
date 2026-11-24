@@ -600,7 +600,12 @@
 }
 
 /* Mobile Navigation (ẩn trên Desktop) */
-.mobileNavWrapper {
+.mobileNavWrapper,
+.mobileBottomNav,
+.mobileDrawerBackdrop,
+.mobileMoreDrawer,
+.mobileMoreSheet,
+.mobileMoreBackdrop {
   display: none;
 }
 

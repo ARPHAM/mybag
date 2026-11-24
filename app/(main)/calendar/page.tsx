@@ -16,6 +16,7 @@ import SaoInput from '@/app/components/SaoInput/SaoInput';
 import { getEvents, createEvent, updateEvent, deleteEvent } from './api';
 import { getTasks } from '../tasks/api';
 import { getLocalDateKey, isSameLocalDate } from './utils';
+import { useI18n } from '@/lib/i18n';
 
 const RANK_BADGES: Record<string, { bg: string; text: string; border: string }> = {
   S: { bg: 'rgba(255, 215, 0, 0.2)', text: '#ffd700', border: '#ffd700' },
@@ -26,6 +27,7 @@ const RANK_BADGES: Record<string, { bg: string; text: string; border: string }> 
 };
 
 export default function CalendarPage() {
+  const { t, language } = useI18n();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
   const [events, setEvents] = useState<any[]>([]);
@@ -243,7 +245,7 @@ export default function CalendarPage() {
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
           <Calendar className={styles.titleIcon} size={28} />
-          <h1 className={styles.title}>Lịch trình</h1>
+          <h1 className={styles.title}>{t('calendar.title')}</h1>
         </div>
 
         <div className="flex items-center gap-2 lg:gap-3 flex-wrap justify-end">
@@ -254,21 +256,21 @@ export default function CalendarPage() {
               style={{ padding: '4px 8px', fontSize: '0.8rem' }}
               onClick={() => setViewMode('day')}
             >
-              <Clock size={13} style={{ marginRight: 4 }} /> Ngày
+              <Clock size={13} style={{ marginRight: 4 }} /> {t('common.date')}
             </SaoButton>
             <SaoButton
               variant={viewMode === 'week' ? 'primary' : 'ghost'}
               style={{ padding: '4px 8px', fontSize: '0.8rem' }}
               onClick={() => setViewMode('week')}
             >
-              <Columns3 size={13} style={{ marginRight: 4 }} /> Tuần
+              <Columns3 size={13} style={{ marginRight: 4 }} /> {t('calendar.weekView')}
             </SaoButton>
             <SaoButton
               variant={viewMode === 'month' ? 'primary' : 'ghost'}
               style={{ padding: '4px 8px', fontSize: '0.8rem' }}
               onClick={() => setViewMode('month')}
             >
-              <CalendarDays size={13} style={{ marginRight: 4 }} /> Tháng
+              <CalendarDays size={13} style={{ marginRight: 4 }} /> {t('calendar.monthView')}
             </SaoButton>
           </div>
 
@@ -276,7 +278,7 @@ export default function CalendarPage() {
             onClick={openCreateModal}
             className={styles.addButton}
           >
-            <Plus size={18} /> <span className="hidden sm:inline">Thêm sự kiện</span><span className="sm:hidden">Thêm</span>
+            <Plus size={18} /> <span className="hidden sm:inline">{t('calendar.addEvent')}</span><span className="sm:hidden">{t('common.add')}</span>
           </SaoButton>
         </div>
       </div>
@@ -337,7 +339,7 @@ export default function CalendarPage() {
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                Sự kiện ({dayEvents.length})
+                {t('calendar.eventsTab')} ({dayEvents.length})
               </button>
               <button
                 onClick={() => setQuestTab('quests')}
@@ -347,7 +349,7 @@ export default function CalendarPage() {
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                Nhiệm vụ ({dayTasks.length})
+                {t('calendar.questsTab')} ({dayTasks.length})
               </button>
             </div>
           </div>
@@ -355,7 +357,7 @@ export default function CalendarPage() {
           <div className="overflow-y-auto flex-1 custom-scrollbar pr-2 space-y-3">
             {questTab === 'events' ? (
               dayEvents.length === 0 ? (
-                <div className="text-zinc-500 italic text-sm py-4 text-center">Không có sự kiện nào trong ngày này.</div>
+                <div className="text-zinc-500 italic text-sm py-4 text-center">{t('calendar.noEvents')}</div>
               ) : (
                 dayEvents.map((ev, idx) => {
                   const actualColor = (ev.color_code && ev.color_code !== '#f97316') ? ev.color_code : null;
@@ -366,11 +368,11 @@ export default function CalendarPage() {
                       className="border-l-2 pl-3 py-2 bg-zinc-800/50 hover:bg-zinc-800 transition-colors cursor-pointer" 
                       style={{ borderLeftColor: actualColor || 'var(--sao-primary-hex)' }}
                     >
-                      <div className="font-bold text-sm text-zinc-200">{ev.title} {ev.is_virtual ? '(Lặp)' : ''}</div>
+                      <div className="font-bold text-sm text-zinc-200">{ev.title} {ev.is_virtual ? `(${t('calendar.recurring')})` : ''}</div>
                       {ev.description && <div className="text-xs text-zinc-400 mt-1 whitespace-pre-wrap line-clamp-3 leading-relaxed">{ev.description}</div>}
                       <div className="text-xs text-[var(--sao-primary-hex)] mt-2 opacity-80 flex items-center gap-1">
                         <Clock size={12} />
-                        {new Date(ev.start_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} - {new Date(ev.end_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}
+                        {new Date(ev.start_time).toLocaleTimeString(language === 'en' ? 'en-US' : 'vi-VN', {hour: '2-digit', minute:'2-digit'})} - {new Date(ev.end_time).toLocaleTimeString(language === 'en' ? 'en-US' : 'vi-VN', {hour: '2-digit', minute:'2-digit'})}
                       </div>
                     </div>
                   );
@@ -378,7 +380,7 @@ export default function CalendarPage() {
               )
             ) : (
               dayTasks.length === 0 ? (
-                <div className="text-zinc-500 italic text-sm py-4 text-center">Không có hạn chót Quest nào trong ngày này.</div>
+                <div className="text-zinc-500 italic text-sm py-4 text-center">{t('calendar.noQuestsToday')}</div>
               ) : (
                 dayTasks.map((task, idx) => {
                   const rank = task.quest_rank || 'C';
@@ -407,7 +409,7 @@ export default function CalendarPage() {
                               ? 'bg-rose-950/80 text-rose-300 border border-rose-500/30'
                               : 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/30'
                         }`}>
-                          {isDone ? 'HOÀN THÀNH' : isOverdue ? 'QUÁ HẠN' : 'ĐANG THỰC HIỆN'}
+                          {isDone ? t('tasks.completed').toUpperCase() : isOverdue ? t('tasks.overdue').toUpperCase() : t('tasks.pending').toUpperCase()}
                         </span>
                       </div>
 
@@ -418,7 +420,7 @@ export default function CalendarPage() {
 
                       <div className="text-xs text-amber-400 mt-2 flex items-center gap-1 opacity-90">
                         <Clock size={12} />
-                        Hạn chót: {new Date(task.due_date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(task.due_date).toLocaleTimeString(language === 'en' ? 'en-US' : 'vi-VN', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   );
@@ -433,24 +435,24 @@ export default function CalendarPage() {
       <SaoModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        title={editingEvent ? "Chi tiết sự kiện" : "Thêm lịch trình mới"}
+        title={editingEvent ? t('calendar.eventDetails') : t('calendar.addEvent')}
         icon={editingEvent ? <Edit2 size={20} /> : <Plus size={20} />}
       >
         <form onSubmit={handleSaveEvent}>
           <div className={styles.formGroup}>
-            <label>Tiêu đề</label>
+            <label>{t('calendar.eventTitle')}</label>
             <SaoInput 
               type="text" 
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className={styles.input}
-              placeholder="VD: Họp định kỳ, Thể dục..."
+              placeholder={t('calendar.eventTitlePlaceholder')}
             />
           </div>
           
           <div className={styles.formGroup}>
-            <label>Ngày diễn ra</label>
+            <label>{t('calendar.eventDate')}</label>
             <SaoDatePicker 
               value={startDateStr}
               onChange={(val) => setStartDateStr(val)}
@@ -459,18 +461,18 @@ export default function CalendarPage() {
           </div>
 
           <div className={styles.formGroup}>
-            <label>Mô tả chi tiết</label>
+            <label>{t('calendar.eventDesc')}</label>
             <textarea 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className={styles.textarea}
-              placeholder="Ghi chú thêm..."
+              placeholder={t('calendar.eventDescPlaceholder')}
             />
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className={styles.formGroup} style={{flex: 1}}>
-              <label>Giờ bắt đầu</label>
+              <label>{t('calendar.startTime')}</label>
               <div className="flex items-center gap-2 bg-black/30 border border-zinc-700/50 p-1 rounded">
                 <div className="flex-1">
                   <SaoSelect 
@@ -492,7 +494,7 @@ export default function CalendarPage() {
               </div>
             </div>
             <div className={styles.formGroup} style={{flex: 1}}>
-              <label>Giờ kết thúc</label>
+              <label>{t('calendar.endTime')}</label>
               <div className="flex items-center gap-2 bg-black/30 border border-zinc-700/50 p-1 rounded">
                 <div className="flex-1">
                   <SaoSelect 
@@ -523,7 +525,7 @@ export default function CalendarPage() {
               <div className={`${styles.checkbox} ${isRecurring ? styles.checked : ''}`}>
                 {isRecurring && <div style={{width: 10, height: 10, background: 'var(--sao-primary-hex)', borderRadius: 2}} />}
               </div>
-              Lặp lại sự kiện này (Recurring)
+              {t('calendar.repeatEvent')}
             </div>
 
             {isRecurring && (
@@ -531,21 +533,21 @@ export default function CalendarPage() {
                 <div className="flex flex-wrap gap-4 sm:gap-6 mb-3">
                   <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
                     <input type="radio" name="recType" checked={recurrenceType === 'DAILY'} onChange={() => setRecurrenceType('DAILY')} className="accent-orange-500 w-4 h-4"/>
-                    Hàng ngày
+                    {t('calendar.daily')}
                   </label>
                   <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
                     <input type="radio" name="recType" checked={recurrenceType === 'WEEKLY'} onChange={() => setRecurrenceType('WEEKLY')} className="accent-orange-500 w-4 h-4"/>
-                    Hàng tuần
+                    {t('calendar.weekly')}
                   </label>
                   <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
                     <input type="radio" name="recType" checked={recurrenceType === 'YEARLY'} onChange={() => setRecurrenceType('YEARLY')} className="accent-orange-500 w-4 h-4"/>
-                    Hàng năm
+                    {t('calendar.yearly')}
                   </label>
                 </div>
 
                 {recurrenceType === 'WEEKLY' && (
                   <div className="flex flex-wrap gap-2 mt-3 mb-3">
-                    {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((label, i) => (
+                    {(language === 'en' ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] : ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']).map((label, i) => (
                       <div 
                         key={i}
                         onClick={() => toggleDay(i)}
@@ -558,11 +560,11 @@ export default function CalendarPage() {
                 )}
                 
                 <div className={styles.formGroup} style={{ marginTop: '12px' }}>
-                  <label className={styles.formLabel}>Lặp đến ngày (Tùy chọn)</label>
+                  <label className={styles.formLabel}>{t('calendar.repeatUntilOptional')}</label>
                   <SaoDatePicker 
                     value={recurrenceEndDateStr} 
                     onChange={setRecurrenceEndDateStr} 
-                    placeholder="Không giới hạn"
+                    placeholder={t('calendar.unlimited')}
                   />
                 </div>
               </div>
@@ -577,7 +579,7 @@ export default function CalendarPage() {
                   onClick={() => handleDelete('series')}
                   className={`${styles.btn} ${styles.deleteBtnConfirm}`}
                 >
-                  <Trash2 size={16} /> Xóa
+                  <Trash2 size={16} /> {t('common.delete')}
                 </SaoButton>
                 {editingEvent.is_virtual && (
                   <SaoButton 
@@ -585,7 +587,7 @@ export default function CalendarPage() {
                     onClick={() => handleDelete('exception')}
                     className={`${styles.btn} ${styles.pauseBtn}`}
                   >
-                    <PauseCircle size={16} /> Bỏ qua hôm nay
+                    <PauseCircle size={16} /> {t('calendar.skipToday')}
                   </SaoButton>
                 )}
               </div>
@@ -597,13 +599,13 @@ export default function CalendarPage() {
                 onClick={() => setIsModalOpen(false)}
                 className={`${styles.btn} ${styles.cancelBtn}`}
               >
-                Hủy bỏ
+                {t('common.cancel')}
               </SaoButton>
               <SaoButton 
                 type="submit"
                 className={`${styles.btn} ${styles.saveBtn}`}
               >
-                {editingEvent ? 'Cập nhật' : 'Tạo mới'}
+                {editingEvent ? t('common.save') : t('common.add')}
               </SaoButton>
             </div>
           </div>

@@ -1,5 +1,8 @@
+"use client";
+
 import React, { useRef } from 'react';
 import { ChevronLeft, ChevronRight, RotateCcw, Calendar as CalendarIcon } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 interface DateSelectorProps {
   selectedDate: Date;
@@ -7,6 +10,7 @@ interface DateSelectorProps {
 }
 
 export default function DateSelector({ selectedDate, onChange }: DateSelectorProps) {
+  const { t, language } = useI18n();
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   const today = new Date();
@@ -92,7 +96,7 @@ export default function DateSelector({ selectedDate, onChange }: DateSelectorPro
           disabled={isPrevDisabled}
           className="p-1 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           style={{ color: 'var(--sao-primary-hex)' }}
-          title={isPrevDisabled ? "Đã chạm giới hạn lịch quá khứ (tối đa 30 ngày)" : "Ngày trước"}
+          title={isPrevDisabled ? t('calendar.pastLimit') : t('calendar.prevDay')}
           onMouseOver={(e) => { if (!isPrevDisabled) e.currentTarget.style.backgroundColor = 'rgba(var(--sao-primary-rgb),0.2)'; }}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
@@ -104,9 +108,9 @@ export default function DateSelector({ selectedDate, onChange }: DateSelectorPro
             onClick={handleToday}
             className="px-2 py-1 text-xs rounded border border-cyan-500/40 hover:bg-cyan-500/20 transition-all flex items-center gap-1"
             style={{ color: 'var(--sao-primary-hex)' }}
-            title="Quay về ngày hôm nay"
+            title={t('calendar.today')}
           >
-            <RotateCcw size={12} /> Hôm nay
+            <RotateCcw size={12} /> {t('calendar.today')}
           </button>
         )}
 
@@ -116,7 +120,7 @@ export default function DateSelector({ selectedDate, onChange }: DateSelectorPro
             onClick={() => dateInputRef.current?.showPicker ? dateInputRef.current.showPicker() : dateInputRef.current?.click()}
             className="p-1 rounded transition-colors hover:bg-cyan-500/20"
             style={{ color: 'var(--sao-primary-hex)' }}
-            title="Nhảy nhanh đến ngày trong tương lai"
+            title={t('calendar.selectDate')}
           >
             <CalendarIcon size={18} />
           </button>
@@ -155,13 +159,13 @@ export default function DateSelector({ selectedDate, onChange }: DateSelectorPro
               } : {}}
             >
               <span className="text-xs opacity-70 uppercase">
-                {date.toLocaleDateString('vi-VN', { weekday: 'short' })}
+                {date.toLocaleDateString(language === 'en' ? 'en-US' : 'vi-VN', { weekday: 'short' })}
               </span>
               <span className="text-lg">
                 {date.getDate()}
               </span>
               <span className="text-[10px] opacity-60">
-                T{date.getMonth() + 1}
+                {language === 'en' ? date.toLocaleDateString('en-US', { month: 'short' }) : `T${date.getMonth() + 1}`}
               </span>
             </button>
           );
@@ -172,7 +176,7 @@ export default function DateSelector({ selectedDate, onChange }: DateSelectorPro
         onClick={handleNext}
         className="p-1 rounded transition-colors"
         style={{ color: 'var(--sao-primary-hex)' }}
-        title="Ngày tiếp theo (nhảy vô tận vào tương lai)"
+        title={t('calendar.nextDay')}
         onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(var(--sao-primary-rgb),0.2)'}
         onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
       >

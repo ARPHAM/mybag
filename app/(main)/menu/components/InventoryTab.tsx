@@ -4,9 +4,11 @@ import { useState } from 'react';
 import {
   Edit3, Wheat, Package, Wallet,
   ShieldAlert, Minus, Plus, Camera, ImageIcon,
-  Sparkles, Check, AlertCircle, CircleDot, Flame
+  Sparkles, Check, AlertCircle, CircleDot, Flame,
+  Utensils, Gift, CheckCircle2, XCircle, AlertTriangle
 } from 'lucide-react';
 import SaoButton from '../../../components/SaoButton/SaoButton';
+import { useI18n } from '../../../contexts/I18nContext';
 import styles from '../menu.module.css';
 import type { InventoryItem } from '@/lib/types';
 
@@ -33,6 +35,7 @@ export default function InventoryTab({
   onUpdateStockStatus,
   onScanBill
 }: Props) {
+  const { t } = useI18n();
   const [filterCat, setFilterCat] = useState<'all' | 'food' | 'spices' | 'utilities'>('all');
 
   const filtered = inventory.filter(item => {
@@ -69,24 +72,26 @@ export default function InventoryTab({
           className={`${styles.filterPill} ${filterCat === 'all' ? styles.filterPillActive : ''}`}
           onClick={() => setFilterCat('all')}
         >
-          Tất cả ({inventory.length})
+          {t('menu.allStock')} ({inventory.length})
         </button>
         <button
           type="button"
           className={`${styles.filterPill} ${filterCat === 'food' ? styles.filterPillActive : ''}`}
           onClick={() => setFilterCat('food')}
         >
-          🥩 Thực phẩm chính ({totalMainFood})
+          <Utensils size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
+          {t('menu.mainFood')} ({totalMainFood})
         </button>
         <button
           type="button"
           className={`${styles.filterPill} ${filterCat === 'spices' ? styles.filterPillActive : ''}`}
           onClick={() => setFilterCat('spices')}
         >
-          🧂 Gia vị & Phụ liệu ({totalSpices})
+          <Flame size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
+          {t('menu.spices')} ({totalSpices})
           {totalOutSpices > 0 && (
             <span style={{ marginLeft: 6, fontSize: '0.72rem', background: 'rgba(255, 68, 68, 0.25)', color: '#ff6666', padding: '1px 5px', borderRadius: '10px' }}>
-              {totalOutSpices} hết
+              {totalOutSpices} {t('menu.statusOut').toLowerCase()}
             </span>
           )}
         </button>
@@ -95,9 +100,9 @@ export default function InventoryTab({
       {sorted.length === 0 ? (
         <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '50px 20px' }}>
           <Package size={48} style={{ opacity: 0.3, marginBottom: 12, display: 'inline-block' }} />
-          <div>Chưa có mặt hàng nào trong danh mục này.</div>
+          <div>{t('menu.emptyPantry')}</div>
           <div style={{ fontSize: '0.85rem', color: '#a0c4ff', marginTop: 8 }}>
-            Bấm dấu + ở góc dưới để thêm thực phẩm hoặc chụp hóa đơn!
+            {t('menu.emptyPantrySub')}
           </div>
         </div>
       ) : (
@@ -124,7 +129,7 @@ export default function InventoryTab({
                   variant="ghost"
                   className={styles.editBtn}
                   onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-                  title="Chỉnh sửa chi tiết"
+                  title={t('menu.editDetails')}
                 >
                   <Edit3 size={15} />
                 </SaoButton>
@@ -144,13 +149,17 @@ export default function InventoryTab({
                   <div className={styles.inventoryMeta}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.78rem', color: isSpice ? '#ffcc66' : '#a0c4ff' }}>
-                        {isSpice ? 'Gia vị & Phụ liệu' : item.category === 'utilities' ? 'Đồ dùng' : 'Thực phẩm chính'}
+                        {isSpice ? t('menu.spices') : item.category === 'utilities' ? t('menu.utilities') : t('menu.mainFood')}
                       </span>
                       <span style={{ color: '#00f0ff', fontSize: '0.78rem' }}>
-                        {item.isGift ? '🎁 Được tặng' : (
+                        {item.isGift ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Gift size={12} /> {t('menu.gift')}
+                          </span>
+                        ) : (
                           <>
                             <Wallet size={11} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                            {item.walletName || 'Chưa gán ví'}
+                            {item.walletName || t('menu.unassignedWallet')}
                           </>
                         )}
                       </span>
@@ -158,35 +167,35 @@ export default function InventoryTab({
 
                     {/* Hiển thị đặc thù cho Gia vị vs Thực phẩm chính */}
                     {isSpice ? (
-                      <div style={{ marginTop: 2, marginBottom: 4 }}>
+                      <div style={{ marginTop: 4, marginBottom: 4 }}>
                         {resolvedStatus === 'stable' && (
-                          <span style={{ color: '#00ffaa', fontSize: '0.8rem', fontWeight: 600 }}>
-                            🟢 Còn ổn • Dùng dài ngày (không cần mua)
+                          <span style={{ color: '#00ffaa', fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <CheckCircle2 size={13} /> {t('menu.statusStable')}
                           </span>
                         )}
                         {resolvedStatus === 'low' && (
-                          <span style={{ color: '#ffcc00', fontSize: '0.8rem', fontWeight: 600 }}>
-                            🟡 Còn ít • Đủ vài bữa tới (cân nhắc mua thêm)
+                          <span style={{ color: '#ffcc00', fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <AlertCircle size={13} /> {t('menu.statusLow')}
                           </span>
                         )}
                         {resolvedStatus === 'out' && (
-                          <span style={{ color: '#ff6666', fontSize: '0.8rem', fontWeight: 600 }}>
-                            🔴 Đã hết • Chờ món cần mới gợi ý mua
+                          <span style={{ color: '#ff6666', fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <XCircle size={13} /> {t('menu.statusOut')}
                           </span>
                         )}
                       </div>
                     ) : (
                       <>
                         {item.quantity <= 0 && (
-                          <div style={{ color: '#ff4444', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                            ⚠️ Đã dùng hết (Sẽ dọn sau 7 ngày nếu không bổ sung)
+                          <div style={{ color: '#ff6666', fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <AlertTriangle size={13} /> {t('menu.statusDepletedNote')}
                           </div>
                         )}
                         {(item.totalValue !== undefined && item.totalValue > 0) && (
-                          <div style={{ color: '#fff', fontSize: '0.82rem' }}>
-                            {item.isGift ? 'Ước tính giá:' : 'Giá trị còn lại:'} {formatMoney(item.totalValue)}
+                          <div style={{ color: '#fff', fontSize: '0.82rem', marginTop: 3 }}>
+                            {item.isGift ? `${t('menu.estimatedValue')}:` : `${t('menu.remainingValue')}:`} {formatMoney(item.totalValue)}
                             {item.quantity > 0 && (
-                              <span style={{ color: '#a0c4ff' }}> (≈ {formatMoney(Math.round(item.totalValue / item.quantity))} đ/{item.unit})</span>
+                              <span style={{ color: '#a0c4ff' }}> (≈ {formatMoney(Math.round(item.totalValue / item.quantity))} /{item.unit})</span>
                             )}
                           </div>
                         )}
@@ -194,7 +203,7 @@ export default function InventoryTab({
                     )}
 
                     {item.expiryDate && (
-                      <span className={styles.inventoryWarning}>
+                      <span className={styles.inventoryWarning} style={{ marginTop: 3 }}>
                         <ShieldAlert size={12} /> HSD: {item.expiryDate}
                       </span>
                     )}
@@ -208,25 +217,25 @@ export default function InventoryTab({
                       type="button"
                       className={`${styles.spiceStatusBtn} ${resolvedStatus === 'stable' ? styles.spiceStatusBtnStableActive : ''}`}
                       onClick={() => onUpdateStockStatus(item.id, 'stable')}
-                      title="Đánh dấu Còn ổn (dùng dài ngày)"
+                      title={t('menu.statusStable')}
                     >
-                      Còn ổn
+                      {t('menu.statusStable')}
                     </button>
                     <button
                       type="button"
                       className={`${styles.spiceStatusBtn} ${resolvedStatus === 'low' ? styles.spiceStatusBtnLowActive : ''}`}
                       onClick={() => onUpdateStockStatus(item.id, 'low')}
-                      title="Đánh dấu Còn ít (sắp hết, đủ vài bữa tới)"
+                      title={t('menu.statusLow')}
                     >
-                      Còn ít
+                      {t('menu.statusLow')}
                     </button>
                     <button
                       type="button"
                       className={`${styles.spiceStatusBtn} ${resolvedStatus === 'out' ? styles.spiceStatusBtnOutActive : ''}`}
                       onClick={() => onUpdateStockStatus(item.id, 'out')}
-                      title="Đánh dấu Đã hết (chỉ đề xuất mua khi món cần dùng)"
+                      title={t('menu.statusOut')}
                     >
-                      Đã hết
+                      {t('menu.statusOut')}
                     </button>
                   </div>
                 ) : (
@@ -264,7 +273,7 @@ export default function InventoryTab({
       <div className={styles.inventoryFabGroup}>
         {isFabExpanded && (
           <>
-            <label className={styles.scanFabLabel} title="Chụp ảnh hóa đơn qua camera" style={{ marginBottom: 0 }}>
+            <label className={styles.scanFabLabel} title="Chụp ảnh qua camera" style={{ marginBottom: 0 }}>
               <input
                 type="file"
                 accept="image/*"
@@ -276,7 +285,7 @@ export default function InventoryTab({
                 <Camera size={18} />
               </div>
             </label>
-            <label className={styles.scanFabLabel} title="Tải ảnh hóa đơn từ máy" style={{ marginBottom: 0 }}>
+            <label className={styles.scanFabLabel} title="Tải ảnh từ thiết bị" style={{ marginBottom: 0 }}>
               <input
                 type="file"
                 accept="image/*"
@@ -290,7 +299,7 @@ export default function InventoryTab({
             <SaoButton
               variant="default"
               className={styles.manualAddFab}
-              title="Thêm thủ công vào kho"
+              title={t('menu.addInventory')}
               onClick={() => { onToggleFab(); onManualAdd(); }}
               style={{ width: 42, height: 42, borderRadius: '50%', padding: 0 }}
             >
@@ -302,7 +311,7 @@ export default function InventoryTab({
           variant="primary"
           className={styles.menuFabMain}
           onClick={onToggleFab}
-          title="Tùy chọn nhập kho"
+          title={t('menu.addInventory')}
         >
           <Plus size={26} style={{ transform: isFabExpanded ? 'rotate(45deg)' : 'none', transition: 'transform 0.25s' }} />
         </SaoButton>

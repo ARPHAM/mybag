@@ -16,6 +16,7 @@ import {
 import SaoModal from '../../../components/SaoModal/SaoModal';
 import { getCategoryTransactions } from '../api';
 import type { Transaction } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 import styles from './CategoryDrilldownModal.module.css';
 
 interface CategoryDrilldownModalProps {
@@ -43,6 +44,7 @@ export default function CategoryDrilldownModal({
   formatMoney,
   fallbackTransactions = []
 }: CategoryDrilldownModalProps) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -171,7 +173,7 @@ export default function CategoryDrilldownModal({
     <SaoModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Bóc tách chi tiêu: ${categoryName}`}
+      title={`${t('finance.drilldownTitle')}: ${categoryName}`}
       icon={<PieChart size={20} color={categoryColor} />}
     >
       <div className={styles.modalContainer}>
@@ -180,7 +182,7 @@ export default function CategoryDrilldownModal({
           <div className={styles.periodBadge}>
             <Calendar size={14} />
             <span>
-              {period === '30days' ? '30 ngày qua' : '6 tháng qua'} ({startDate} → {endDate})
+              {period === '30days' ? t('finance.past30Days') : t('finance.past6Months')} ({startDate} → {endDate})
             </span>
           </div>
           <div
@@ -195,33 +197,33 @@ export default function CategoryDrilldownModal({
         <div className={styles.kpiGrid}>
           <div className={styles.kpiCard}>
             <div className={styles.kpiLabel}>
-              <DollarSign size={13} color="#00f0ff" /> Tổng chi
+              <DollarSign size={13} color="#00f0ff" /> {t('finance.totalExpense')}
             </div>
             <div className={styles.kpiValue} style={{ color: '#ff5555' }}>
-              {formatMoney(stats.totalAmount)} đ
+              {formatMoney(stats.totalAmount)} {t('common.vnd')}
             </div>
           </div>
 
           <div className={styles.kpiCard}>
             <div className={styles.kpiLabel}>
-              <Receipt size={13} color="#00f0ff" /> Số khoản chi
+              <Receipt size={13} color="#00f0ff" /> {t('finance.transactionCount')}
             </div>
-            <div className={styles.kpiValue}>{stats.count} khoản</div>
+            <div className={styles.kpiValue}>{stats.count} {t('finance.itemsOf')}</div>
           </div>
 
           <div className={styles.kpiCard}>
             <div className={styles.kpiLabel}>
-              <ArrowUpDown size={13} color="#00f0ff" /> Trung bình / lần
+              <ArrowUpDown size={13} color="#00f0ff" /> {t('finance.avgPerTx')}
             </div>
-            <div className={styles.kpiValue}>{formatMoney(stats.avgAmount)} đ</div>
+            <div className={styles.kpiValue}>{formatMoney(stats.avgAmount)} {t('common.vnd')}</div>
           </div>
 
           <div className={styles.kpiCard}>
             <div className={styles.kpiLabel}>
-              <TrendingUp size={13} color="#ffd700" /> Khoản lớn nhất
+              <TrendingUp size={13} color="#ffd700" /> {t('finance.largestTx')}
             </div>
             <div className={styles.kpiValue} style={{ color: '#ffd700' }}>
-              {stats.maxTx ? formatMoney(stats.maxTx.amount) + ' đ' : '0 đ'}
+              {stats.maxTx ? `${formatMoney(stats.maxTx.amount)} ${t('common.vnd')}` : `0 ${t('common.vnd')}`}
             </div>
           </div>
         </div>
@@ -232,7 +234,7 @@ export default function CategoryDrilldownModal({
             <div className={styles.topBoxHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Sparkles size={15} color="#00f0ff" />
-                <span>Các khoản chi tiêu chiếm phần lớn số tiền</span>
+                <span>{t('finance.topExpenseTitle')}</span>
               </div>
               <span style={{ fontSize: '0.75rem', color: '#a0c4ff' }}>Top {topExpenses.length}</span>
             </div>
@@ -247,11 +249,11 @@ export default function CategoryDrilldownModal({
                         #{idx + 1}
                       </span>
                       <span className={styles.topDesc} title={item.description}>
-                        {item.description}
+                        {item.description}{' '}
                         <span className={styles.topDate}>({item.date})</span>
                       </span>
                       <span className={styles.topAmount}>
-                        {formatMoney(item.amount)} đ{' '}
+                        {formatMoney(item.amount)} {t('common.vnd')}{' '}
                         <span style={{ fontSize: '0.72rem', color: '#a0c4ff', fontWeight: 'normal' }}>
                           ({percent}%)
                         </span>
@@ -272,7 +274,7 @@ export default function CategoryDrilldownModal({
           <input
             type="text"
             className={styles.searchInput}
-            placeholder="Tìm theo tên món / mô tả..."
+            placeholder={t('finance.searchTxPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -283,7 +285,7 @@ export default function CategoryDrilldownModal({
               value={selectedWallet}
               onChange={(e) => setSelectedWallet(e.target.value)}
             >
-              <option value="all">Tất cả nguồn ví</option>
+              <option value="all">{t('finance.allWallets')}</option>
               {walletOptions.map((w) => (
                 <option key={w} value={w}>
                   {w}
@@ -297,9 +299,9 @@ export default function CategoryDrilldownModal({
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
           >
-            <option value="amount_desc">Số tiền: Cao → Thấp</option>
-            <option value="date_desc">Thời gian: Mới nhất</option>
-            <option value="date_asc">Thời gian: Cũ nhất</option>
+            <option value="amount_desc">{t('finance.sortAmountDesc')}</option>
+            <option value="date_desc">{t('finance.sortDateDesc')}</option>
+            <option value="date_asc">{t('finance.sortDateAsc')}</option>
           </select>
         </div>
 
@@ -307,12 +309,12 @@ export default function CategoryDrilldownModal({
         {loading && transactions.length === 0 ? (
           <div className={styles.stateBox}>
             <Loader2 size={24} className="animate-spin" color="#00f0ff" />
-            <span>Đang bóc tách chi tiết danh mục...</span>
+            <span>{t('finance.drilldownLoading')}</span>
           </div>
         ) : displayItems.length === 0 ? (
           <div className={styles.stateBox}>
             <span>
-              {searchTerm ? 'Không tìm thấy khoản chi nào khớp với từ khóa.' : 'Không có giao dịch nào trong danh mục này.'}
+              {searchTerm ? t('finance.noMatchingTx') : t('finance.noCategoryTx')}
             </span>
           </div>
         ) : (
@@ -332,7 +334,7 @@ export default function CategoryDrilldownModal({
                     )}
                   </div>
                 </div>
-                <div className={styles.txRight}>-{formatMoney(tx.amount)} đ</div>
+                <div className={styles.txRight}>-{formatMoney(tx.amount)} {t('common.vnd')}</div>
               </div>
             ))}
           </div>
@@ -341,11 +343,11 @@ export default function CategoryDrilldownModal({
         {/* Footer */}
         <div className={styles.modalFooter}>
           <span>
-            Hiển thị <strong>{displayItems.length}</strong> / {transactions.length} khoản chi
+            {t('finance.showingTransactions')} <strong>{displayItems.length}</strong> / {transactions.length} {t('finance.itemsOf')}
           </span>
           {loading && (
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#00f0ff' }}>
-              <Loader2 size={12} className="animate-spin" /> Đang cập nhật...
+              <Loader2 size={12} className="animate-spin" /> {t('common.loading')}
             </span>
           )}
         </div>

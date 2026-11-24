@@ -2,7 +2,8 @@
 
 import {
   Edit3, Wheat, Package, Wallet,
-  ShieldAlert, Minus, Plus, Camera, ImageIcon
+  ShieldAlert, Minus, Plus, Camera, ImageIcon,
+  Gift, AlertTriangle
 } from 'lucide-react';
 import SaoButton from '../../../components/SaoButton/SaoButton';
 import styles from '../finance.module.css';
@@ -57,7 +58,11 @@ export default function InventoryTab({
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span>Phân loại: {item.category === 'food' ? 'Thực phẩm' : item.category === 'spices' ? 'Gia vị' : 'Đồ dùng'}</span>
                     <span style={{ color: '#00f0ff' }}>
-                      {item.isGift ? '🎁 Được tặng' : (
+                      {item.isGift ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Gift size={12} /> Được tặng
+                        </span>
+                      ) : (
                         <>
                           <Wallet size={10} style={{ display: 'inline', marginRight: 4 }} />
                           {item.walletName}
@@ -66,8 +71,8 @@ export default function InventoryTab({
                     </span>
                   </div>
                   {item.quantity <= 0 && (
-                    <div style={{ color: '#ff4444', fontSize: '0.82rem', fontWeight: 'bold', marginBottom: '4px' }}>
-                      ⚠️ Đã dùng hết (Sẽ tự dọn sau 7 ngày nếu không hoàn tác/bổ sung)
+                    <div style={{ color: '#ff6666', fontSize: '0.82rem', fontWeight: 'bold', marginBottom: '4px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <AlertTriangle size={13} /> Đã dùng hết (Tự dọn sau 7 ngày)
                     </div>
                   )}
                   {(item.totalValue !== undefined && item.totalValue > 0) && (

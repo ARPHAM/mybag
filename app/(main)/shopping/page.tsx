@@ -17,9 +17,11 @@ import { getWallets, createInventory } from '../finance/api';
 type CategoryType = 'all' | 'food' | 'household' | 'other';
 
 import { GroceryItem, WalletSource } from '@/lib/types';
-import { GROCERY_CATEGORY_OPTIONS } from '@/lib/constants';
+import { getGroceryCategoryOptions } from '@/lib/constants';
+import { useI18n } from '@/lib/i18n';
 
 export default function ShoppingPage() {
+  const { t } = useI18n();
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [wallets, setWallets] = useState<WalletSource[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -193,17 +195,17 @@ export default function ShoppingPage() {
 
   const getCategoryLabel = (category: string) => {
     switch (category) {
-      case 'food': return 'Thực phẩm';
-      case 'household': return 'Đồ dùng';
-      default: return 'Khác';
+      case 'food': return t('shopping.foodTab');
+      case 'household': return t('shopping.householdTab');
+      default: return t('shopping.otherTab');
     }
   };
 
   const tabOptions = [
-    { id: 'all', label: `Tất cả (${totalCount})` },
-    { id: 'food', label: 'Thực phẩm' },
-    { id: 'household', label: 'Đồ dùng' },
-    { id: 'other', label: 'Khác' }
+    { id: 'all', label: `${t('common.all')} (${totalCount})` },
+    { id: 'food', label: t('shopping.foodTab') },
+    { id: 'household', label: t('shopping.householdTab') },
+    { id: 'other', label: t('shopping.otherTab') }
   ];
 
   const walletSelectOptions = wallets.map(w => ({
@@ -217,13 +219,13 @@ export default function ShoppingPage() {
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
           <ShoppingCart className={styles.titleIcon} size={28} />
-          <h1 className={styles.title}>Danh Sách Mua Sắm</h1>
+          <h1 className={styles.title}>{t('shopping.title')}</h1>
         </div>
 
         {/* PROGRESS BAR */}
         <div className={styles.progressContainer}>
           <div className={styles.progressHeader}>
-            <span className={styles.progressLabel}>Tiến độ mua sắm</span>
+            <span className={styles.progressLabel}>{t('tasks.progress')}</span>
             <span className={styles.progressValue}>{completedCount}/{totalCount} ({Math.round(progressPercent)}%)</span>
           </div>
           <div className={styles.progressBarBg}>
@@ -246,6 +248,10 @@ export default function ShoppingPage() {
       <div className={styles.groceryList}>
         {isLoading ? (
           <SaoLoading fullPage />
+        ) : filteredItems.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8', fontStyle: 'italic' }}>
+            {t('shopping.empty')}
+          </div>
         ) : (
           filteredItems.map(item => (
             <div 
@@ -264,7 +270,7 @@ export default function ShoppingPage() {
                     {getCategoryIcon(item.category)} {getCategoryLabel(item.category)}
                   </span>
                   <span>
-                    • Số lượng dự kiến: {item.quantity} {item.unit}
+                    • {t('shopping.expectedQuantity')}: {item.quantity} {item.unit}
                   </span>
                 </div>
               </div>
@@ -275,11 +281,11 @@ export default function ShoppingPage() {
                   <SaoButton
                     variant="ghost"
                     onClick={(e) => openInventoryModal(e, item)}
-                    title="Đã mua -> Chuyển vào Kho dự trữ & Ghi chi tiêu"
+                    title={t('shopping.moveToPantry')}
                     style={{ color: '#00ffaa', borderColor: 'rgba(0, 255, 170, 0.4)' }}
                   >
                     <PackagePlus size={16} style={{ marginRight: 4 }} />
-                    <span className="hidden sm:inline">Nhập kho</span>
+                    <span className="hidden sm:inline">{t('shopping.moveToPantry')}</span>
                   </SaoButton>
                 )}
 
@@ -287,7 +293,7 @@ export default function ShoppingPage() {
                   variant="ghost"
                   ghostType="danger"
                   onClick={(e) => confirmDelete(e, item._id)}
-                  title="Xóa"
+                  title={t('common.delete')}
                 >
                   <Trash2 size={16} />
                 </SaoButton>
@@ -297,7 +303,7 @@ export default function ShoppingPage() {
         )}
         
         <SaoButton variant="dashed" onClick={openAddModal}>
-          <Plus size={20} /> Thêm vào danh sách
+          <Plus size={20} /> {t('shopping.addItem')}
         </SaoButton>
       </div>
 
@@ -305,15 +311,15 @@ export default function ShoppingPage() {
       <SaoModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
-        title="Thêm Mục Mới" 
+        title={t('shopping.addItemModal')} 
         icon={<Plus size={20} />}
       >
         <form onSubmit={handleSave}>
           <div className={styles.formGroup}>
-            <label>Tên mặt hàng</label>
+            <label>{t('shopping.itemName')}</label>
             <SaoInput
               type="text"
-              placeholder="Vd: Thịt heo, sữa..."
+              placeholder={t('shopping.itemNamePlaceholder')}
               value={formData.name}
               onChange={e => setFormData({...formData, name: e.target.value})}
               required
@@ -323,7 +329,7 @@ export default function ShoppingPage() {
 
           <div className={styles.flexRow}>
             <div className={styles.formGroup}>
-              <label>Số lượng</label>
+              <label>{t('shopping.quantity')}</label>
               <SaoInput
                 type="number"
                 min="1"
@@ -332,10 +338,10 @@ export default function ShoppingPage() {
               />
             </div>
             <div className={styles.formGroup}>
-              <label>Đơn vị</label>
+              <label>{t('shopping.unit')}</label>
               <SaoInput
                 type="text"
-                placeholder="kg, lít, cái..."
+                placeholder={t('shopping.unitPlaceholder')}
                 value={formData.unit}
                 onChange={e => setFormData({...formData, unit: e.target.value})}
               />
@@ -343,9 +349,9 @@ export default function ShoppingPage() {
           </div>
 
           <div className={styles.formGroup}>
-            <label>Danh mục</label>
+            <label>{t('shopping.category')}</label>
             <SaoSelect
-              options={GROCERY_CATEGORY_OPTIONS}
+              options={getGroceryCategoryOptions(t)}
               initialValue={formData.category}
               onChange={val => setFormData({...formData, category: val as 'food' | 'household' | 'other'})}
             />
@@ -353,10 +359,10 @@ export default function ShoppingPage() {
 
           <div className={styles.modalFooter}>
             <SaoButton variant="default" onClick={() => setIsAddModalOpen(false)} type="button">
-              Hủy bỏ
+              {t('common.cancel')}
             </SaoButton>
             <SaoButton variant="primary" type="submit">
-              Thêm
+              {t('common.add')}
             </SaoButton>
           </div>
         </form>
@@ -366,16 +372,16 @@ export default function ShoppingPage() {
       <SaoModal
         isOpen={!!inventoryItem}
         onClose={() => setInventoryItem(null)}
-        title="Xác nhận mua & Nhập vào Kho dự trữ"
+        title={t('shopping.transferToPantryTitle')}
         icon={<PackagePlus size={20} color="#00ffaa" />}
       >
         <form onSubmit={handleConfirmTransfer}>
           <div style={{ color: '#a0c4ff', fontSize: '0.85rem', marginBottom: '14px', lineHeight: 1.4 }}>
-            Nhập số lượng và chi phí thực tế tại chợ để đưa món đồ này vào Kho dự trữ và tự động ghi chép chi tiêu tài chính.
+            {t('shopping.transferDesc')}
           </div>
 
           <div className={styles.formGroup}>
-            <label>Tên mặt hàng</label>
+            <label>{t('shopping.itemName')}</label>
             <SaoInput
               type="text"
               value={invData.name}
@@ -386,7 +392,7 @@ export default function ShoppingPage() {
 
           <div className={styles.flexRow}>
             <div className={styles.formGroup}>
-              <label>Số lượng thực mua</label>
+              <label>{t('shopping.actualQuantity')}</label>
               <SaoInput
                 type="number"
                 min="0.1"
@@ -397,10 +403,10 @@ export default function ShoppingPage() {
               />
             </div>
             <div className={styles.formGroup}>
-              <label>Đơn vị tính</label>
+              <label>{t('shopping.unit')}</label>
               <SaoInput
                 type="text"
-                placeholder="kg, lít, hộp, bó..."
+                placeholder={t('shopping.unitPlaceholder')}
                 value={invData.unit}
                 onChange={e => setInvData({ ...invData, unit: e.target.value })}
                 required
@@ -417,14 +423,14 @@ export default function ShoppingPage() {
                 onChange={e => setInvData({ ...invData, isGift: e.target.checked })}
                 className="accent-cyan-400"
               />
-              Được tặng / Miễn phí (không trừ tiền ví)
+              {t('shopping.isGiftFree')}
             </label>
           </div>
 
           {!invData.isGift && (
             <>
               <div className={styles.formGroup}>
-                <label>Tổng tiền thực tế đã chi (VND)</label>
+                <label>{t('shopping.totalSpentVnd')}</label>
                 <SaoInput
                   type="number"
                   min="0"
@@ -437,9 +443,9 @@ export default function ShoppingPage() {
               </div>
 
               <div className={styles.formGroup}>
-                <label>Ví thanh toán</label>
+                <label>{t('shopping.walletSource')}</label>
                 {wallets.length === 0 ? (
-                  <div style={{ color: '#f59e0b', fontSize: '0.85rem' }}>Chưa có ví nào trong hệ thống</div>
+                  <div style={{ color: '#f59e0b', fontSize: '0.85rem' }}>{t('shopping.noWallets')}</div>
                 ) : (
                   <SaoSelect
                     options={walletSelectOptions}
@@ -452,20 +458,20 @@ export default function ShoppingPage() {
           )}
 
           <div className={styles.formGroup}>
-            <label>Hạn sử dụng (Tùy chọn)</label>
+            <label>{t('shopping.expiryDateOptional')}</label>
             <SaoDatePicker
               value={invData.expiryDate}
               onChange={val => setInvData({ ...invData, expiryDate: val })}
-              placeholder="Chọn ngày hết hạn..."
+              placeholder={t('shopping.pickExpiryDate')}
             />
           </div>
 
           <div className={styles.modalFooter}>
             <SaoButton variant="default" onClick={() => setInventoryItem(null)} type="button">
-              Hủy
+              {t('common.cancel')}
             </SaoButton>
             <SaoButton variant="primary" type="submit" disabled={isTransferring}>
-              {isTransferring ? 'Đang nhập kho...' : 'Xác nhận nhập kho'}
+              {isTransferring ? t('shopping.transferring') : t('shopping.confirmTransfer')}
             </SaoButton>
           </div>
         </form>
@@ -475,18 +481,18 @@ export default function ShoppingPage() {
       <SaoModal
         isOpen={!!itemToDelete}
         onClose={() => setItemToDelete(null)}
-        title="Xác nhận xóa"
+        title={t('shopping.confirmDeleteTitle')}
         icon={<AlertTriangle size={20} />}
       >
         <div className={styles.confirmText}>
-          Bạn có chắc chắn muốn xóa mục này khỏi danh sách không?
+          {t('shopping.deleteItemDesc')}
         </div>
         <div className={styles.modalFooter}>
           <SaoButton variant="default" onClick={() => setItemToDelete(null)} type="button">
-            Hủy
+            {t('common.cancel')}
           </SaoButton>
           <SaoButton variant="danger" onClick={handleDelete} type="button">
-            <Trash2 size={16} /> Xóa
+            <Trash2 size={16} /> {t('common.delete')}
           </SaoButton>
         </div>
       </SaoModal>

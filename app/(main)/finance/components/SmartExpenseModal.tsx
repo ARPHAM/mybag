@@ -59,7 +59,7 @@ export default function SmartExpenseModal({
     try {
       const res: any = await executeSmartExpense(parsedResult.actions);
       if (res?.success) {
-        showAlert(`🎉 ${res.message || 'Thực hiện thành công!'}`);
+        showAlert(`${res.message || 'Thực hiện thành công!'}`);
         window.dispatchEvent(new CustomEvent('sao-user-updated'));
         window.dispatchEvent(new CustomEvent('sao-shopping-updated'));
         window.dispatchEvent(new CustomEvent('sao-inventory-updated'));

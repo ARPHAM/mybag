@@ -12,11 +12,12 @@ import {
   CartesianGrid,
   Cell
 } from 'recharts';
-import { TrendingUp, PieChart as PieChartIcon, Calendar, ChevronRight } from 'lucide-react';
+import { TrendingUp, PieChart as PieChartIcon, ChevronRight } from 'lucide-react';
 import SaoButton from '../../../components/SaoButton/SaoButton';
 import styles from '../finance.module.css';
 import type { Transaction } from '@/lib/types';
 import { FINANCE_CATEGORY_OPTIONS } from '@/lib/constants/finance';
+import { useI18n } from '@/lib/i18n';
 import CategoryDrilldownModal from './CategoryDrilldownModal';
 
 interface FinanceChartsProps {
@@ -52,9 +53,18 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function FinanceCharts({ transactions, formatMoney }: FinanceChartsProps) {
+  const { t } = useI18n();
   const [viewMode, setViewMode] = useState<'comparison' | 'category'>('comparison');
   const [period, setPeriod] = useState<'30days' | '6months'>('30days');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const getCategoryName = (key: string) => {
+    const normalizedKey = key.toLowerCase().trim();
+    const i18nKey = `finance.categories.${normalizedKey}`;
+    const translated = (t as any)(i18nKey);
+    if (translated && translated !== i18nKey) return translated;
+    return CATEGORY_LABEL_MAP[normalizedKey] || CATEGORY_LABEL_MAP[key] || key;
+  };
 
   const dateRange = useMemo(() => {
     const now = new Date();
@@ -141,7 +151,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
         const normalizedKey = key.toLowerCase().trim();
         return {
           categoryKey: key,
-          name: CATEGORY_LABEL_MAP[normalizedKey] || CATEGORY_LABEL_MAP[key] || key,
+          name: getCategoryName(key),
           amount,
           percentage: totalExpense > 0 ? Math.round((amount / totalExpense) * 100) : 0,
           color: CATEGORY_COLORS[normalizedKey] || CATEGORY_COLORS[key] || '#00f0ff'
@@ -150,7 +160,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
       .sort((a, b) => b.amount - a.amount);
 
     return { items: result, totalExpense };
-  }, [transactions, period]);
+  }, [transactions, period, t]);
 
   const CustomComparisonTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -163,7 +173,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
           boxShadow: '0 0 15px rgba(0, 240, 255, 0.3)',
           backdropFilter: 'blur(8px)'
         }}>
-          <p style={{ color: '#a0c4ff', margin: '0 0 8px 0', fontWeight: 'bold' }}>Thời gian: {label}</p>
+          <p style={{ color: '#a0c4ff', margin: '0 0 8px 0', fontWeight: 'bold' }}>{t('finance.timeLabel')}: {label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{
               color: entry.dataKey === 'income' ? '#00f0ff' : '#ff4444',
@@ -173,8 +183,8 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
               justifyContent: 'space-between',
               gap: '15px'
             }}>
-              <span>{entry.dataKey === 'income' ? '● Thu nhập:' : '● Chi tiêu:'}</span>
-              <span style={{ fontWeight: 'bold' }}>{formatMoney(entry.value)} VND</span>
+              <span>{entry.dataKey === 'income' ? `● ${t('finance.income')}:` : `● ${t('finance.expense')}:`}</span>
+              <span style={{ fontWeight: 'bold' }}>{formatMoney(entry.value)} {t('common.currency')}</span>
             </p>
           ))}
         </div>
@@ -197,10 +207,10 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
         }}>
           <p style={{ color: data.color, margin: '0 0 4px 0', fontWeight: 'bold', fontSize: '1rem' }}>{data.name}</p>
           <p style={{ color: '#fff', margin: '2px 0', fontSize: '0.9rem' }}>
-            Chi tiêu: <span style={{ fontWeight: 'bold' }}>{formatMoney(data.amount)} VND</span>
+            {t('finance.spentLabel')}: <span style={{ fontWeight: 'bold' }}>{formatMoney(data.amount)} {t('common.currency')}</span>
           </p>
           <p style={{ color: '#a0c4ff', margin: '2px 0', fontSize: '0.85rem' }}>
-            Tỷ trọng: <span style={{ fontWeight: 'bold' }}>{data.percentage}%</span>
+            {t('finance.ratioLabel')}: <span style={{ fontWeight: 'bold' }}>{data.percentage}%</span>
           </p>
         </div>
       );
@@ -214,7 +224,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
       <div className={styles.chartsHeader}>
         <div className={styles.chartsTitle}>
           <TrendingUp size={20} color="var(--sao-primary-hex)" />
-          <span>BIỂU ĐỒ TÀI CHÍNH</span>
+          <span>{t('finance.chartTitle')}</span>
         </div>
 
         <div className={styles.chartsControls}>
@@ -226,7 +236,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
               onClick={() => setViewMode('comparison')}
             >
               <TrendingUp size={13} style={{ marginRight: 4 }} />
-              Thu & Chi
+              {t('finance.chartIncomeExpense')}
             </SaoButton>
             <SaoButton
               variant={viewMode === 'category' ? 'primary' : 'ghost'}
@@ -234,7 +244,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
               onClick={() => setViewMode('category')}
             >
               <PieChartIcon size={13} style={{ marginRight: 4 }} />
-              Danh mục
+              {t('finance.chartCategory')}
             </SaoButton>
           </div>
 
@@ -247,14 +257,14 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
               style={{ padding: '4px 8px', fontSize: '0.8rem' }}
               onClick={() => setPeriod('30days')}
             >
-              30 Ngày
+              {t('finance.filter30Days')}
             </SaoButton>
             <SaoButton
               variant={period === '6months' ? 'primary' : 'ghost'}
               style={{ padding: '4px 8px', fontSize: '0.8rem' }}
               onClick={() => setPeriod('6months')}
             >
-              6 Tháng
+              {t('finance.filter6Months')}
             </SaoButton>
           </div>
         </div>
@@ -277,7 +287,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
               <Legend
                 formatter={(value) => (
                   <span style={{ color: value === 'income' ? '#00f0ff' : '#ff4444', fontSize: '0.82rem', fontWeight: 'bold' }}>
-                    {value === 'income' ? 'Thu nhập' : 'Chi tiêu'}
+                    {value === 'income' ? t('finance.income') : t('finance.expense')}
                   </span>
                 )}
               />
@@ -290,7 +300,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
         <div className={categoryData.items.length > 0 ? styles.categoryChartGrid : styles.categoryChartGridEmpty}>
           {categoryData.items.length === 0 ? (
             <div style={{ textAlign: 'center', color: '#a0c4ff', padding: '40px 0', fontStyle: 'italic' }}>
-              Chưa có dữ liệu chi tiêu trong khoảng thời gian này.
+              {t('finance.noExpensePeriod')}
             </div>
           ) : (
             <>
@@ -340,7 +350,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
                 border: '1px solid rgba(var(--sao-primary-rgb), 0.2)'
               }}>
                 <div style={{ fontSize: '0.85rem', color: '#a0c4ff', textTransform: 'uppercase', marginBottom: '4px' }}>
-                  Tổng chi: <span style={{ color: '#ff4444', fontWeight: 'bold' }}>{formatMoney(categoryData.totalExpense)} VND</span>
+                  {t('finance.totalExpense')}: <span style={{ color: '#ff4444', fontWeight: 'bold' }}>{formatMoney(categoryData.totalExpense)} {t('common.currency')}</span>
                 </div>
                 {categoryData.items.map(item => (
                   <div
@@ -349,7 +359,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
                     onClick={() => setSelectedCategory(item.categoryKey)}
                     role="button"
                     tabIndex={0}
-                    title="Bấm để bóc tách chi tiết các khoản chi"
+                    title={t('finance.drilldownHint')}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
@@ -363,7 +373,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
                   </div>
                 ))}
                 <div className={styles.categoryChartHint}>
-                  * Bấm vào từng danh mục hoặc cột biểu đồ để bóc tách chi tiết
+                  {t('finance.drilldownHint')}
                 </div>
               </div>
             </>
@@ -377,7 +387,7 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
           isOpen={!!selectedCategory}
           onClose={() => setSelectedCategory(null)}
           categoryKey={selectedCategory}
-          categoryName={CATEGORY_LABEL_MAP[selectedCategory.toLowerCase().trim()] || CATEGORY_LABEL_MAP[selectedCategory] || selectedCategory}
+          categoryName={getCategoryName(selectedCategory)}
           categoryColor={CATEGORY_COLORS[selectedCategory.toLowerCase().trim()] || CATEGORY_COLORS[selectedCategory] || '#00f0ff'}
           period={period}
           startDate={dateRange.startDate}

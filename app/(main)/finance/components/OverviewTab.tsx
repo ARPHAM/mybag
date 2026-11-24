@@ -11,6 +11,7 @@ import FinanceCharts from './FinanceCharts';
 import SaoButton from '../../../components/SaoButton/SaoButton';
 import styles from '../finance.module.css';
 import type { WalletSource, Transaction } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 
 interface Props {
   wallets: WalletSource[];
@@ -42,37 +43,47 @@ export function getCategoryIcon(category: string) {
 }
 
 export default function OverviewTab({ wallets, transactions, formatMoney, onAddTransaction, onEditWallet }: Props) {
+  const { t } = useI18n();
   const currentMonth = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7);
   const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
   const monthlyIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(currentMonth)).reduce((sum, t) => sum + t.amount, 0);
   const monthlyExpense = transactions.filter(t => t.type === 'expense' && t.date.startsWith(currentMonth)).reduce((sum, t) => sum + t.amount, 0);
 
+  const getWalletTypeLabel = (type: string) => {
+    switch (type) {
+      case 'bank': return t('finance.walletTypes.bank');
+      case 'ewallet': return t('finance.walletTypes.ewallet');
+      case 'cash': return t('finance.walletTypes.cash');
+      default: return type;
+    }
+  };
+
   return (
     <div className={styles.overviewGrid}>
       <div className={styles.totalBalanceCard}>
         <div className={styles.balanceLabel}>
-          <Wallet size={20} /> Tổng Tài Sản
+          <Wallet size={20} /> {t('finance.totalBalance')}
         </div>
         <div className={styles.balanceAmount}>
-          {formatMoney(totalBalance)} <span className={styles.currency}>VND</span>
+          {formatMoney(totalBalance)} <span className={styles.currency}>{t('common.currency')}</span>
         </div>
       </div>
 
       <div className={`${styles.summaryCard} ${styles.income}`}>
         <div className={styles.summaryHeader}>
-          <ArrowUpRight size={16} color="#00ffaa" style={{ flexShrink: 0 }} /> <span>Tổng Thu (Tháng)</span>
+          <ArrowUpRight size={16} color="#00ffaa" style={{ flexShrink: 0 }} /> <span>{t('finance.totalIncome')}</span>
         </div>
         <div className={`${styles.summaryAmount} ${styles.income}`}>
-          +{formatMoney(monthlyIncome)} <span style={{ fontSize: '0.8rem', color: '#a0c4ff', fontWeight: 'normal' }}>VND</span>
+          +{formatMoney(monthlyIncome)} <span style={{ fontSize: '0.8rem', color: '#a0c4ff', fontWeight: 'normal' }}>{t('common.currency')}</span>
         </div>
       </div>
 
       <div className={`${styles.summaryCard} ${styles.expense}`}>
         <div className={styles.summaryHeader}>
-          <ArrowDownRight size={16} color="#ff4444" style={{ flexShrink: 0 }} /> <span>Tổng Chi (Tháng)</span>
+          <ArrowDownRight size={16} color="#ff4444" style={{ flexShrink: 0 }} /> <span>{t('finance.totalExpense')}</span>
         </div>
         <div className={`${styles.summaryAmount} ${styles.expense}`}>
-          -{formatMoney(monthlyExpense)} <span style={{ fontSize: '0.8rem', color: '#a0c4ff', fontWeight: 'normal' }}>VND</span>
+          -{formatMoney(monthlyExpense)} <span style={{ fontSize: '0.8rem', color: '#a0c4ff', fontWeight: 'normal' }}>{t('common.currency')}</span>
         </div>
       </div>
 
@@ -91,22 +102,23 @@ export default function OverviewTab({ wallets, transactions, formatMoney, onAddT
                 {getWalletIcon(wallet.type)}
                 {wallet.name}
               </div>
-              <div className={styles.walletType}>{wallet.type}</div>
+              <div className={styles.walletType}>{getWalletTypeLabel(wallet.type)}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.8rem', color: '#a0c4ff', textTransform: 'uppercase' }}>Số dư khả dụng</div>
+              <div style={{ fontSize: '0.8rem', color: '#a0c4ff', textTransform: 'uppercase' }}>{t('finance.availableBalance')}</div>
               <div className={styles.walletBalance}>
-                {formatMoney(wallet.balance)} <span className={styles.walletCurrency}>VND</span>
+                {formatMoney(wallet.balance)} <span className={styles.walletCurrency}>{t('common.currency')}</span>
               </div>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Add Transaction FAB */}
       <SaoButton
         variant="primary"
         className={styles.overviewFab}
-        title="Ghi chép giao dịch"
+        title={t('finance.addTransaction')}
         onClick={onAddTransaction}
       >
         <Plus size={28} />

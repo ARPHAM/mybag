@@ -50,6 +50,7 @@ import {
 import { getYuiBriefing, parseYuiMessage, executeYuiActions } from './api';
 import styles from './YuiAssistant.module.css';
 import SaoMediaPickerButton from '../SaoMediaPickerButton/SaoMediaPickerButton';
+import { useI18n } from '@/lib/i18n';
 
 type Msg =
   | { role: 'user'; text: string; imagePreview?: string }
@@ -93,38 +94,49 @@ interface SpeechRecognitionInstanceLike {
   stop: () => void;
 }
 
-const WELCOME_MSG: Msg = {
+const getWelcomeMsg = (t: (key: any) => string): Msg => ({
   role: 'yui',
-  text: 'Chào Papa! Yui đây ✨ Yui là trợ lý riêng đồng hành cùng Papa trong thế giới SAO này. Papa có thể nhắn, nói bằng Micro, hoặc gửi ảnh hóa đơn / món ăn / cân nặng để Yui xử lý giúp Papa nha! (Yui sẽ luôn hiện bảng xác nhận để Papa kiểm tra hoặc sửa nhanh trước khi lưu vào hệ thống ạ).'
-};
+  text: t('yui.greeting')
+});
 
-const fmt = (n: number) => (Number(n) || 0).toLocaleString('vi-VN');
+const fmt = (n: number, lang: string = 'vi') => (Number(n) || 0).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN');
 
-const CATEGORY_LABELS: Record<string, string> = {
-  food: 'Ăn uống',
-  housing: 'Nhà cửa & Sinh hoạt',
-  transport: 'Đi lại',
-  entertainment: 'Giải trí',
-  shopping: 'Mua sắm',
-  health: 'Sức khoẻ',
-  other: 'Khác'
-};
+const getCategoryLabels = (t: (key: any) => string): Record<string, string> => ({
+  food: t('finance.categories.food'),
+  housing: t('finance.categories.housing'),
+  transport: t('finance.categories.transport'),
+  entertainment: t('finance.categories.entertainment'),
+  shopping: t('finance.categories.shopping'),
+  health: t('finance.categories.health'),
+  other: t('finance.categories.other')
+});
 
-const TASK_STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Chờ làm',
-  IN_PROGRESS: 'Đang làm',
-  COMPLETED: 'Hoàn thành'
-};
+const getTaskStatusLabels = (t: (key: any) => string): Record<string, string> => ({
+  PENDING: t('yui.taskPending'),
+  IN_PROGRESS: t('yui.taskInProgress'),
+  COMPLETED: t('yui.taskCompleted')
+});
 
-const WEEKDAY_SHORT: Record<number, string> = {
-  0: 'CN',
-  1: 'T2',
-  2: 'T3',
-  3: 'T4',
-  4: 'T5',
-  5: 'T6',
-  6: 'T7'
-};
+const getWeekdayShort = (t: (key: any) => string): Record<number, string> => ({
+  0: t('yui.sunShort'),
+  1: t('yui.monShort'),
+  2: t('yui.tueShort'),
+  3: t('yui.wedShort'),
+  4: t('yui.thuShort'),
+  5: t('yui.friShort'),
+  6: t('yui.satShort')
+});
+
+const getYuiSuggestions = (t: (key: any) => string): string[] => [
+  t('yui.suggestion1'),
+  t('yui.suggestion2'),
+  t('yui.suggestion3'),
+  t('yui.suggestion4'),
+  t('yui.suggestion5'),
+  t('yui.suggestion6'),
+  t('yui.suggestion7'),
+  t('yui.suggestion8')
+];
 
 const WALLET_ACTION_TYPES = new Set([
   'meal',
@@ -157,20 +169,22 @@ function getTitleFieldKey(actionType: string): string {
   return 'description';
 }
 
-function formatRecurrenceSummary(a: any): string | null {
+function formatRecurrenceSummary(a: any, t?: (key: any) => string): string | null {
   if (!a?.is_recurring) return null;
   const type = String(a.recurrence_type || 'WEEKLY').toUpperCase();
-  if (type === 'DAILY') return 'Lặp hàng ngày';
-  if (type === 'MONTHLY') return 'Lặp hàng tháng';
-  if (type === 'YEARLY') return 'Lặp hàng năm';
+  if (type === 'DAILY') return t ? t('yui.repeatDaily') : 'Lặp hàng ngày';
+  if (type === 'MONTHLY') return t ? t('yui.repeatMonthly') : 'Lặp hàng tháng';
+  if (type === 'YEARLY') return t ? t('yui.repeatYearly') : 'Lặp hàng năm';
   if (Array.isArray(a.recurrence_days) && a.recurrence_days.length > 0) {
+    const weekdayShort = t ? getWeekdayShort(t) : { 0: 'CN', 1: 'T2', 2: 'T3', 3: 'T4', 4: 'T5', 5: 'T6', 6: 'T7' };
     const days = a.recurrence_days
-      .map((d: number) => WEEKDAY_SHORT[Number(d)])
+      .map((d: number) => weekdayShort[Number(d)])
       .filter(Boolean)
       .join(', ');
-    return days ? `Lặp hàng tuần (${days})` : 'Lặp hàng tuần';
+    const weeklyText = t ? t('yui.repeatWeekly') : 'Lặp hàng tuần';
+    return days ? `${weeklyText} (${days})` : weeklyText;
   }
-  return 'Lặp hàng tuần';
+  return t ? t('yui.repeatWeekly') : 'Lặp hàng tuần';
 }
 
 interface InlineEditorProps {
@@ -182,23 +196,25 @@ interface InlineEditorProps {
 }
 
 function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose }: InlineEditorProps) {
-  const t = String(action?.actionType || '');
-  const titleKey = getTitleFieldKey(t);
+  const { t, language } = useI18n();
+  const actType = String(action?.actionType || '');
+  const titleKey = getTitleFieldKey(actType);
   const titleVal = String(action?.[titleKey] ?? action?.description ?? '');
+  const categoryLabels = getCategoryLabels(t);
 
-  const showAmount = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'update_transaction'].includes(t);
-  const showWallet = WALLET_ACTION_TYPES.has(t) && wallets.length > 0;
-  const isTransfer = t === 'transfer';
-  const showCategory = CATEGORY_ACTION_TYPES.has(t);
-  const showTaskFields = TASK_ACTION_TYPES.has(t);
-  const showCalendarFields = CALENDAR_ACTION_TYPES.has(t);
-  const showCustomTime = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'create_inventory', 'update_inventory', 'record_weight', 'update_transaction'].includes(t);
+  const showAmount = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'update_transaction'].includes(actType);
+  const showWallet = WALLET_ACTION_TYPES.has(actType) && wallets.length > 0;
+  const isTransfer = actType === 'transfer';
+  const showCategory = CATEGORY_ACTION_TYPES.has(actType);
+  const showTaskFields = TASK_ACTION_TYPES.has(actType);
+  const showCalendarFields = CALENDAR_ACTION_TYPES.has(actType);
+  const showCustomTime = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'create_inventory', 'update_inventory', 'record_weight', 'update_transaction'].includes(actType);
 
   return (
     <div className={styles.inlineEditor}>
       <div className={styles.inlineRow2}>
         <div className={styles.inlineField}>
-          <label>{titleKey === 'person' ? 'Đối tượng' : titleKey === 'title' ? 'Tiêu đề' : 'Tên / Mô tả'}</label>
+          <label>{titleKey === 'person' ? t('yui.targetPerson') : titleKey === 'title' ? t('yui.fieldTitle') : t('yui.fieldNameDesc')}</label>
           <input
             type="text"
             value={titleVal}
@@ -211,7 +227,7 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
 
         {showAmount && (
           <div className={styles.inlineField}>
-            <label>Số tiền (VND)</label>
+            <label>{t('menu.cost')} ({t('common.currency')})</label>
             <input
               type="number"
               min={0}
@@ -221,9 +237,9 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
           </div>
         )}
 
-        {t === 'upsert_budget' && (
+        {actType === 'upsert_budget' && (
           <div className={styles.inlineField}>
-            <label>Hạn mức (VND)</label>
+            <label>{t('finance.limit')} ({t('common.currency')})</label>
             <input
               type="number"
               min={0}
@@ -233,9 +249,9 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
           </div>
         )}
 
-        {t === 'record_weight' && (
+        {actType === 'record_weight' && (
           <div className={styles.inlineField}>
-            <label>Cân nặng (kg)</label>
+            <label>{t('health.weight')} (kg)</label>
             <input
               type="number"
               step="0.1"
@@ -246,9 +262,9 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
           </div>
         )}
 
-        {['create_shopping_item', 'create_inventory'].includes(t) && (
+        {['create_shopping_item', 'create_inventory'].includes(actType) && (
           <div className={styles.inlineField}>
-            <label>Số lượng</label>
+            <label>{t('yui.quantity')}</label>
             <input
               type="number"
               step="0.1"
@@ -260,11 +276,11 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
         )}
       </div>
 
-      {(showWallet || showCategory || showTaskFields || t === 'meal') && (
+      {(showWallet || showCategory || showTaskFields || actType === 'meal') && (
         <div className={styles.inlineRow2}>
           {showWallet && (
             <div className={styles.inlineField}>
-              <label>{isTransfer ? 'Ví nguồn' : 'Tài khoản / Ví'}</label>
+              <label>{isTransfer ? t('yui.sourceWallet') : t('yui.accountWallet')}</label>
               <select
                 value={action?.wallet_id || ''}
                 onChange={(e) => {
@@ -275,10 +291,10 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
                   });
                 }}
               >
-                <option value="">-- Chưa chọn ví --</option>
+                <option value="">{t('yui.unselectedWallet')}</option>
                 {wallets.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.name} ({fmt(w.balance)}đ)
+                    {w.name} ({fmt(w.balance, language)}{t('common.vnd')})
                   </option>
                 ))}
               </select>
@@ -287,7 +303,7 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
 
           {isTransfer && wallets.length > 0 && (
             <div className={styles.inlineField}>
-              <label>Ví đích</label>
+              <label>{t('yui.destWallet')}</label>
               <select
                 value={action?.to_wallet_id || ''}
                 onChange={(e) => {
@@ -298,10 +314,10 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
                   });
                 }}
               >
-                <option value="">-- Chọn ví đích --</option>
+                <option value="">{t('yui.selectDestWallet')}</option>
                 {wallets.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.name} ({fmt(w.balance)}đ)
+                    {w.name} ({fmt(w.balance, language)}{t('common.vnd')})
                   </option>
                 ))}
               </select>
@@ -310,28 +326,28 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
 
           {showCategory && (
             <div className={styles.inlineField}>
-              <label>Danh mục</label>
+              <label>{t('menu.category')}</label>
               <select
                 value={action?.category || 'other'}
                 onChange={(e) => onChange({ category: e.target.value })}
               >
-                {Object.entries(CATEGORY_LABELS).map(([k, lbl]) => (
+                {Object.entries(categoryLabels).map(([k, lbl]) => (
                   <option key={k} value={k}>{lbl}</option>
                 ))}
               </select>
             </div>
           )}
 
-          {t === 'meal' && (
+          {actType === 'meal' && (
             <div className={styles.inlineField}>
-              <label>Nguồn bữa ăn / Calo</label>
+              <label>{t('yui.mealSourceCalo')}</label>
               <div style={{ display: 'flex', gap: '4px' }}>
                 <select
                   value={action?.source === 'home' ? 'home' : 'eat_out'}
                   onChange={(e) => onChange({ source: e.target.value })}
                 >
-                  <option value="eat_out">Ăn ngoài</option>
-                  <option value="home">Tự nấu</option>
+                  <option value="eat_out">{t('menu.eatOut')}</option>
+                  <option value="home">{t('menu.homeCook')}</option>
                 </select>
                 <input
                   type="number"
@@ -347,7 +363,7 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
 
           {showTaskFields && (
             <div className={styles.inlineField}>
-              <label>Rank Quest</label>
+              <label>{t('tasks.rank')}</label>
               <select
                 value={action?.quest_rank || 'C'}
                 onChange={(e) => onChange({ quest_rank: e.target.value })}
@@ -365,7 +381,7 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
         <div className={styles.inlineRow2}>
           {showCustomTime && (
             <div className={styles.inlineField}>
-              <label>Thời gian (giờ VN)</label>
+              <label>{t('common.time')}</label>
               <input
                 type="datetime-local"
                 value={toVnDatetimeLocalValue(action?.custom_time, fallbackTime ? new Date(fallbackTime) : new Date())}
@@ -379,7 +395,7 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
 
           {showTaskFields && (
             <div className={styles.inlineField}>
-              <label>Hạn chót (giờ VN)</label>
+              <label>{t('tasks.deadline')}</label>
               <input
                 type="datetime-local"
                 value={toVnDatetimeLocalValue(action?.due_date, fallbackTime ? new Date(fallbackTime) : new Date())}
@@ -394,7 +410,7 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
           {showCalendarFields && (
             <>
               <div className={styles.inlineField}>
-                <label>Bắt đầu (giờ VN)</label>
+                <label>{t('calendar.startTime')}</label>
                 <input
                   type="datetime-local"
                   value={toVnDatetimeLocalValue(action?.start_time, fallbackTime ? new Date(fallbackTime) : new Date())}
@@ -405,7 +421,7 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
                 />
               </div>
               <div className={styles.inlineField}>
-                <label>Kết thúc (giờ VN)</label>
+                <label>{t('calendar.endTime')}</label>
                 <input
                   type="datetime-local"
                   value={toVnDatetimeLocalValue(action?.end_time || action?.start_time, fallbackTime ? new Date(fallbackTime) : new Date())}
@@ -422,30 +438,29 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
 
       <div className={styles.inlineDoneRow}>
         <button type="button" className={styles.inlineDoneBtn} onClick={onClose}>
-          <Check size={12} /> Xong chỉnh sửa
+          <Check size={12} /> {t('yui.doneEditing')}
         </button>
       </div>
     </div>
   );
 }
 
-const SUGGESTIONS = [
-  "Tình hình hôm nay của Papa?",
-  "Số dư các ví hiện tại?",
-  "Tuần này tiêu gì, so với tuần trước?",
-  "Hôm nay có quest nào cần làm?",
-  "Lịch trình sắp tới có gì?",
-  "Thói quen ăn uống 7 ngày qua?",
-  "Kho đồ có gì sắp hết hạn?",
-  "Danh sách mua sắm còn gì?"
-];
-
 export default function YuiAssistant() {
+  const { t, language } = useI18n();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>([WELCOME_MSG]);
+  const [msgs, setMsgs] = useState<Msg[]>(() => [getWelcomeMsg(t)]);
   const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMsgs((prev) => {
+      if (prev.length === 1 && prev[0].role === 'yui' && (!prev[0].plan)) {
+        return [getWelcomeMsg(t)];
+      }
+      return prev;
+    });
+  }, [t]);
   const [wallets, setWallets] = useState<WalletOption[]>([]);
   const [alerts, setAlerts] = useState<ProactiveAlert[]>([]);
   const [alertsExpanded, setAlertsExpanded] = useState(false);
@@ -462,7 +477,7 @@ export default function YuiAssistant() {
 
   const loadBriefing = async () => {
     try {
-      const res: any = await getYuiBriefing();
+      const res: any = await getYuiBriefing(language);
       const data = res?.data;
       if (!data) return;
       if (data.userId) setUserId(data.userId);
@@ -488,6 +503,12 @@ export default function YuiAssistant() {
       // Không làm gián đoạn UX chat nếu briefing tải lỗi
     }
   };
+
+  useEffect(() => {
+    if (open) {
+      void loadBriefing();
+    }
+  }, [language, open]);
 
   useEffect(() => {
     if (!userId) return;
@@ -550,14 +571,14 @@ export default function YuiAssistant() {
   const attachImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
     if (file.size > 25 * 1024 * 1024) {
-      setMsgs((m) => [...m, { role: 'yui', text: 'Ảnh lớn quá (trên 25MB), Papa chọn ảnh nhỏ hơn giúp Yui nhé!' }]);
+      setMsgs((m) => [...m, { role: 'yui', text: t('yui.imageTooLarge') }]);
       return;
     }
     try {
       const prepared = await compressImageFile(file);
       setPendingImage({ dataUrl: prepared.base64, name: prepared.filename });
     } catch {
-      setMsgs((m) => [...m, { role: 'yui', text: 'Ui, Yui không đọc được file ảnh này Papa ạ!' }]);
+      setMsgs((m) => [...m, { role: 'yui', text: t('yui.imageReadError') }]);
     }
   };
 
@@ -594,7 +615,7 @@ export default function YuiAssistant() {
         ...m,
         {
           role: 'yui',
-          text: 'Trình duyệt hiện tại chưa hỗ trợ nhập giọng nói trực tiếp. Papa có thể dùng Chrome/Safari mới hoặc gõ/gửi ảnh giúp Yui nha!'
+          text: t('yui.voiceNotSupported')
         }
       ]);
       return;
@@ -628,7 +649,7 @@ export default function YuiAssistant() {
   };
 
   const handleClearChat = () => {
-    setMsgs([WELCOME_MSG]);
+    setMsgs([getWelcomeMsg(t)]);
     setEditingRow(null);
     if (userId) {
       try {
@@ -660,7 +681,7 @@ export default function YuiAssistant() {
       ...m,
       {
         role: 'user',
-        text: text || 'Hãy xem hình ảnh này giúp Papa!',
+        text: text || t('yui.inspectImagePrompt'),
         ...(attached ? { imagePreview: attached.dataUrl } : {})
       }
     ]);
@@ -675,15 +696,15 @@ export default function YuiAssistant() {
       } else if (!plan?.actions?.length) {
         setMsgs(m => [
           ...m,
-          { role: 'yui', text: 'Hmm, Yui chưa hiểu rõ ý Papa lắm. Papa có thể nói chi tiết hơn giúp Yui được không?' }
+          { role: 'yui', text: t('yui.notUnderstood') }
         ]);
       } else {
-        const replyText = plan.reply || plan.summary || 'Yui đã lên kế hoạch rồi nè, Papa xem qua rồi xác nhận giúp Yui nhé:';
+        const replyText = plan.reply || plan.summary || t('yui.planReady');
         setMsgs(m => [...m, { role: 'yui', text: replyText, plan, createdAt: formatVnIsoString(new Date()) }]);
       }
     } catch (err: any) {
-      const errMsg = typeof err === 'string' ? err : err?.response?.data?.error || err?.message || 'Mất kết nối máy chủ';
-      setMsgs(m => [...m, { role: 'yui', text: `Ui, Yui gặp lỗi rồi Papa ơi: ${errMsg}` }]);
+      const errMsg = typeof err === 'string' ? err : err?.response?.data?.error || err?.message || 'Error';
+      setMsgs(m => [...m, { role: 'yui', text: `${t('yui.errorOccurred')} ${errMsg}` }]);
     } finally {
       setBusy(false);
     }
@@ -715,7 +736,7 @@ export default function YuiAssistant() {
       if (!target || target.role !== 'yui' || !target.plan || target.done) return prev;
       const nextActions = target.plan.actions.filter((_: unknown, idx: number) => idx !== actionIdx);
       if (nextActions.length === 0) {
-        copy[msgIdx] = { ...target, plan: undefined, text: target.text + '\n\n*(Papa đã huỷ các thao tác này)*' };
+        copy[msgIdx] = { ...target, plan: undefined, text: target.text + '\n\n' + t('yui.userCancelledActions') };
       } else {
         copy[msgIdx] = { ...target, plan: { ...target.plan, actions: nextActions } };
       }
@@ -738,9 +759,9 @@ export default function YuiAssistant() {
       const weightLogged = results.some(r => r.type === 'record_weight');
 
       const bonuses: string[] = [];
-      if (hpRestored > 0) bonuses.push(`+${hpRestored} HP 💚`);
-      if (expGained > 0) bonuses.push(`+${expGained} EXP ⭐`);
-      if (weightLogged) bonuses.push(`Đã ghi cân nặng ⚖️`);
+      if (hpRestored > 0) bonuses.push(`+${hpRestored} HP`);
+      if (expGained > 0) bonuses.push(`+${expGained} EXP`);
+      if (weightLogged) bonuses.push(t('yui.weightLogged'));
 
       const bonusStr = bonuses.length > 0 ? ` (${bonuses.join(', ')})` : '';
 
@@ -751,7 +772,7 @@ export default function YuiAssistant() {
           ...copy,
           {
             role: 'yui',
-            text: `Xong rồi Papa! Yui đã ghi nhận thành công ${results.length} mục vào hệ thống${bonusStr} ✨`
+            text: `${t('yui.donePrefix')} ${results.length} ${t('yui.doneSuffix')}${bonusStr}.`
           }
         ];
       });
@@ -768,8 +789,8 @@ export default function YuiAssistant() {
       void loadBriefing();
 
     } catch (err: any) {
-      const errMsg = typeof err === 'string' ? err : err?.response?.data?.error || err?.message || 'Lỗi khi lưu';
-      setMsgs(m => [...m, { role: 'yui', text: `Ui, thao tác thất bại: ${errMsg}` }]);
+      const errMsg = typeof err === 'string' ? err : err?.response?.data?.error || err?.message || 'Error';
+      setMsgs(m => [...m, { role: 'yui', text: `${t('yui.actionFailed')} ${errMsg}` }]);
     } finally {
       setBusy(false);
     }
@@ -781,7 +802,7 @@ export default function YuiAssistant() {
       const copy = [...m];
       const msg = copy[idx];
       if (msg.role === 'yui') {
-        copy[idx] = { ...msg, plan: undefined, text: msg.text + '\n\n*(Papa đã huỷ thao tác này)*' };
+        copy[idx] = { ...msg, plan: undefined, text: msg.text + '\n\n' + t('yui.userCancelledThisAction') };
       }
       return copy;
     });
@@ -790,57 +811,57 @@ export default function YuiAssistant() {
   const renderActionBadge = (a: any) => {
     switch (a?.actionType) {
       case 'meal':
-        return <span className={`${styles.badge} ${styles.badgeMeal}`}>{a.source === 'home' ? 'Tự nấu' : 'Bữa ăn'}</span>;
+        return <span className={`${styles.badge} ${styles.badgeMeal}`}>{a.source === 'home' ? t('menu.homeCook') : t('yui.badgeMeal')}</span>;
       case 'delete_meal':
-        return <span className={`${styles.badge} ${styles.badgeDanger}`}>Hoàn tác ăn</span>;
+        return <span className={`${styles.badge} ${styles.badgeDanger}`}>{t('yui.badgeUndoMeal')}</span>;
       case 'expense':
-        return <span className={`${styles.badge} ${styles.badgeExpense}`}>Chi tiêu</span>;
+        return <span className={`${styles.badge} ${styles.badgeExpense}`}>{t('finance.expense')}</span>;
       case 'income':
-        return <span className={`${styles.badge} ${styles.badgeIncome}`}>Thu nhập</span>;
+        return <span className={`${styles.badge} ${styles.badgeIncome}`}>{t('finance.income')}</span>;
       case 'transfer':
-        return <span className={`${styles.badge} ${styles.badgeTransfer}`}>Chuyển ví</span>;
+        return <span className={`${styles.badge} ${styles.badgeTransfer}`}>{t('finance.transfer')}</span>;
       case 'debt_lent':
-        return <span className={`${styles.badge} ${styles.badgeDebt}`}>Cho vay</span>;
+        return <span className={`${styles.badge} ${styles.badgeDebt}`}>{t('finance.lendMore')}</span>;
       case 'debt_borrowed':
-        return <span className={`${styles.badge} ${styles.badgeDebt}`}>Đi vay</span>;
+        return <span className={`${styles.badge} ${styles.badgeDebt}`}>{t('finance.borrowMore')}</span>;
       case 'pay_debt':
-        return <span className={`${styles.badge} ${a.debt_type === 'lent' ? styles.badgeIncome : styles.badgeDebt}`}>{a.debt_type === 'lent' ? 'Thu nợ' : 'Trả nợ'}</span>;
+        return <span className={`${styles.badge} ${a.debt_type === 'lent' ? styles.badgeIncome : styles.badgeDebt}`}>{a.debt_type === 'lent' ? t('finance.collectDebt') : t('finance.payDebt')}</span>;
       case 'borrow_more_debt':
-        return <span className={`${styles.badge} ${a.debt_type === 'lent' ? styles.badgeDebt : styles.badgeIncome}`}>{a.debt_type === 'lent' ? 'Cho vay thêm' : 'Vay thêm'}</span>;
+        return <span className={`${styles.badge} ${a.debt_type === 'lent' ? styles.badgeDebt : styles.badgeIncome}`}>{a.debt_type === 'lent' ? t('finance.lendMore') : t('finance.borrowMore')}</span>;
       case 'upsert_budget':
-        return <span className={`${styles.badge} ${styles.badgeBudget}`}>Hạn mức</span>;
+        return <span className={`${styles.badge} ${styles.badgeBudget}`}>{t('finance.limit')}</span>;
       case 'update_transaction':
-        return <span className={`${styles.badge} ${styles.badgeEdit}`}>Sửa GD</span>;
+        return <span className={`${styles.badge} ${styles.badgeEdit}`}>{t('yui.badgeEditTx')}</span>;
       case 'delete_transaction':
-        return <span className={`${styles.badge} ${styles.badgeDanger}`}>Xóa GD</span>;
+        return <span className={`${styles.badge} ${styles.badgeDanger}`}>{t('yui.badgeDeleteTx')}</span>;
       case 'create_task':
-        return <span className={`${styles.badge} ${styles.badgeTask}`}>Quest Mới</span>;
+        return <span className={`${styles.badge} ${styles.badgeTask}`}>{t('yui.badgeNewQuest')}</span>;
       case 'complete_task':
-        return <span className={`${styles.badge} ${styles.badgeTask}`}>Xong Quest</span>;
+        return <span className={`${styles.badge} ${styles.badgeTask}`}>{t('yui.badgeDoneQuest')}</span>;
       case 'update_task':
-        return <span className={`${styles.badge} ${styles.badgeEdit}`}>Sửa Quest</span>;
+        return <span className={`${styles.badge} ${styles.badgeEdit}`}>{t('yui.badgeEditQuest')}</span>;
       case 'delete_task':
-        return <span className={`${styles.badge} ${styles.badgeDanger}`}>Xóa Quest</span>;
+        return <span className={`${styles.badge} ${styles.badgeDanger}`}>{t('yui.badgeDeleteQuest')}</span>;
       case 'create_calendar_event':
-        return <span className={`${styles.badge} ${styles.badgeCalendar}`}>Lịch trình</span>;
+        return <span className={`${styles.badge} ${styles.badgeCalendar}`}>{t('calendar.title')}</span>;
       case 'update_calendar_event':
-        return <span className={`${styles.badge} ${styles.badgeEdit}`}>Sửa Lịch</span>;
+        return <span className={`${styles.badge} ${styles.badgeEdit}`}>{t('yui.badgeEditEvent')}</span>;
       case 'delete_calendar_event':
-        return <span className={`${styles.badge} ${styles.badgeDanger}`}>Hủy Lịch</span>;
+        return <span className={`${styles.badge} ${styles.badgeDanger}`}>{t('yui.badgeCancelEvent')}</span>;
       case 'create_shopping_item':
-        return <span className={`${styles.badge} ${styles.badgeShopping}`}>Mua sắm</span>;
+        return <span className={`${styles.badge} ${styles.badgeShopping}`}>{t('nav.shopping')}</span>;
       case 'purchase_shopping':
-        return <span className={`${styles.badge} ${styles.badgeShopping}`}>{a.add_to_inventory === false ? 'Đã mua' : 'Mua & Kho'}</span>;
+        return <span className={`${styles.badge} ${styles.badgeShopping}`}>{a.add_to_inventory === false ? t('shopping.statusBought') : t('yui.badgeBuyAndStock')}</span>;
       case 'create_inventory':
-        return <span className={`${styles.badge} ${styles.badgeInventory}`}>Kho đồ</span>;
+        return <span className={`${styles.badge} ${styles.badgeInventory}`}>{t('menu.inventoryTab')}</span>;
       case 'update_inventory':
-        return <span className={`${styles.badge} ${a.operation === 'discard' ? styles.badgeDanger : styles.badgeInventory}`}>Sửa Kho</span>;
+        return <span className={`${styles.badge} ${a.operation === 'discard' ? styles.badgeDanger : styles.badgeInventory}`}>{t('yui.badgeEditStock')}</span>;
       case 'record_weight':
-        return <span className={`${styles.badge} ${styles.badgeHealth}`}>Cân nặng</span>;
+        return <span className={`${styles.badge} ${styles.badgeHealth}`}>{t('health.weight')}</span>;
       case 'create_recipe':
-        return <span className={`${styles.badge} ${styles.badgeRecipe}`}>Công thức</span>;
+        return <span className={`${styles.badge} ${styles.badgeRecipe}`}>{t('menu.recipesTab')}</span>;
       default:
-        return <span className={styles.badge}>Hành động</span>;
+        return <span className={styles.badge}>{t('common.actions')}</span>;
     }
   };
 
@@ -921,7 +942,7 @@ export default function YuiAssistant() {
       case 'borrow_more_debt':
         return `${a.debt_type === 'lent' ? 'Cho vay thêm' : 'Vay thêm từ'}: ${a.person || 'Đối tượng'}${a.walletName ? ` (${a.walletName})` : ''}`;
       case 'upsert_budget':
-        return `Ngân sách ${CATEGORY_LABELS[a.category] || a.name || a.category}`;
+        return `Ngân sách ${getCategoryLabels(t)[a.category] || a.name || a.category}`;
       case 'update_transaction':
         return `Sửa GD: ${a.description || 'Giao dịch'}`;
       case 'delete_transaction':
@@ -931,7 +952,7 @@ export default function YuiAssistant() {
       case 'complete_task':
         return `Hoàn thành: ${a.title || 'Quest'}`;
       case 'update_task': {
-        const statusLabel = a.status ? ` → ${TASK_STATUS_LABELS[a.status] || a.status}` : '';
+        const statusLabel = a.status ? ` → ${getTaskStatusLabels(t)[a.status] || a.status}` : '';
         const rankLabel = a.quest_rank ? ` [Rank ${a.quest_rank}]` : '';
         return `Sửa Quest: ${a.title || a.original_title || 'Quest'}${rankLabel}${statusLabel}`;
       }
@@ -967,19 +988,19 @@ export default function YuiAssistant() {
 
   const getAmountBadgeProps = (a: any): { text: string; className: string } | null => {
     if (a?.actionType === 'upsert_budget' && a.limit !== undefined) {
-      return { text: `${fmt(a.limit)}đ`, className: styles.planAmtTransfer };
+      return { text: `${fmt(a.limit, language)}${t('common.vnd')}`, className: styles.planAmtTransfer };
     }
     if (a?.amount === undefined || Number(a.amount) <= 0) return null;
 
-    const val = fmt(a.amount);
-    const t = a.actionType;
-    if (t === 'income' || t === 'debt_borrowed' || (t === 'pay_debt' && a.debt_type === 'lent') || (t === 'borrow_more_debt' && a.debt_type === 'borrowed')) {
-      return { text: `+${val}đ`, className: '' };
+    const val = fmt(a.amount, language);
+    const actType = a.actionType;
+    if (actType === 'income' || actType === 'debt_borrowed' || (actType === 'pay_debt' && a.debt_type === 'lent') || (actType === 'borrow_more_debt' && a.debt_type === 'borrowed')) {
+      return { text: `+${val}${t('common.vnd')}`, className: '' };
     }
-    if (t === 'transfer' || t === 'update_transaction' || t === 'delete_transaction') {
-      return { text: `${val}đ`, className: styles.planAmtTransfer };
+    if (actType === 'transfer' || actType === 'update_transaction' || actType === 'delete_transaction') {
+      return { text: `${val}${t('common.vnd')}`, className: styles.planAmtTransfer };
     }
-    return { text: `-${val}đ`, className: styles.planAmtExpense };
+    return { text: `-${val}${t('common.vnd')}`, className: styles.planAmtExpense };
   };
 
   return (
@@ -991,8 +1012,8 @@ export default function YuiAssistant() {
             setOpen(true);
             void loadBriefing();
           }}
-          title="Gọi trợ thủ Yui"
-          aria-label="Gọi trợ thủ Yui"
+          title={t('yui.callYui')}
+          aria-label={t('yui.callYui')}
         >
           <Sparkles size={26} />
         </button>
@@ -1008,7 +1029,7 @@ export default function YuiAssistant() {
             <div>
               <div className={styles.name}>YUI</div>
               <div className={styles.sub}>
-                Navigation Pixie · {busy ? 'đang suy nghĩ...' : 'sẵn sàng hỗ trợ Papa'}
+                Navigation Pixie · {busy ? t('yui.thinking') : t('yui.readyToHelp')}
               </div>
             </div>
             <div className={styles.headActions}>
@@ -1016,8 +1037,8 @@ export default function YuiAssistant() {
                 type="button"
                 className={styles.headIconBtn}
                 onClick={handleClearChat}
-                title="Làm mới hội thoại"
-                aria-label="Làm mới hội thoại"
+                title={t('yui.refreshChat')}
+                aria-label={t('yui.refreshChat')}
                 disabled={busy}
               >
                 <Eraser size={16} />
@@ -1029,7 +1050,7 @@ export default function YuiAssistant() {
                   setOpen(false);
                   setMobilePanelStyle(undefined);
                 }}
-                aria-label="Đóng bảng Yui"
+                aria-label={t('yui.closePanel')}
               >
                 <X size={18} />
               </button>
@@ -1038,7 +1059,7 @@ export default function YuiAssistant() {
 
           {/* QUICK SUGGESTIONS */}
           <div className={styles.suggestions}>
-            {SUGGESTIONS.map((s, idx) => (
+            {getYuiSuggestions(t).map((s, idx) => (
               <button
                 key={idx}
                 className={styles.chip}
@@ -1061,7 +1082,7 @@ export default function YuiAssistant() {
                 >
                   <Bell size={13} color="#ffaa00" />
                   <span className={styles.alertHeaderText}>
-                    <strong>{alerts.length} nhắc nhở:</strong> {alerts[0].title}
+                    <strong>{alerts.length} {t('yui.reminders')}:</strong> {alerts[0].title}
                   </span>
                   {alertsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </button>
@@ -1069,8 +1090,8 @@ export default function YuiAssistant() {
                   type="button"
                   className={styles.alertDismissBtn}
                   onClick={() => setAlertsDismissed(true)}
-                  aria-label="Ẩn nhắc nhở"
-                  title="Ẩn nhắc nhở"
+                  aria-label={t('yui.hideReminders')}
+                  title={t('yui.hideReminders')}
                 >
                   <X size={13} />
                 </button>
@@ -1108,7 +1129,7 @@ export default function YuiAssistant() {
             {msgs.map((m, i) => (
               <div key={i} className={m.role === 'user' ? styles.userMsg : styles.yuiMsg}>
                 {m.role === 'user' && m.imagePreview && (
-                  <img src={m.imagePreview} alt="Ảnh đính kèm" className={styles.userImage} />
+                  <img src={m.imagePreview} alt={t('yui.attachedPhoto')} className={styles.userImage} />
                 )}
                 <div className={styles.markdown}>
                   <ReactMarkdown>{m.text}</ReactMarkdown>
@@ -1119,13 +1140,13 @@ export default function YuiAssistant() {
                   <div className={styles.plan}>
                     <div className={styles.confirmNotice}>
                       <AlertTriangle size={14} />
-                      Yui cần Papa xác nhận ghi dữ liệu vào hệ thống:
+                      {t('yui.confirmTitle')}
                     </div>
 
                     {m.plan.actions.map((a: any, j: number) => {
                       const schedule = getYuiActionScheduleDisplay(a, m.createdAt);
                       const amtProps = getAmountBadgeProps(a);
-                      const recSummary = formatRecurrenceSummary(a);
+                      const recSummary = formatRecurrenceSummary(a, t);
                       const hasIngredientsUsed = a.actionType === 'meal' && a.source === 'home' && Array.isArray(a.ingredients_used) && a.ingredients_used.length > 0;
                       const showMetaTags = Boolean(schedule || a.walletName || a.toWalletName || a.to_wallet_name || recSummary || hasIngredientsUsed);
                       const isEditing = !m.done && editingRow?.msgIdx === i && editingRow?.actionIdx === j;
@@ -1151,8 +1172,8 @@ export default function YuiAssistant() {
                                   type="button"
                                   className={styles.planIconBtn}
                                   onClick={() => setEditingRow(isEditing ? null : { msgIdx: i, actionIdx: j })}
-                                  title="Chỉnh nhanh"
-                                  aria-label="Chỉnh nhanh"
+                                  title={t('common.edit')}
+                                  aria-label={t('common.edit')}
                                 >
                                   <Pencil size={12} />
                                 </button>
@@ -1160,8 +1181,8 @@ export default function YuiAssistant() {
                                   type="button"
                                   className={`${styles.planIconBtn} ${styles.planIconBtnDanger}`}
                                   onClick={() => removePlanAction(i, j)}
-                                  title="Bỏ mục này"
-                                  aria-label="Bỏ mục này"
+                                  title={t('yui.removeAction')}
+                                  aria-label={t('yui.removeAction')}
                                 >
                                   <X size={12} />
                                 </button>
@@ -1227,8 +1248,8 @@ export default function YuiAssistant() {
                           <div className={styles.planRecipeBox}>
                             <div className={styles.planRecipeTags}>
                               {a.restored_ingredients.map((ing: any, k: number) => (
-                                <span key={k} className={styles.planRecipeTag}>
-                                  ♻️ Hoàn kho: +{ing.qty} {ing.unit} {ing.name}
+                                <span key={k} className={styles.planRecipeTag} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <RotateCcw size={11} /> Hoàn kho: +{ing.qty} {ing.unit} {ing.name}
                                 </span>
                               ))}
                             </div>
@@ -1254,7 +1275,7 @@ export default function YuiAssistant() {
                             )}
                             {a.instructions && (
                               <div className={styles.planInstructions}>
-                                <strong>Cách nấu:</strong> {a.instructions}
+                                <strong>{t('menu.cookingGuide')}:</strong> {a.instructions}
                               </div>
                             )}
                           </div>
@@ -1270,18 +1291,20 @@ export default function YuiAssistant() {
                           onClick={() => cancel(i)}
                           className={styles.btnGhost}
                         >
-                          <RotateCcw size={13} /> Huỷ
+                          <RotateCcw size={13} /> {t('yui.cancelAction')}
                         </button>
                         <button
                           disabled={busy}
                           onClick={() => confirm(i)}
                           className={styles.btnOk}
                         >
-                          <Check size={14} /> Xác nhận ghi DB
+                          <Check size={14} /> {t('yui.confirmAction')}
                         </button>
                       </div>
                     ) : (
-                      <div className={styles.doneTag}>✓ Đã ghi vào hệ thống</div>
+                      <div className={styles.doneTag} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Check size={14} /> {t('yui.doneTag')}
+                      </div>
                     )}
                   </div>
                 )}
@@ -1304,13 +1327,13 @@ export default function YuiAssistant() {
             <div className={styles.imagePreviewBar}>
               <img src={pendingImage.dataUrl} alt={pendingImage.name} className={styles.imagePreviewThumb} />
               <div className={styles.imagePreviewMeta}>
-                Ảnh đính kèm ({pendingImage.name}) · thêm ghi chú nếu cần rồi bấm Gửi
+                {t('yui.attachedPhotoMeta')} ({pendingImage.name}) · {t('yui.addNoteOptional')}
               </div>
               <button
                 type="button"
                 className={styles.removePreviewBtn}
                 onClick={() => setPendingImage(null)}
-                aria-label="Xóa ảnh đính kèm"
+                aria-label={t('yui.removeAttachedPhoto')}
               >
                 <X size={14} />
               </button>
@@ -1325,16 +1348,16 @@ export default function YuiAssistant() {
               placement="top"
               align="left"
               enableClipboardOption={true}
-              title="Chụp ảnh hoặc chọn từ thư viện"
-              ariaLabel="Tùy chọn tải ảnh"
+              title={t('media.selectImage')}
+              ariaLabel={t('media.uploadOptions')}
               trigger={({ isOpen, toggle, disabled: btnDisabled }) => (
                 <button
                   type="button"
                   className={`${styles.iconInputBtn} ${isOpen ? styles.activeInputBtn : ''}`}
                   onClick={toggle}
                   disabled={btnDisabled}
-                  title="Chụp ảnh hoặc chọn từ thư viện"
-                  aria-label="Tải ảnh lên / Chụp camera"
+                  title={t('media.selectImage')}
+                  aria-label={t('media.selectImage')}
                 >
                   <Camera size={17} />
                 </button>
@@ -1345,8 +1368,8 @@ export default function YuiAssistant() {
               className={`${styles.iconInputBtn} ${listening ? styles.micActive : ''}`}
               onClick={toggleVoiceInput}
               disabled={busy}
-              title={listening ? 'Dừng ghi âm' : 'Nói tiếng Việt với Yui'}
-              aria-label={listening ? 'Dừng ghi âm' : 'Nhập giọng nói'}
+              title={listening ? t('yui.stopRecording') : t('yui.voiceInput')}
+              aria-label={listening ? t('yui.stopRecording') : t('yui.voiceInput')}
             >
               {listening ? <MicOff size={17} /> : <Mic size={17} />}
             </button>
@@ -1356,14 +1379,14 @@ export default function YuiAssistant() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onPaste={handlePaste}
-              placeholder={listening ? 'Đang nghe Papa nói...' : pendingImage ? 'Ghi chú thêm cho ảnh (tùy chọn)...' : 'Nhắn, nói hoặc gửi ảnh cho Yui...'}
+              placeholder={listening ? t('yui.listening') : pendingImage ? t('yui.pendingImagePlaceholder') : t('yui.inputPlaceholder')}
               disabled={busy}
             />
             <button
               type="submit"
               disabled={busy || (!input.trim() && !pendingImage)}
-              title="Gửi cho Yui"
-              aria-label="Gửi cho Yui"
+              title={t('yui.sendTitle')}
+              aria-label={t('yui.sendTitle')}
             >
               <Send size={16} />
             </button>

@@ -3,11 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSaoAlert } from '../../contexts/AlertContext';
+import { useI18n } from '../../contexts/I18nContext';
 import { AlertCircle, HelpCircle } from 'lucide-react';
 import styles from './SaoAlert.module.css';
 
 export default function SaoAlert() {
   const { alertState, closeAlert } = useSaoAlert();
+  const { t } = useI18n();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -17,7 +19,7 @@ export default function SaoAlert() {
   if (!mounted || !alertState.isOpen) return null;
 
   const isError = alertState.type === 'alert' && (alertState.message.toLowerCase().includes('lỗi') || alertState.message.toLowerCase().includes('error'));
-  const isDestructive = alertState.type === 'confirm' && alertState.message.toLowerCase().includes('xóa');
+  const isDestructive = alertState.type === 'confirm' && (alertState.message.toLowerCase().includes('xóa') || alertState.message.toLowerCase().includes('delete'));
 
   const handleConfirm = () => {
     if (alertState.onConfirm) alertState.onConfirm();
@@ -41,10 +43,10 @@ export default function SaoAlert() {
         </div>
         
         <div className={styles.message}>
-          {alertState.message.split('\\n').map((line, i) => (
+          {alertState.message.split('\n').map((line, i) => (
             <React.Fragment key={i}>
               {line}
-              {i !== alertState.message.split('\\n').length - 1 && <br />}
+              {i !== alertState.message.split('\n').length - 1 && <br />}
             </React.Fragment>
           ))}
         </div>
@@ -52,7 +54,7 @@ export default function SaoAlert() {
         <div className={styles.buttonGroup}>
           {alertState.type === 'confirm' && (
             <button className={`${styles.btn} ${styles.btnCancel}`} onClick={handleCancel}>
-              HỦY BỎ
+              {t('common.cancel').toUpperCase()}
             </button>
           )}
           <button 
@@ -60,7 +62,9 @@ export default function SaoAlert() {
             onClick={handleConfirm}
             autoFocus
           >
-            {alertState.type === 'confirm' ? (isDestructive ? 'XÓA' : 'XÁC NHẬN') : 'ĐÃ HIỂU'}
+            {alertState.type === 'confirm' 
+              ? (isDestructive ? t('common.delete').toUpperCase() : t('common.confirm').toUpperCase()) 
+              : t('common.understood').toUpperCase()}
           </button>
         </div>
       </div>

@@ -8,6 +8,7 @@ import {
 import SaoButton from '../../../components/SaoButton/SaoButton';
 import styles from '../finance.module.css';
 import type { Transaction } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 
 interface Props {
   transactions: Transaction[];
@@ -20,6 +21,7 @@ interface Props {
 type Filter = 'all' | 'income' | 'expense' | 'transfer';
 
 export default function HistoryTab({ transactions, formatMoney, onAdd, onEdit, onDelete }: Props) {
+  const { t } = useI18n();
   const [filter, setFilter] = useState<Filter>('all');
 
   const filtered = transactions.filter(tx => filter === 'all' || tx.type === filter);
@@ -39,7 +41,7 @@ export default function HistoryTab({ transactions, formatMoney, onAdd, onEdit, o
             className={`${styles.filterBtn} ${filter === f ? styles.active : ''}`}
             onClick={() => setFilter(f)}
           >
-            {f === 'all' ? 'Tất cả' : f === 'income' ? 'Thu nhập' : f === 'expense' ? 'Chi tiêu' : 'Chuyển khoản'}
+            {f === 'all' ? t('common.all') : f === 'income' ? t('finance.income') : f === 'expense' ? t('finance.expense') : t('finance.transfer')}
           </SaoButton>
         ))}
       </div>
@@ -49,7 +51,7 @@ export default function HistoryTab({ transactions, formatMoney, onAdd, onEdit, o
           <div key={date}>
             <div className={styles.historyDateGroup}>
               <CalendarDays size={14} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle' }} />
-              Ngày {date}
+              {t('common.date')} {date}
             </div>
             <div className={styles.historyList}>
               {grouped[date].map(tx => (
@@ -64,10 +66,10 @@ export default function HistoryTab({ transactions, formatMoney, onAdd, onEdit, o
                       <div className={styles.historyTitle}>
                         <span className={styles.historyTitleText}>{tx.description}</span>
                         <span className={styles.historyItemActions}>
-                          <SaoButton variant="ghost" style={{ padding: 6 }} onClick={() => onEdit(tx)} aria-label="Chỉnh sửa giao dịch">
+                          <SaoButton variant="ghost" style={{ padding: 6 }} onClick={() => onEdit(tx)} aria-label={t('common.edit')}>
                             <Edit3 size={14} />
                           </SaoButton>
-                          <SaoButton variant="ghost" ghostType="danger" style={{ padding: 6 }} onClick={() => onDelete(tx.id)} aria-label="Xóa giao dịch">
+                          <SaoButton variant="ghost" ghostType="danger" style={{ padding: 6 }} onClick={() => onDelete(tx.id)} aria-label={t('common.delete')}>
                             <Trash2 size={14} />
                           </SaoButton>
                         </span>
@@ -78,7 +80,7 @@ export default function HistoryTab({ transactions, formatMoney, onAdd, onEdit, o
                     </div>
                   </div>
                   <div className={`${styles.historyAmount} ${styles[tx.type]}`}>
-                    {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}{formatMoney(tx.amount)} <small>VND</small>
+                    {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}{formatMoney(tx.amount)} <small>{t('common.currency')}</small>
                   </div>
                 </div>
               ))}
@@ -87,7 +89,7 @@ export default function HistoryTab({ transactions, formatMoney, onAdd, onEdit, o
         ))}
         {filtered.length === 0 && (
           <div className={styles.emptyState} style={{ marginTop: 20 }}>
-            Không có giao dịch nào phù hợp.
+            {t('finance.noMatchingTx')}
           </div>
         )}
       </div>
@@ -95,7 +97,7 @@ export default function HistoryTab({ transactions, formatMoney, onAdd, onEdit, o
       <SaoButton
         variant="primary"
         className={styles.overviewFab}
-        title="Ghi chép giao dịch"
+        title={t('finance.addTransaction')}
         onClick={onAdd}
       >
         <Plus size={28} />

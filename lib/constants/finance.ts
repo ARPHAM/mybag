@@ -45,3 +45,46 @@ export const FINANCE_TABS: { id: FinanceTabId; label: string; icon: any }[] = [
   { id: 'history', label: 'Lịch sử', icon: Clock },
   { id: 'debts', label: 'Sổ nợ', icon: Users },
 ];
+
+export function getFinanceTabs(t?: (key: any) => string): { id: FinanceTabId; label: string; icon: any }[] {
+  if (!t) return FINANCE_TABS;
+  return [
+    { id: 'overview', label: t('finance.overviewTab'), icon: Activity },
+    { id: 'wallets', label: t('finance.walletsTab'), icon: Wallet },
+    { id: 'budgets', label: t('finance.budgetsTab'), icon: CreditCard },
+    { id: 'history', label: t('finance.historyTab'), icon: Clock },
+    { id: 'debts', label: t('finance.debtsTab'), icon: Users },
+  ];
+}
+
+export function getFinanceCategoryOptions(t?: (key: any) => string) {
+  if (!t) return FINANCE_CATEGORY_OPTIONS;
+  return [
+    { value: 'food', label: t('finance.categories.food') },
+    { value: 'housing', label: t('finance.categories.housing') },
+    { value: 'transport', label: t('finance.categories.transport') },
+    { value: 'shopping', label: t('finance.categories.shopping') },
+    { value: 'utilities', label: t('finance.categories.utilities') },
+    { value: 'entertainment', label: t('finance.categories.entertainment') },
+    { value: 'health', label: t('finance.categories.health') },
+    { value: 'other', label: t('finance.categories.other') },
+  ];
+}
+
+export function getWalletTypeOptions(t?: (key: any) => string) {
+  if (!t) return WALLET_TYPE_OPTIONS;
+  return [
+    { value: 'bank', label: t('finance.walletTypes.bank') },
+    { value: 'ewallet', label: t('finance.walletTypes.ewallet') },
+    { value: 'cash', label: t('finance.walletTypes.cash') },
+  ];
+}
+
+export function getInventoryCategoryOptions(t?: (key: any) => string) {
+  if (!t) return INVENTORY_CATEGORY_OPTIONS;
+  return [
+    { value: 'food', label: t('finance.categories.food') },
+    { value: 'spices', label: t('finance.categories.spices') },
+    { value: 'utilities', label: t('finance.categories.utilities') },
+  ];
+}

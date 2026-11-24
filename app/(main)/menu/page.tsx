@@ -5,7 +5,7 @@ import {
   ChefHat, Flame, Clock, Plus, Edit3, Utensils, History, Sparkles, Save,
   CheckCircle2, ShoppingBag, AlertCircle, RefreshCw, Trash2, Beef, Droplet,
   Wheat, Candy, AlertTriangle, Package, Camera, ImageIcon, Wallet as WalletIcon,
-  ShieldAlert
+  ShieldAlert, FileText
 } from 'lucide-react';
 import SaoModal from '../../components/SaoModal/SaoModal';
 import SaoInput from '../../components/SaoInput/SaoInput';
@@ -28,8 +28,11 @@ import { MenuTabId, Recipe, MealRecord, MealIngredientUsed, InventoryItem } from
 import {
   MENU_TABS,
   INVENTORY_CATEGORY_OPTIONS,
-  INVENTORY_UNIT_OPTIONS
+  INVENTORY_UNIT_OPTIONS,
+  getMenuTabs,
+  getInventoryCategoryOptions
 } from '@/lib/constants';
+import { useI18n } from '@/lib/i18n';
 import { convertQtyToInventoryUnit, parseRecipeIngredientString } from '@/lib/unitHelper';
 
 interface Wallet {
@@ -56,6 +59,7 @@ function toVnDateString(dateInput?: string | Date): string {
 }
 
 export default function MenuPage() {
+  const { t, language } = useI18n();
   const { showAlert } = useSaoAlert();
   // Ưu tiên hiển thị Lịch sử bữa ăn trước tiên, công thức và kho đồ là các tab kế bên
   const [activeTab, setActiveTab] = useState<MenuTabId>('history');
@@ -553,7 +557,7 @@ export default function MenuPage() {
     const itemsToSave = scannedBillItems.filter(i => i.keep);
     const needsWallet = itemsToSave.some(i => !i.isGift && (i.price > 0));
     if (needsWallet && !billWalletId) {
-      showAlert('Vui lòng chọn nguồn tiền thanh toán cho hóa đơn này.');
+      showAlert(t('menu.enterBillWalletPrompt'));
       return;
     }
 
@@ -630,9 +634,9 @@ export default function MenuPage() {
   const handleSaveMeal = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const resolvedFoodName = formName.trim() || (formImageUrl ? 'Món ăn (AI đang nhận diện...)' : '');
+    const resolvedFoodName = formName.trim() || (formImageUrl ? t('menu.mealNameAiRecognizing') : '');
     if (!resolvedFoodName) {
-      showAlert("Vui lòng nhập tên món ăn hoặc tải ảnh bữa ăn lên!");
+      showAlert(t('menu.enterDishNamePrompt'));
       return;
     }
 
@@ -729,19 +733,19 @@ export default function MenuPage() {
       return (
         <form onSubmit={handleSaveRecipe}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Tên Công Thức</label>
-            <SaoInput type="text" placeholder="VD: Sườn xào chua ngọt" value={formName} onChange={e => setFormName(e.target.value)} required />
+            <label className={styles.formLabel}>{t('menu.recipeName')}</label>
+            <SaoInput type="text" placeholder={t('menu.recipeNamePlaceholder')} value={formName} onChange={e => setFormName(e.target.value)} required />
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Nguyên liệu cơ bản (Cách nhau bằng dấu phẩy)</label>
-            <SaoInput isTextarea placeholder="VD: Sườn non, Hành tím, Tương cà..." rows={3} value={formIngredients} onChange={e => setFormIngredients(e.target.value)} required />
+            <label className={styles.formLabel}>{t('menu.recipeIngredients')}</label>
+            <SaoInput isTextarea placeholder={t('menu.recipeIngredientsPlaceholder')} rows={3} value={formIngredients} onChange={e => setFormIngredients(e.target.value)} required />
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Hướng dẫn nấu (Tùy chọn)</label>
-            <SaoInput isTextarea placeholder="VD: B1: Chặt sườn và chần nước sôi... B2: Nấu sốt..." rows={3} value={formInstructions} onChange={e => setFormInstructions(e.target.value)} />
+            <label className={styles.formLabel}>{t('menu.recipeInstructions')}</label>
+            <SaoInput isTextarea placeholder={t('menu.recipeInstructionsPlaceholder')} rows={3} value={formInstructions} onChange={e => setFormInstructions(e.target.value)} />
           </div>
           <SaoButton variant="primary" type="submit">
-            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> Lưu Công thức
+            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {t('menu.saveRecipe')}
           </SaoButton>
         </form>
       );
@@ -751,7 +755,7 @@ export default function MenuPage() {
       return (
         <form onSubmit={handleSaveMeal}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Hình ảnh bữa ăn (Tùy chọn, tải lên để AI phân tích)</label>
+            <label className={styles.formLabel}>{t('menu.mealPhoto')}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {formImageUrl && (
                 <div style={{ position: 'relative', width: '44px', height: '44px', flexShrink: 0 }}>
@@ -759,24 +763,24 @@ export default function MenuPage() {
                   <button
                     type="button"
                     onClick={() => setFormImageUrl('')}
-                    title="Xóa ảnh"
+                    title={t('common.delete')}
                     style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', background: '#ff4444', color: '#fff', border: 'none', fontSize: '11px', lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     ×
                   </button>
                 </div>
               )}
-              <SaoImageUpload onUploadSuccess={(url: string) => setFormImageUrl(url)} label={formImageUrl ? "Đổi ảnh" : "Tải ảnh lên"} />
+              <SaoImageUpload onUploadSuccess={(url: string) => setFormImageUrl(url)} label={formImageUrl ? undefined : undefined} />
             </div>
           </div>
 
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>
-              Tên món ăn {formImageUrl && <span style={{ color: '#00ffaa', fontSize: '0.8rem', fontWeight: 'normal' }}>(Có thể bỏ trống để AI tự nhận diện từ ảnh)</span>}
+              {t('menu.mealName')} {formImageUrl && <span style={{ color: '#00ffaa', fontSize: '0.8rem', fontWeight: 'normal' }}>{t('menu.mealNameAutoAi')}</span>}
             </label>
             <SaoInput
               type="text"
-              placeholder={formImageUrl ? "Bỏ trống để AI tự đặt tên theo ảnh, hoặc nhập tên món..." : "VD: Phở bò, Cơm tấm..."}
+              placeholder={formImageUrl ? t('menu.mealNamePlaceholderAi') : t('menu.mealNamePlaceholder')}
               value={formName}
               onChange={e => setFormName(e.target.value)}
               required={modalType === 'meal' && !formImageUrl}
@@ -785,31 +789,31 @@ export default function MenuPage() {
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Hình thức dùng bữa</label>
+            <label className={styles.formLabel}>{t('menu.diningOption')}</label>
             <div className={styles.radioGroup}>
               <label className={styles.radioLabel}>
                 <input type="radio" name="source" checked={formCookSource === 'home'} onChange={() => setFormCookSource('home')} />
                 <Utensils size={16} style={{ marginBottom: 4 }} />
-                <div>Nấu tại nhà</div>
+                <div>{t('menu.homeCook')}</div>
               </label>
               <label className={styles.radioLabel}>
                 <input type="radio" name="source" checked={formCookSource === 'eat_out'} onChange={() => setFormCookSource('eat_out')} />
                 <ShoppingBag size={16} style={{ marginBottom: 4 }} />
-                <div>Ăn ngoài</div>
+                <div>{t('menu.eatOut')}</div>
               </label>
             </div>
           </div>
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Ngày</label>
+              <label className={styles.formLabel}>{t('menu.date')}</label>
               <SaoDatePicker value={formDate} onChange={setFormDate} required />
             </div>
           </div>
 
           {editingRecipe && (
             <div className={styles.formGroup} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px' }}>
-              <label className={styles.formLabel} style={{ color: '#a0c4ff', marginBottom: 0 }}>Công thức gợi ý:</label>
+              <label className={styles.formLabel} style={{ color: '#a0c4ff', marginBottom: 0 }}>{t('menu.suggestedRecipe')}:</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '8px' }}>
                 {editingRecipe.ingredients.map((ing, i) => (
                   <span key={i} style={{ background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', padding: '4px 10px', borderRadius: '12px', fontSize: '0.85rem' }}>{ing}</span>
@@ -817,7 +821,7 @@ export default function MenuPage() {
               </div>
               {editingRecipe.instructions && (
                 <div style={{ marginTop: '10px', fontSize: '0.82rem', color: '#cbd5e1', background: 'rgba(0,0,0,0.3)', padding: '8px 10px', borderRadius: '6px', borderLeft: '3px solid #00f0ff', whiteSpace: 'pre-line', lineHeight: '1.45' }}>
-                  <strong style={{ color: '#00f0ff', display: 'block', marginBottom: '4px' }}>Hướng dẫn nấu:</strong>
+                  <strong style={{ color: '#00f0ff', display: 'block', marginBottom: '4px' }}>{t('menu.cookingGuide')}:</strong>
                   {editingRecipe.instructions}
                 </div>
               )}
@@ -826,7 +830,7 @@ export default function MenuPage() {
 
           {formCookSource === 'home' && (
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Lấy từ Dự trữ Kho (Sẽ trừ hoặc hoàn trả tự động khi lưu)</label>
+              <label className={styles.formLabel}>{t('menu.pantryDeductSection')}</label>
               <div className={styles.ingredientCheckList}>
                 {selectedIngredients.map((ing, idx) => {
                   const pool = getIngredientPoolInfo(ing.invId);
@@ -840,12 +844,12 @@ export default function MenuPage() {
                     const p = getIngredientPoolInfo(item.id);
                     if (p.effectivePoolQty > 0 || item.id === ing.invId) {
                       optionIds.add(item.id);
-                      let label = `${item.name} (Còn: ${p.currentStock} ${item.unit})`;
+                      let label = `${item.name} (${t('menu.remaining')}: ${p.currentStock} ${item.unit})`;
                       if (p.oldHeldQty > 0) {
                         if (p.currentStock <= 0) {
-                          label = `${item.name} (Kho đã hết • Đang dùng: ${p.oldHeldQty} ${item.unit} → Tối đa: ${p.effectivePoolQty} ${item.unit})`;
+                          label = `${item.name} (${t('menu.depletedPantry')} • ${t('menu.inUse')}: ${p.oldHeldQty} ${item.unit} → ${t('menu.max')}: ${p.effectivePoolQty} ${item.unit})`;
                         } else {
-                          label = `${item.name} (Kho: ${p.currentStock} + Đang dùng: ${p.oldHeldQty} → Tối đa: ${p.effectivePoolQty} ${item.unit})`;
+                          label = `${item.name} (${t('menu.stock')}: ${p.currentStock} + ${t('menu.inUse')}: ${p.oldHeldQty} → ${t('menu.max')}: ${p.effectivePoolQty} ${item.unit})`;
                         }
                       }
                       selectOptions.push({ value: item.id, label });
@@ -855,7 +859,7 @@ export default function MenuPage() {
                   if (ing.invId && !optionIds.has(ing.invId)) {
                     selectOptions.unshift({
                       value: ing.invId,
-                      label: `${pool.name} (Đã xóa khỏi kho • Đang giữ: ${pool.effectivePoolQty} ${pool.unit})`
+                      label: `${pool.name} (${t('menu.deletedFromPantry')} • ${t('menu.holding')}: ${pool.effectivePoolQty} ${pool.unit})`
                     });
                   }
 
@@ -910,14 +914,18 @@ export default function MenuPage() {
                         </SaoButton>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginTop: '4px', padding: '0 2px', color: isOverLimit ? '#ff4444' : '#94a3b8' }}>
-                        <span>
-                          {isOverLimit
-                            ? `⚠️ Vượt quá giới hạn khả dụng (Tối đa: ${pool.effectivePoolQty} ${pool.unit})`
-                            : `Khả dụng tối đa: ${pool.effectivePoolQty} ${pool.unit}${pool.oldHeldQty > 0 && pool.currentStock === 0 ? ' (Món đã dùng hết trong kho)' : ''}`}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          {isOverLimit ? (
+                            <>
+                              <AlertTriangle size={13} /> {t('menu.exceedsMax')} ({t('menu.max')}: {pool.effectivePoolQty} {pool.unit})
+                            </>
+                          ) : (
+                            `${t('menu.maxAvailable')}: ${pool.effectivePoolQty} ${pool.unit}${pool.oldHeldQty > 0 && pool.currentStock === 0 ? ` (${t('menu.depletedInStock')})` : ''}`
+                          )}
                         </span>
                         {rowEstimatedCost > 0 && (
                           <span style={{ color: '#00f0ff', fontWeight: 500 }}>
-                            Thiệt hại kho: ≈ {rowEstimatedCost.toLocaleString('vi-VN')} đ
+                            {t('menu.pantryCost')}: ≈ {rowEstimatedCost.toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')} {t('common.vnd')}
                           </span>
                         )}
                       </div>
@@ -931,7 +939,7 @@ export default function MenuPage() {
                   onClick={() => {
                     const allCandidates = inventory.filter(i => getIngredientPoolInfo(i.id).effectivePoolQty > 0);
                     if (allCandidates.length === 0) {
-                      showAlert("Kho của bạn hiện không có nguyên liệu nào còn hàng!");
+                      showAlert(t('menu.noStockAvailable'));
                       return;
                     }
                     const selectedIds = new Set(selectedIngredients.map(s => s.invId));
@@ -944,7 +952,7 @@ export default function MenuPage() {
                     });
 
                     if (!chosen) {
-                      showAlert("Tất cả nguyên liệu còn hàng trong kho đã được chọn hết số lượng khả dụng!");
+                      showAlert(t('menu.allStockSelected'));
                       return;
                     }
                     const pool = getIngredientPoolInfo(chosen.id);
@@ -963,21 +971,21 @@ export default function MenuPage() {
                     ]);
                   }}
                 >
-                  <Plus size={16} style={{ display: 'inline', marginRight: 5 }} /> Thêm nguyên liệu từ Kho
+                  <Plus size={16} style={{ display: 'inline', marginRight: 5 }} /> {t('menu.addIngredientFromPantry')}
                 </SaoButton>
 
                 {(selectedIngredients.length > 0 || (editingMeal && editingMeal.source === 'home' && (editingMeal.cost || 0) > 0)) && (
                   <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(0, 240, 255, 0.08)', border: '1px solid rgba(0, 240, 255, 0.25)', fontSize: '0.88rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff', fontWeight: 600 }}>
-                      <span>Tổng thiệt hại kho tính toán:</span>
-                      <span style={{ color: '#00f0ff', fontSize: '1rem' }}>{estimatedHomeTotalCost.toLocaleString('vi-VN')} VND</span>
+                      <span>{t('menu.pantryCost')}:</span>
+                      <span style={{ color: '#00f0ff', fontSize: '1rem' }}>{estimatedHomeTotalCost.toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')} {t('common.currency')}</span>
                     </div>
                     {editingMeal && editingMeal.source === 'home' && (editingMeal.cost || 0) !== estimatedHomeTotalCost && (
                       <div style={{ fontSize: '0.78rem', color: '#ffaa00', marginTop: '4px' }}>
-                        Chênh lệch so với trước khi sửa: {(editingMeal.cost || 0).toLocaleString('vi-VN')} VND → {estimatedHomeTotalCost.toLocaleString('vi-VN')} VND
+                        {t('menu.diffFromOriginal')}: {(editingMeal.cost || 0).toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')} {t('common.currency')} → {estimatedHomeTotalCost.toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')} {t('common.currency')}
                         {estimatedHomeTotalCost < (editingMeal.cost || 0)
-                          ? ` (Hoàn lại kho ${( (editingMeal.cost || 0) - estimatedHomeTotalCost ).toLocaleString('vi-VN')} VND)`
-                          : ` (Trừ thêm kho ${( estimatedHomeTotalCost - (editingMeal.cost || 0) ).toLocaleString('vi-VN')} VND)`}
+                          ? ` (${t('menu.refundToPantry')} ${( (editingMeal.cost || 0) - estimatedHomeTotalCost ).toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')} ${t('common.currency')})`
+                          : ` (${t('menu.deductFromPantry')} ${( estimatedHomeTotalCost - (editingMeal.cost || 0) ).toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')} ${t('common.currency')})`}
                       </div>
                     )}
                   </div>
@@ -987,18 +995,18 @@ export default function MenuPage() {
           )}
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Ghi chú thêm (VD: cho AI biết thêm nguyên liệu ngoài kho)</label>
-            <SaoInput isTextarea placeholder="Mô tả bổ sung..." rows={2} value={formActualIngredients} onChange={e => setFormActualIngredients(e.target.value)} />
+            <label className={styles.formLabel}>{t('menu.additionalNote')}</label>
+            <SaoInput isTextarea placeholder={t('menu.additionalNotePlaceholder')} rows={2} value={formActualIngredients} onChange={e => setFormActualIngredients(e.target.value)} />
           </div>
 
           {formCookSource === 'eat_out' && (
             <>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Số tiền (VND - Tùy chọn)</label>
-                <SaoInput type="number" placeholder="Nhập số tiền (Bỏ trống nếu 0đ)..." value={formCost} onChange={e => setFormCost(e.target.value)} />
+                <label className={styles.formLabel}>{t('menu.amountVnd')}</label>
+                <SaoInput type="number" placeholder="0" value={formCost} onChange={e => setFormCost(e.target.value)} />
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Chọn Ví trừ tiền</label>
+                <label className={styles.formLabel}>{t('menu.paymentWallet')}</label>
                 <SaoSelect
                   initialValue={formWalletId}
                   options={wallets.map(w => ({ value: w._id, label: `${w.name} (${w.balance.toLocaleString('vi-VN')} đ)` }))}
@@ -1009,7 +1017,7 @@ export default function MenuPage() {
           )}
 
           <SaoButton variant="primary" type="submit">
-            <CheckCircle2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {modalType === 'cook' ? 'Ghi nhận Nấu Món Này' : (editingMeal ? 'Lưu Sửa Đổi Bữa Ăn' : 'Lưu Bữa Ăn')}
+            <CheckCircle2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {modalType === 'cook' ? t('menu.recordCook') : (editingMeal ? t('menu.editMeal') : t('menu.saveMeal'))}
           </SaoButton>
         </form>
       );
@@ -1020,10 +1028,10 @@ export default function MenuPage() {
       return (
         <form onSubmit={handleSaveInventory}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Tên mặt hàng</label>
+            <label className={styles.formLabel}>{t('menu.itemName')}</label>
             <SaoInput
               type="text"
-              placeholder={isSpice ? "VD: Nước mắm, Tỏi, Tiêu xay, Tương ớt..." : "VD: Ức gà, Trứng, Sữa tươi..."}
+              placeholder={isSpice ? t('menu.spiceItemPlaceholder') : t('menu.foodItemPlaceholder')}
               value={inventoryForm.name}
               onChange={e => setInventoryForm({ ...inventoryForm, name: e.target.value })}
               required
@@ -1032,10 +1040,10 @@ export default function MenuPage() {
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Phân loại</label>
+              <label className={styles.formLabel}>{t('menu.category')}</label>
               <SaoSelect
                 initialValue={inventoryForm.category}
-                options={INVENTORY_CATEGORY_OPTIONS}
+                options={getInventoryCategoryOptions(t)}
                 onChange={v => setInventoryForm({
                   ...inventoryForm,
                   category: v,
@@ -1045,13 +1053,13 @@ export default function MenuPage() {
             </div>
             {isSpice ? (
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Mức độ sử dụng</label>
+                <label className={styles.formLabel}>{t('menu.spiceUsageLevel')}</label>
                 <SaoSelect
                   initialValue={inventoryForm.stock_status}
                   options={[
-                    { value: 'stable', label: '🟢 Còn ổn • Dùng dài ngày' },
-                    { value: 'low', label: '🟡 Còn ít • Đủ vài bữa tới' },
-                    { value: 'out', label: '🔴 Đã hết • Chờ món cần mới mua' }
+                    { value: 'stable', label: t('menu.spiceStable') },
+                    { value: 'low', label: t('menu.spiceLow') },
+                    { value: 'out', label: t('menu.spiceOut') }
                   ]}
                   onChange={v => setInventoryForm({
                     ...inventoryForm,
@@ -1062,7 +1070,7 @@ export default function MenuPage() {
               </div>
             ) : (
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Số lượng & Đơn vị</label>
+                <label className={styles.formLabel}>{t('menu.quantityAndUnit')}</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <SaoInput
                     type="number"
@@ -1075,7 +1083,7 @@ export default function MenuPage() {
                   />
                   <SaoSelect
                     initialValue={inventoryForm.unit}
-                    placeholder="Đơn vị"
+                    placeholder={t('menu.unit')}
                     allowCustom={true}
                     options={INVENTORY_UNIT_OPTIONS}
                     onChange={v => setInventoryForm({ ...inventoryForm, unit: v })}
@@ -1088,7 +1096,7 @@ export default function MenuPage() {
           {isSpice && (
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Số lượng ước tính (Tùy chọn)</label>
+                <label className={styles.formLabel}>{t('menu.estimatedQtyOptional')}</label>
                 <SaoInput
                   type="number"
                   step="any"
@@ -1099,10 +1107,10 @@ export default function MenuPage() {
                 />
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Đơn vị</label>
+                <label className={styles.formLabel}>{t('menu.unit')}</label>
                 <SaoSelect
                   initialValue={inventoryForm.unit}
-                  placeholder="Đơn vị"
+                  placeholder={t('menu.unit')}
                   allowCustom={true}
                   options={INVENTORY_UNIT_OPTIONS}
                   onChange={v => setInventoryForm({ ...inventoryForm, unit: v })}
@@ -1113,14 +1121,14 @@ export default function MenuPage() {
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Ngày mua / nhập kho</label>
+              <label className={styles.formLabel}>{t('menu.purchaseDateStock')}</label>
               <SaoDatePicker
                 value={inventoryForm.purchaseDate}
                 onChange={v => setInventoryForm({ ...inventoryForm, purchaseDate: v })}
               />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Hạn sử dụng (Tùy chọn)</label>
+              <label className={styles.formLabel}>{t('menu.expiryDateOptional')}</label>
               <SaoDatePicker
                 value={inventoryForm.expiryDate}
                 onChange={v => setInventoryForm({ ...inventoryForm, expiryDate: v })}
@@ -1140,13 +1148,13 @@ export default function MenuPage() {
                 })}
                 style={{ width: 18, height: 18 }}
               />
-              Đây là đồ được cho/tặng (Không trừ tiền ví)
+              {t('menu.isGiftFree')}
             </label>
           </div>
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Tổng tiền mua / Ước tính giá</label>
+              <label className={styles.formLabel}>{t('menu.totalCostEst')}</label>
               <SaoInput
                 type="number"
                 placeholder="VD: 50000"
@@ -1156,10 +1164,10 @@ export default function MenuPage() {
             </div>
             {!inventoryForm.isGift && (
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Nguồn tiền chi trả</label>
+                <label className={styles.formLabel}>{t('menu.paymentSource')}</label>
                 <SaoSelect
                   initialValue={inventoryForm.wallet_id}
-                  placeholder="Chọn ví"
+                  placeholder={t('menu.selectWallet')}
                   options={wallets.map(w => ({ value: w._id, label: `${w.name} (${formatMoney(w.balance)} đ)` }))}
                   onChange={v => setInventoryForm({ ...inventoryForm, wallet_id: v })}
                 />
@@ -1174,12 +1182,12 @@ export default function MenuPage() {
                 type="button"
                 onClick={() => setInventoryToDelete(editingInventoryItem.id)}
               >
-                <Trash2 size={16} /> Xóa khỏi kho
+                <Trash2 size={16} /> {t('common.delete')}
               </SaoButton>
             )}
             <SaoButton variant="primary" type="submit">
               <CheckCircle2 size={18} style={{ display: 'inline', marginRight: 6 }} />
-              {editingInventoryItem ? 'Lưu Thay Đổi' : 'Thêm Vào Kho'}
+              {editingInventoryItem ? t('common.save') : t('common.add')}
             </SaoButton>
           </div>
         </form>
@@ -1190,7 +1198,7 @@ export default function MenuPage() {
       return (
         <form onSubmit={handleSaveScannedBill}>
           <div style={{ color: '#cbd5e1', fontSize: '0.9rem', marginBottom: 15 }}>
-            AI đã nhận diện các mặt hàng từ hóa đơn. Bạn có thể chọn giữ lại món nào để nhập vào Kho đồ:
+            {t('menu.aiRecognizedBill')}
           </div>
 
           <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: 15, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1209,7 +1217,7 @@ export default function MenuPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.95rem' }}>{item.name}</div>
                   <div style={{ color: '#a0c4ff', fontSize: '0.8rem' }}>
-                    {item.quantity} {item.unit || 'cái'} • {formatMoney(item.price || 0)} đ • {item.category === 'spices' ? 'Gia vị' : 'Thực phẩm'}
+                    {item.quantity} {item.unit || (language === 'en' ? 'pcs' : 'cái')} • {formatMoney(item.price || 0)} {t('common.vnd')} • {item.category === 'spices' ? t('menu.spices') : t('menu.mainFood')}
                   </div>
                 </div>
               </div>
@@ -1217,17 +1225,17 @@ export default function MenuPage() {
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Chọn ví thanh toán</label>
+            <label className={styles.formLabel}>{t('menu.paymentWallet')}</label>
             <SaoSelect
               initialValue={billWalletId}
-              placeholder="Chọn ví chi tiền"
+              placeholder={t('menu.selectWallet')}
               options={wallets.map(w => ({ value: w._id, label: `${w.name} (${formatMoney(w.balance)} đ)` }))}
               onChange={setBillWalletId}
             />
           </div>
 
           <SaoButton variant="primary" type="submit" style={{ width: '100%', marginTop: 10 }}>
-            <CheckCircle2 size={18} style={{ display: 'inline', marginRight: 6 }} /> Lưu Hóa Đơn Vào Kho
+            <CheckCircle2 size={18} style={{ display: 'inline', marginRight: 6 }} /> {t('menu.saveScannedBill')}
           </SaoButton>
         </form>
       );
@@ -1239,12 +1247,12 @@ export default function MenuPage() {
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
           <ChefHat className={styles.titleIcon} size={28} />
-          <h1 className={styles.title}>Thực Đơn & Kho Đồ</h1>
+          <h1 className={styles.title}>{t('menu.title')}</h1>
         </div>
       </div>
 
       <SaoTabs
-        tabs={MENU_TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={18} /> }))}
+        tabs={getMenuTabs(t).map(t => ({ id: t.id, label: t.label, icon: <t.icon size={18} /> }))}
         activeTab={activeTab}
         onChange={(id) => setActiveTab(id as MenuTabId)}
       />
@@ -1258,13 +1266,13 @@ export default function MenuPage() {
             {Object.keys(groupedMeals).length === 0 ? (
               <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '50px 20px' }}>
                 <History size={48} style={{ opacity: 0.3, marginBottom: 12, display: 'inline-block' }} />
-                <div>Chưa có lịch sử ăn uống.</div>
+                <div>{t('menu.emptyMeals')}</div>
                 <SaoButton
                   variant="primary"
                   onClick={openGlobalAddModal}
                   style={{ marginTop: 15, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
-                  <Plus size={16} /> Ghi nhận Bữa ăn đầu tiên
+                  <Plus size={16} /> {t('menu.firstMealPrompt')}
                 </SaoButton>
               </div>
             ) : (
@@ -1285,19 +1293,19 @@ export default function MenuPage() {
                               <div className="flex justify-between items-start">
                                 <div className={styles.mealName}>{meal.food_name}</div>
                                 <div className="flex gap-2">
-                                  <button onClick={() => openEditMealModal(meal)} title="Chỉnh sửa bữa ăn" style={{ background: 'none', border: 'none', color: '#00f0ff', cursor: 'pointer', padding: '4px' }}>
+                                  <button onClick={() => openEditMealModal(meal)} title={t('common.edit')} style={{ background: 'none', border: 'none', color: '#00f0ff', cursor: 'pointer', padding: '4px' }}>
                                     <Edit3 size={16} />
                                   </button>
-                                  <button onClick={() => confirmDeleteMeal(meal._id)} title="Xóa bữa ăn" style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', padding: '4px' }}>
+                                  <button onClick={() => confirmDeleteMeal(meal._id)} title={t('common.delete')} style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', padding: '4px' }}>
                                     <Trash2 size={16} />
                                   </button>
                                 </div>
                               </div>
                               <div className={styles.mealTimeType}>
-                                <span>{meal.source === 'eat_out' ? 'Ăn ngoài' : 'Nấu tại nhà'}</span>
+                                <span>{meal.source === 'eat_out' ? t('menu.eatOut') : t('menu.homeCook')}</span>
                                 {meal.cost !== undefined && meal.cost > 0 && (
                                   <span style={{ color: '#00f0ff' }} suppressHydrationWarning>
-                                    {' '}• {meal.source === 'home' ? 'Thiệt hại kho' : 'Chi phí'}: {meal.cost.toLocaleString('vi-VN')} VND
+                                    {' '}• {meal.source === 'home' ? t('menu.pantryCost') : t('menu.cost')}: {meal.cost.toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')} {t('common.currency')}
                                   </span>
                                 )}
                               </div>
@@ -1306,7 +1314,7 @@ export default function MenuPage() {
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                                   {meal.ingredients_used.map((ing, i) => {
                                     const invItem = inventory.find(item => item.id === ing.invId);
-                                    const name = ing.name || invItem?.name || 'Nguyên liệu kho';
+                                    const name = ing.name || invItem?.name || t('menu.pantryIngredient');
                                     const unit = ing.unit || invItem?.unit || '';
                                     const isDepletedNow = invItem ? invItem.quantity <= 0 : false;
                                     return (
@@ -1320,11 +1328,11 @@ export default function MenuPage() {
                                           border: isDepletedNow ? '1px solid rgba(255, 170, 0, 0.35)' : '1px solid rgba(0, 240, 255, 0.25)',
                                           color: isDepletedNow ? '#ffcc66' : '#a0c4ff'
                                         }}
-                                        title={isDepletedNow ? 'Món này trong kho hiện đã dùng hết (0)' : undefined}
+                                        title={isDepletedNow ? t('menu.itemDepleted') : undefined}
                                       >
                                         {ing.qty} {unit} {name}
                                         {ing.cost && ing.cost > 0 ? ` (-${ing.cost.toLocaleString('vi-VN')}đ)` : ''}
-                                        {isDepletedNow ? ' • Kho hết' : ''}
+                                        {isDepletedNow ? ` • ${t('menu.depletedPantry')}` : ''}
                                       </span>
                                     );
                                   })}
@@ -1332,8 +1340,8 @@ export default function MenuPage() {
                               )}
 
                               {cleanNote && (
-                                <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '5px' }}>
-                                  📝 Ghi chú: {cleanNote}
+                                <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <FileText size={12} /> {t('common.notes')}: {cleanNote}
                                 </div>
                               )}
 
@@ -1354,18 +1362,18 @@ export default function MenuPage() {
                               )}
                               {meal.ai_status === 'pending' && (
                                 <div style={{ fontSize: '0.8rem', color: '#ffaa00', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <Sparkles size={12} /> AI đang tính toán...
+                                  <Sparkles size={12} /> {t('menu.aiCalculating')}
                                 </div>
                               )}
                               {meal.ai_status === 'failed' && (
                                 <div style={{ fontSize: '0.8rem', color: '#ff4444', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <AlertCircle size={12} /> Lỗi tính AI
+                                  <AlertCircle size={12} /> {t('menu.aiError')}
                                   <SaoButton
                                     type="button"
                                     onClick={() => handleRetryAI(meal)}
                                     style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', borderRadius: '4px', padding: '2px 6px', marginLeft: '6px', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '2px' }}
                                   >
-                                    <RefreshCw size={10} /> Thử lại
+                                    <RefreshCw size={10} /> {t('menu.retry')}
                                   </SaoButton>
                                 </div>
                               )}
@@ -1382,7 +1390,7 @@ export default function MenuPage() {
                                     marginTop: '6px'
                                   }}
                                 >
-                                  ✏️ {meal.edit_note}
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Edit3 size={11} /> {meal.edit_note}</span>
                                 </div>
                               )}
                             </div>
@@ -1413,7 +1421,7 @@ export default function MenuPage() {
             <div className={styles.recipesGrid}>
               {recipes.length === 0 && (
                 <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', gridColumn: '1 / -1', padding: '40px' }}>
-                  Chưa có công thức nào. Nhấn nút + bên dưới để thêm!
+                  {t('menu.emptyRecipes')}
                 </div>
               )}
               {recipes.map(recipe => (
@@ -1434,7 +1442,7 @@ export default function MenuPage() {
                       </div>
                     )}
                     <SaoButton className={styles.cookBtn} onClick={() => openCookModal(recipe)}>
-                      Nấu Món Này
+                      {t('menu.cookThis')}
                     </SaoButton>
                   </div>
                 </div>
@@ -1450,7 +1458,7 @@ export default function MenuPage() {
           variant="primary"
           className={styles.menuFab}
           onClick={openGlobalAddModal}
-          title={activeTab === 'recipes' ? 'Thêm công thức' : 'Ghi nhận bữa ăn'}
+          title={activeTab === 'recipes' ? t('menu.addRecipe') : t('menu.addMeal')}
         >
           <Plus size={28} />
         </SaoButton>
@@ -1461,11 +1469,11 @@ export default function MenuPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={
-          modalType === 'cook' ? 'Chi tiết Nấu ăn' :
-          modalType === 'recipe' ? (editingRecipe ? 'Sửa Công thức' : 'Thêm Công thức') :
-          modalType === 'inventory' ? (editingInventoryItem ? 'Sửa Đồ Dự Trữ' : 'Thêm Đồ Dự Trữ Mới') :
-          modalType === 'scan_bill_review' ? 'Duyệt Hóa Đơn Nhập Kho' :
-          (editingMeal ? 'Chỉnh sửa Lịch sử Bữa ăn' : 'Ghi nhận Bữa ăn')
+          modalType === 'cook' ? t('menu.cookDetails') :
+          modalType === 'recipe' ? (editingRecipe ? t('menu.editRecipe') : t('menu.addRecipe')) :
+          modalType === 'inventory' ? (editingInventoryItem ? t('menu.editInventory') : t('menu.addInventory')) :
+          modalType === 'scan_bill_review' ? t('menu.scanBillReview') :
+          (editingMeal ? t('menu.editMeal') : t('menu.addMeal'))
         }
       >
         {renderModalContent()}
@@ -1475,18 +1483,18 @@ export default function MenuPage() {
       <SaoModal
         isOpen={!!mealToDelete}
         onClose={() => setMealToDelete(null)}
-        title="Xác nhận xóa bữa ăn"
+        title={t('menu.confirmDeleteMeal')}
         icon={<AlertTriangle size={20} />}
       >
         <div style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '20px', lineHeight: '1.5' }}>
-          Bạn có chắc chắn muốn xóa bữa ăn này không? Hành động này sẽ hoàn trả nguyên liệu hoặc hoàn lại tiền ví tương ứng và không thể hoàn tác.
+          {t('menu.deleteMealDesc')}
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           <SaoButton variant="default" onClick={() => setMealToDelete(null)} type="button">
-            Hủy
+            {t('common.cancel')}
           </SaoButton>
           <SaoButton variant="danger" onClick={handleDeleteMeal} type="button">
-            <Trash2 size={16} /> Xóa
+            <Trash2 size={16} /> {t('common.delete')}
           </SaoButton>
         </div>
       </SaoModal>
@@ -1495,18 +1503,18 @@ export default function MenuPage() {
       <SaoModal
         isOpen={!!inventoryToDelete}
         onClose={() => setInventoryToDelete(null)}
-        title="Xác nhận xóa mặt hàng"
+        title={t('menu.confirmDeleteInventory')}
         icon={<AlertTriangle size={20} />}
       >
         <div style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '20px', lineHeight: '1.5' }}>
-          Bạn có chắc chắn muốn xóa mặt hàng này khỏi kho? Số tiền mua hàng còn lại sẽ được hoàn lại vào ví nếu có.
+          {t('menu.deleteInventoryDesc')}
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           <SaoButton variant="default" onClick={() => setInventoryToDelete(null)} type="button">
-            Hủy
+            {t('common.cancel')}
           </SaoButton>
           <SaoButton variant="danger" onClick={handleDeleteInventory} type="button">
-            <Trash2 size={16} /> Xóa khỏi kho
+            <Trash2 size={16} /> {t('common.delete')}
           </SaoButton>
         </div>
       </SaoModal>

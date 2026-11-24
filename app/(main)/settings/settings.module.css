@@ -67,6 +67,52 @@
   gap: 10px;
 }
 
+.languageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+.languageCard {
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 16px 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.3s;
+}
+
+.languageCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.languageCard.active {
+  background: rgba(var(--sao-primary-rgb), 0.12);
+  border-color: var(--sao-primary-hex);
+  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.25);
+}
+
+.languageInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.languageTitle {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.languageSub {
+  color: #a0c4ff;
+  font-size: 0.8rem;
+}
+
 .themeGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -111,12 +157,13 @@
 .themeName {
   color: #fff;
   font-weight: bold;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  text-align: center;
 }
 
 .themeDesc {
   color: #a0c4ff;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   text-align: center;
 }
 
@@ -132,6 +179,11 @@
 
   .themeGrid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .languageGrid {
+    grid-template-columns: 1fr;
     gap: 10px;
   }
 }
