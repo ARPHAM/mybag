@@ -1,0 +1,205 @@
+/* SaoHeaderBridge.module.css
+   Holographic HUD Data Bridge connecting Player Status and System Clock */
+
+.bridgeContainer {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 90px;
+  margin: 0 16px;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+  min-width: 0;
+}
+
+/* TERMINALS (Hai cực kết nối đầu cuối) */
+.terminalLeft,
+.terminalRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.diamondNode {
+  width: 7px;
+  height: 7px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff), 0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.6);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+.notchGroup {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.notch {
+  width: 2px;
+  height: 9px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+  transform: skewX(-25deg);
+  border-radius: 1px;
+}
+
+/* RAIL & DATA BEAM (Thanh ray quang học) */
+.railWrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  min-width: 80px;
+}
+
+.railTrack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15) 0%,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.6) 20%,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.8) 50%,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.6) 80%,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15) 100%
+  );
+  box-shadow: 0 0 8px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+}
+
+.railGlow {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 6px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25) 0%,
+    transparent 80%
+  );
+  filter: blur(2px);
+}
+
+/* Photon Pulse Runner (Tia sáng chạy quét) */
+.pulseBeam {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 70px;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--sao-primary-hex, #00f0ff) 50%,
+    #ffffff 80%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px var(--sao-primary-hex, #00f0ff), 0 0 20px #ffffff;
+  animation: saoPulseBeam 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes saoPulseBeam {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 70px);
+    opacity: 0;
+  }
+}
+
+/* TELEMETRY BADGE (Thẻ thông số hệ thống trung tâm) */
+.telemetryBadge {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 12px;
+  background: rgba(6, 18, 35, 0.9);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.45);
+  box-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3),
+              inset 0 0 8px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    calc(100% - 8px) 100%,
+    0 100%
+  );
+  backdrop-filter: blur(8px);
+}
+
+.statusDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+  animation: saoDotBlink 2s ease-in-out infinite;
+}
+
+@keyframes saoDotBlink {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
+
+.telemetryText {
+  font-family: 'Tauri', monospace, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--sao-primary-hex, #00f0ff);
+  text-shadow: 0 0 6px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.8);
+  white-space: nowrap;
+}
+
+.bracketLeft,
+.bracketRight {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.6);
+}
+
+/* RESPONSIVE */
+@media (max-width: 1280px) {
+  .bridgeContainer {
+    margin: 0 10px;
+    gap: 8px;
+  }
+  .telemetryText {
+    font-size: 0.58rem;
+    letter-spacing: 1px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .telemetryBadge {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .bridgeContainer {
+    display: none;
+  }
+}

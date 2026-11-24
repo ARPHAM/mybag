@@ -10,7 +10,7 @@
   padding-top: 2vh;
   font-family: 'Tauri', sans-serif;
   user-select: none;
-  
+
   perspective: 1200px;
   transform-style: preserve-3d;
   overflow: hidden;
@@ -53,36 +53,192 @@
   display: flex;
   flex-direction: column;
   position: relative;
-
-  transform: perspective(1200px) rotateY(15deg) translateZ(0);
-  transform-style: preserve-3d;
-  transform-origin: right center;
-  backface-visibility: hidden;
-  will-change: transform;
-  padding-top: 4px;
+  padding-top: 10px;
   padding-left: 4px;
 }
 
+/* --- SIDEBAR LEFT RAIL (Trục xương quang học / Data Spine) --- */
 .sidebarLeftRail {
   position: absolute;
-  left: 0;
-  top: 10px;
-  bottom: 20px;
-  width: 4px;
-  background: var(--sao-primary-hex);
-  box-shadow: 0 0 10px var(--sao-primary-hex), 0 0 20px var(--sao-primary-hex);
+  left: -8px;
+  top: 0;
+  bottom: 16px;
+  width: 14px;
+  pointer-events: none;
+  z-index: 5;
 }
 
+/* Tia ray chính phát sáng neon */
+.railSpine {
+  position: absolute;
+  left: 5px;
+  top: 10px;
+  bottom: 14px;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    var(--sao-primary-hex) 0%,
+    rgba(var(--sao-primary-rgb), 0.5) 50%,
+    var(--sao-primary-hex) 100%
+  );
+  box-shadow: 0 0 8px var(--sao-primary-hex), 0 0 16px rgba(var(--sao-primary-rgb), 0.4);
+}
+
+/* Luồng photon chạy dọc trục đứng (Vertical Pulse) */
+.railPulse {
+  position: absolute;
+  left: 4px;
+  width: 4px;
+  height: 50px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--sao-primary-hex) 50%,
+    #ffffff 80%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px var(--sao-primary-hex), 0 0 20px #ffffff;
+  animation: saoRailPulse 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes saoRailPulse {
+  0% {
+    top: 10px;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 60px);
+    opacity: 0;
+  }
+}
+
+/* Ngàm nối trên đỉnh trục ray (Ăn khớp với top accent) */
+.railTopBracket {
+  position: absolute;
+  top: 0;
+  left: 1px;
+  width: 10px;
+  height: 12px;
+  background: var(--sao-primary-hex);
+  clip-path: polygon(0 0, 100% 30%, 100% 100%, 40% 100%, 0 70%);
+  box-shadow: 0 0 8px var(--sao-primary-hex);
+}
+
+/* Vạch chia độ laser HUD (Calibration ticks) */
+.railTicks {
+  position: absolute;
+  left: 1px;
+  top: 25%;
+  bottom: 25%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  pointer-events: none;
+}
+
+.railTick {
+  width: 7px;
+  height: 2px;
+  background: rgba(var(--sao-primary-rgb), 0.85);
+  box-shadow: 0 0 5px var(--sao-primary-hex);
+  clip-path: polygon(0 0, 100% 0, 60% 100%, 0 100%);
+}
+
+/* Chốt ngàm đáy ray */
+.railBottomBracket {
+  position: absolute;
+  bottom: 0;
+  left: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.railDiamond {
+  width: 8px;
+  height: 8px;
+  background: var(--sao-primary-hex);
+  box-shadow: 0 0 8px var(--sao-primary-hex), 0 0 14px rgba(var(--sao-primary-rgb), 0.6);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* --- SIDEBAR TOP ACCENT (Khung xà mũ công nghệ góc trên) --- */
 .sidebarTopAccent {
   position: absolute;
   top: 0;
+  left: -8px;
+  right: 0;
+  height: 10px;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* Thanh xà ngang chính bao phủ toàn bộ chiều rộng 240px */
+.topAccentBar {
+  position: absolute;
+  top: 0;
   left: 0;
-  width: 120px;
-  height: 30px;
-  border-top: 4px solid var(--sao-primary-hex);
-  border-left: 4px solid var(--sao-primary-hex);
-  box-shadow: -2px -2px 10px rgba(var(--sao-primary-rgb), 0.6);
-  clip-path: polygon(0 0, 59px 0px, 61px 2px, 118px 2px, 120px 4px, 0 100%);
+  right: 0;
+  height: 2px;
+  background: var(--sao-primary-hex);
+  box-shadow: 0 0 10px var(--sao-primary-hex), 0 0 20px rgba(var(--sao-primary-rgb), 0.5);
+}
+
+/* Ngàm kẹp góc trên-phải: Dừng chuẩn xác ở ranh giới đỉnh menu (Y = 10px) không xâm lấn vào item 1 */
+.topAccentCorner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: 10px;
+  background: var(--sao-primary-hex);
+  box-shadow: 2px 0 8px rgba(var(--sao-primary-rgb), 0.6);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 100%,
+    calc(100% - 2px) 100%,
+    calc(100% - 2px) 2px,
+    0 2px
+  );
+}
+
+/* Tinh thể neo chốt góc trên-phải (gắn trực tiếp tại đỉnh góc vuông) */
+.topAccentDiamond {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 6px;
+  height: 6px;
+  background: #ffffff;
+  border: 1px solid var(--sao-primary-hex);
+  box-shadow: 0 0 6px #ffffff, 0 0 12px var(--sao-primary-hex);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* Các khía cơ khí nhô lên dọc thanh xà */
+.topAccentNotches {
+  position: absolute;
+  top: -3px;
+  left: 50px;
+  display: flex;
+  gap: 12px;
+}
+
+.topNotch {
+  width: 16px;
+  height: 3px;
+  background: var(--sao-primary-hex);
+  box-shadow: 0 0 6px var(--sao-primary-hex);
+  clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%);
 }
 
 .sidebarMenu {
@@ -186,6 +342,44 @@
   filter: drop-shadow(0 0 5px var(--sao-primary-hex));
 }
 
+/* Dải sóng quét năng lượng từ ngàm ray chạy dọc qua bề mặt nút */
+.activeDecorators::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--sao-primary-rgb), 0.4) 40%,
+    rgba(255, 255, 255, 0.85) 80%,
+    transparent 100%
+  );
+  filter: blur(1px);
+  animation: saoBeamSweep 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes saoBeamSweep {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  50% {
+    left: calc(100% - 45px);
+    opacity: 0.9;
+  }
+  60%, 100% {
+    left: calc(100% - 45px);
+    opacity: 0;
+  }
+}
+
 /* Viền trên của Active */
 .activeBorderTop {
   position: absolute;
@@ -234,7 +428,7 @@
   background: var(--sao-primary-hex);
 }
 
-/* Viền trái của Active (Trên vát, dưới có tam giác bằng clip-path) */
+/* Viền trái của Active (Ngàm khóa cơ khí neo vào thanh ray) */
 .activeBorderLeft {
   position: absolute;
   top: 0;
@@ -244,45 +438,150 @@
   border-left: 2px solid var(--sao-primary-hex);
   border-right: 12px solid var(--sao-primary-hex);
   clip-path: polygon(80% 0, 100% 0, 100% 90%, 80% 100%, 60% 100%, 40% 90%, 0 90%, 0 75%, 10% 70%, 20% 75%, 20% 60%, 0 70%, 0 30%, 40% 30%, 40% 20%);
+  animation: saoClampSnap 0.35s cubic-bezier(0.18, 0.9, 0.32, 1.25) forwards,
+             saoClampGlow 2.5s ease-in-out 0.35s infinite;
 }
 
-/* ĐUÔI SIDEBAR */
+/* Chốt điểm ngàm phát sáng rực rỡ tại điểm giao cắt với thanh ray */
+.activeBorderLeft::after {
+  content: '';
+  position: absolute;
+  top: calc(50% - 4px);
+  left: 6px;
+  width: 8px;
+  height: 8px;
+  background: #ffffff;
+  border: 1.5px solid var(--sao-primary-hex);
+  box-shadow: 0 0 10px #ffffff, 0 0 18px var(--sao-primary-hex);
+  transform: rotate(45deg);
+  border-radius: 1px;
+  animation: saoCorePulse 2.5s ease-in-out infinite;
+}
+
+@keyframes saoClampSnap {
+  0% {
+    transform: translateX(12px) scaleX(0.6);
+    opacity: 0;
+  }
+  65% {
+    transform: translateX(-3px) scaleX(1.1);
+    opacity: 1;
+    filter: drop-shadow(-4px 0 14px #ffffff) brightness(2.2);
+  }
+  100% {
+    transform: translateX(0) scaleX(1);
+    opacity: 1;
+    filter: drop-shadow(-2px 0 8px var(--sao-primary-hex));
+  }
+}
+
+@keyframes saoClampGlow {
+  0%, 100% {
+    filter: drop-shadow(-2px 0 6px var(--sao-primary-hex));
+  }
+  50% {
+    filter: drop-shadow(-4px 0 14px var(--sao-primary-hex)) brightness(1.3);
+  }
+}
+
+@keyframes saoCorePulse {
+  0%, 100% {
+    transform: rotate(45deg) scale(1);
+    box-shadow: 0 0 8px #ffffff, 0 0 14px var(--sao-primary-hex);
+  }
+  50% {
+    transform: rotate(45deg) scale(1.35);
+    box-shadow: 0 0 14px #ffffff, 0 0 24px var(--sao-primary-hex);
+  }
+}
+
+/* --- ĐUÔI SIDEBAR (Chassis Keel đáy vát đa tầng & viền liền mạch) --- */
 .sidebarBottomAccent {
   position: relative;
-  height: 40px;
+  height: 38px;
+  margin-top: -1px; /* Khớp khít vào mép đáy của sidebarMenu */
+  pointer-events: none;
 }
 
-.bottomAngledCut {
+/* Khung viền ngoài: Lớp nền viền neon phát sáng liền mạch */
+.bottomChassis {
+  position: absolute;
+  inset: 0;
+  background: var(--sao-primary-hex);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.5);
+  /* Vát 2 nấc đa tầng: từ phải xuống, giật nấc notch, rồi vát vào đáy */
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 8px,
+    calc(100% - 10px) 18px,
+    calc(100% - 6px) 20px,
+    calc(100% - 28px) 100%,
+    0 100%
+  );
+}
+
+/* Lớp nền trong: Tạo đường viền 2px hoàn hảo theo góc vát */
+.bottomChassisInner {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  height: 100%;
-  background: rgba(4, 15, 30, 0.65);
-  clip-path: polygon(0 0, 100% 0, 100% 20%, 75% 100%, 0 100%);
-  border-bottom: 2px solid var(--sao-primary-hex);
-  border-right: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  right: 2px;
+  bottom: 2px;
+  background: rgba(4, 15, 30, 0.85);
+  backdrop-filter: blur(12px);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 7px,
+    calc(100% - 10px) 17px,
+    calc(100% - 6px) 19px,
+    calc(100% - 28px) 100%,
+    0 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 42px;
 }
 
+/* Cụm vạch khía trang trí (Telemetry hazard stripes) ở góc vát */
+.bottomStripes {
+  display: flex;
+  gap: 4px;
+  transform: skewX(-35deg);
+  opacity: 0.65;
+}
+
+.bottomStripe {
+  width: 3px;
+  height: 10px;
+  background: var(--sao-primary-hex);
+  border-radius: 1px;
+}
+
+/* Tinh thể thoi ở điểm gập của góc vát */
+.bottomCornerDiamond {
+  position: absolute;
+  right: calc(28px - 3px);
+  bottom: -3px;
+  width: 7px;
+  height: 7px;
+  background: var(--sao-primary-hex);
+  box-shadow: 0 0 8px var(--sao-primary-hex);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* Dải laser mỏng lửng lơ ở đáy */
 .bottomTechLine {
   position: absolute;
-  bottom: 0;
+  bottom: -6px;
   left: 0;
-  right: 25%;
+  width: 110px;
   height: 2px;
-  background: var(--sao-primary-hex);
-  box-shadow: 0 0 15px var(--sao-primary-hex);
-}
-
-/* Vạch sáng nằm lửng lơ ở dưới đáy */
-.bottomTechLine::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 10px;
-  width: 30px;
-  height: 2px;
-  background: rgba(var(--sao-primary-rgb), 0.8);
+  background: linear-gradient(90deg, var(--sao-primary-hex) 0%, transparent 100%);
+  box-shadow: 0 0 8px var(--sao-primary-hex);
 }
 
 /* --- MAIN CONTENT AREA --- */
@@ -303,8 +602,10 @@
   align-items: flex-start;
   z-index: 20;
   animation: fadeIn 0.8s ease-out;
-  margin-top: 20px;    /* Kéo Header xuống, tránh chạm kịch trần */
-  margin-bottom: 20px; /* Thu hẹp khoảng cách với phần bên dưới */
+  margin-top: 20px;
+  /* Kéo Header xuống, tránh chạm kịch trần */
+  margin-bottom: 20px;
+  /* Thu hẹp khoảng cách với phần bên dưới */
   padding: 0 20px;
   position: relative;
   transform-style: preserve-3d;
@@ -326,8 +627,10 @@
   display: flex;
   position: relative;
   z-index: 2;
-  margin-left: 0; /* KHÔNG margin âm để khớp với vị trí Sidebar X=0 */
-  height: 90px; /* Cố định chiều cao để 2 khối phẳng và nghiêng không bị lệch height */
+  margin-left: 0;
+  /* KHÔNG margin âm để khớp với vị trí Sidebar X=0 */
+  height: 90px;
+  /* Cố định chiều cao để 2 khối phẳng và nghiêng không bị lệch height */
   transform-style: preserve-3d;
 }
 
@@ -337,30 +640,24 @@
   align-items: center;
   background: rgba(10, 25, 45, 0.85);
   backdrop-filter: blur(15px);
-  padding: 0 10px 0 25px; /* Giảm padding để vừa avatar 70px trong 90px */
-  width: 240px; /* Bằng đúng width của sidebar */
+  padding: 0 10px 0 25px;
+  /* Giảm padding để vừa avatar 70px trong 90px */
+  width: 240px;
+  /* Bằng đúng width của sidebar */
   height: 100%;
-  
-  /* 3D Bend */
-  transform: perspective(1200px) rotateY(15deg) translateZ(0);
-  transform-origin: right center;
-  backface-visibility: hidden;
-  will-change: transform;
-  
+
   /* Viền trái phát sáng + mép phải thẳng để nối với nửa phẳng */
   border-left: 4px solid var(--sao-primary-hex);
   border-top: 3px solid var(--sao-primary-hex);
   border-bottom: 3px solid var(--sao-primary-hex);
   box-shadow: -2px 0 10px rgba(var(--sao-primary-rgb), 0.6);
-  
+
   /* Vát mép dưới trái */
-  clip-path: polygon(
-    0 0, 
-    100% 0, 
-    100% 100%, 
-    15px 100%,
-    0 calc(100% - 15px)
-  );
+  clip-path: polygon(0 0,
+      100% 0,
+      100% 100%,
+      15px 100%,
+      0 calc(100% - 15px));
 }
 
 /* Nửa phải (Flat) - Phẳng 2D, chứa thanh HP/MP */
@@ -371,37 +668,36 @@
   backdrop-filter: blur(15px);
   padding: 0 50px 0 20px;
   height: 100%;
-  
+
   /* Khớp viền với nửa trái */
   border-top: 3px solid var(--sao-primary-hex);
   border-bottom: 3px solid var(--sao-primary-hex);
-  
+
   /* Vát mép phải (SAO Style) */
-  clip-path: polygon(
-    0 0, 
-    calc(100% - 30px) 0, 
-    100% 30px, 
-    100% calc(100% - 15px), 
-    calc(100% - 15px) 100%, 
-    0 100%
-  );
+  clip-path: polygon(0 0,
+      calc(100% - 30px) 0,
+      100% 30px,
+      100% calc(100% - 15px),
+      calc(100% - 15px) 100%,
+      0 100%);
 }
 
 /* Kẻ viền phải giả (Decor) cho nửa Flat */
 .headerLeftFlat::after {
   content: "";
   position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   pointer-events: none;
   border-right: 2px solid var(--sao-primary-hex);
-  clip-path: polygon(
-    0 0, 
-    calc(100% - 30px) 0, 
-    100% 30px, 
-    100% calc(100% - 15px), 
-    calc(100% - 15px) 100%, 
-    0 100%
-  );
+  clip-path: polygon(0 0,
+      calc(100% - 30px) 0,
+      100% 30px,
+      100% calc(100% - 15px),
+      calc(100% - 15px) 100%,
+      0 100%);
 }
 
 
@@ -413,26 +709,27 @@
   background: rgba(10, 25, 45, 0.75);
   backdrop-filter: blur(15px);
   padding: 15px 35px 15px 50px;
-  margin-right: 0; /* Xóa margin âm để lề phải khớp hoàn toàn với khối bên dưới */
+  margin-right: 0;
+  /* Xóa margin âm để lề phải khớp hoàn toàn với khối bên dưới */
   z-index: 2;
-  
+
   /* Mirror of Left */
-  clip-path: polygon(
-    30px 0, 
-    100% 0, 
-    100% calc(100% - 15px), 
-    calc(100% - 15px) calc(100% - 15px), 
-    calc(100% - 30px) 100%, 
-    15px 100%, 
-    0 calc(100% - 15px), 
-    0 30px
-  );
+  clip-path: polygon(30px 0,
+      100% 0,
+      100% calc(100% - 15px),
+      calc(100% - 15px) calc(100% - 15px),
+      calc(100% - 30px) 100%,
+      15px 100%,
+      0 calc(100% - 15px),
+      0 30px);
 }
 
 /* Decorators for Right Header */
 .hrDecorTop {
   position: absolute;
-  top: 0; left: 29px; right: 0;
+  top: 0;
+  left: 29px;
+  right: 0;
   height: 3px;
   background: var(--sao-primary-hex);
   box-shadow: 0 0 8px var(--sao-primary-hex);
@@ -440,7 +737,9 @@
 
 .hrDecorBottom {
   position: absolute;
-  bottom: 0; left: 14px; right: 29px;
+  bottom: 0;
+  left: 14px;
+  right: 29px;
   height: 3px;
   background: var(--sao-primary-hex);
   box-shadow: 0 0 8px var(--sao-primary-hex);
@@ -448,8 +747,10 @@
 
 .hrDecorLeft {
   position: absolute;
-  bottom: 0; left: 0;
-  width: 40px; height: 100%;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 100%;
   background: linear-gradient(270deg, transparent, rgba(var(--sao-primary-rgb), 0.2));
   clip-path: polygon(0 30px, 0 calc(100% - 15px), 15px 100%, 100% 100%, 70% 30px);
   border-left: 2px solid var(--sao-primary-hex);
@@ -613,6 +914,7 @@
    MOBILE RESPONSIVE (MAX-WIDTH: 768px)
 ========================================= */
 @media (max-width: 768px) {
+
   /* 1. Tắt 3D Container & setup layout dọc linh hoạt theo viewport */
   .dashboardContainer {
     perspective: none;
@@ -661,13 +963,11 @@
     border: 2px solid var(--sao-primary-hex);
     box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
     /* Vát góc dưới bên phải giống SAO */
-    clip-path: polygon(
-      0 0, 
-      100% 0, 
-      100% calc(100% - 15px), 
-      calc(100% - 15px) 100%, 
-      0 100%
-    );
+    clip-path: polygon(0 0,
+        100% 0,
+        100% calc(100% - 15px),
+        calc(100% - 15px) 100%,
+        0 100%);
   }
 
   .headerLeftTilted {
@@ -681,18 +981,18 @@
     background: transparent;
     box-shadow: none;
   }
-  
+
   .avatarHex {
     width: 45px;
     height: 45px;
     min-width: 45px;
   }
-  
+
   .userName {
     font-size: 1.1rem;
     gap: 5px;
   }
-  
+
   .userLevel {
     font-size: 0.8rem;
   }
@@ -720,11 +1020,11 @@
     font-size: 0.7rem;
     gap: 8px;
   }
-  
+
   .barLabel {
     width: 25px;
   }
-  
+
   .barLabel svg {
     width: 12px;
     height: 12px;
@@ -736,7 +1036,7 @@
     clip-path: polygon(0 0, 98% 0, 100% 100%, 2% 100%);
     border-radius: 2px;
   }
-  
+
   .barValues {
     width: auto;
     font-size: 0.65rem;
@@ -755,7 +1055,9 @@
     box-shadow: none;
   }
 
-  .hrDecorTop, .hrDecorBottom, .hrDecorLeft {
+  .hrDecorTop,
+  .hrDecorBottom,
+  .hrDecorLeft {
     display: none;
   }
 
@@ -1023,16 +1325,33 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes spinReverse {
-  0% { transform: rotate(360deg); }
-  100% { transform: rotate(0deg); }
+  0% {
+    transform: rotate(360deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }

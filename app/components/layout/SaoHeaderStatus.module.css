@@ -10,6 +10,7 @@
   margin-left: 0;
   height: 90px;
   transform-style: preserve-3d;
+  flex-shrink: 0;
 }
 
 /* Nửa trái (Tilted) */
@@ -21,9 +22,6 @@
   padding: 0 10px 0 25px;
   width: 240px;
   height: 100%;
-
-  transform: rotateY(15deg);
-  transform-origin: right center;
 
   border-left: 4px solid var(--sao-primary-hex);
   border-top: 3px solid var(--sao-primary-hex);
@@ -87,6 +85,7 @@
   padding: 15px 35px 15px 50px;
   margin-right: 0;
   z-index: 2;
+  flex-shrink: 0;
 
   clip-path: polygon(
     30px 0,
@@ -255,30 +254,6 @@
 
 .date {
   font-size: 0.85rem;
-}
-
-.langToggleBtn {
-  background: rgba(var(--sao-primary-rgb), 0.15);
-  border: 1px solid var(--sao-primary-hex);
-  color: var(--sao-primary-hex);
-  font-family: inherit;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 2px 7px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 10px;
-  transition: all 0.2s ease;
-}
-
-.langToggleBtn:hover {
-  background: rgba(var(--sao-primary-rgb), 0.3);
-  box-shadow: 0 0 8px rgba(var(--sao-primary-rgb), 0.5);
-  transform: translateY(-1px);
 }
 
 /* ── MOBILE ── */

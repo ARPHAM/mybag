@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Sun, Clock, Brain, Utensils, Languages } from 'lucide-react';
+import { Sun, Clock, Brain, Utensils } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import SaoHeaderBridge from './SaoHeaderBridge';
 import styles from './SaoHeaderStatus.module.css';
 
 interface UserStatus {
@@ -21,12 +22,11 @@ interface Props {
 }
 
 export default function SaoHeaderStatus({ user }: Props) {
-  const { t, language, setLanguage, formatDate, formatTime } = useI18n();
+  const { t, formatDate, formatTime } = useI18n();
   const [now, setNow] = useState(() => new Date());
   const [hp, setHp] = useState(user?.current_hp ?? 0);
   const [mp, setMp] = useState(user?.current_mp ?? 0);
 
-  // Sync with parent user prop when it changes (e.g. after fetch)
   const prevUserRef = useRef<UserStatus | null>(null);
   useEffect(() => {
     if (user && user !== prevUserRef.current) {
@@ -53,7 +53,6 @@ export default function SaoHeaderStatus({ user }: Props) {
     }, 1000);
 
     return () => clearInterval(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.overdueCount, user?.max_mp]);
 
   const hpPct = user ? (hp / user.max_hp) * 100 : 100;
@@ -61,7 +60,6 @@ export default function SaoHeaderStatus({ user }: Props) {
 
   return (
     <>
-      {/* Left: Avatar + HP/MP */}
       <div className={styles.headerLeftContainer}>
         <div className={styles.headerLeftTilted}>
           <div
@@ -103,7 +101,8 @@ export default function SaoHeaderStatus({ user }: Props) {
         </div>
       </div>
 
-      {/* Right: Clock & Language */}
+      <SaoHeaderBridge />
+
       <div className={styles.headerRight}>
         <div className={styles.hrDecorTop} />
         <div className={styles.hrDecorBottom} />
@@ -115,16 +114,6 @@ export default function SaoHeaderStatus({ user }: Props) {
             <span>{t('common.today')}</span>
             <Clock size={17} color="var(--sao-primary-hex, #00f0ff)" style={{ marginLeft: 8 }} />
             <span className={styles.time} suppressHydrationWarning>{formatTime(now)}</span>
-            <button
-              type="button"
-              className={styles.langToggleBtn}
-              onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
-              title={language === 'vi' ? 'Chuyển sang English' : 'Switch to Tiếng Việt'}
-              aria-label="Toggle language"
-            >
-              <Languages size={13} />
-              <span>{language.toUpperCase()}</span>
-            </button>
           </div>
           <div className={styles.date} suppressHydrationWarning>{formatDate(now)}</div>
         </div>

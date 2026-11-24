@@ -118,17 +118,36 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.dashboardContainer}>
       <div className={styles.topHeader}>
-        <div className={styles.topHeaderLine}></div>
-
-        {/* SaoHeaderStatus runs its own 1-second timer; only IT re-renders each tick */}
         <SaoHeaderStatus user={user} />
       </div>
 
       <div className={styles.dashboardLayout}>
-        {/* SIDEBAR */}
         <div className={styles.sidebarContainer}>
-          <div className={styles.sidebarLeftRail}></div>
-          <div className={styles.sidebarTopAccent}></div>
+          <div className={styles.sidebarLeftRail}>
+            <div className={styles.railSpine}></div>
+            <div className={styles.railPulse}></div>
+            <div className={styles.railTopBracket}></div>
+            <div className={styles.railTicks}>
+              <span className={styles.railTick}></span>
+              <span className={styles.railTick}></span>
+              <span className={styles.railTick}></span>
+              <span className={styles.railTick}></span>
+            </div>
+            <div className={styles.railBottomBracket}>
+              <span className={styles.railDiamond}></span>
+            </div>
+          </div>
+
+          {/* Khung xà mũ công nghệ góc trên (Cyber Canopy) */}
+          <div className={styles.sidebarTopAccent}>
+            <div className={styles.topAccentBar}></div>
+            <div className={styles.topAccentCorner}></div>
+            <div className={styles.topAccentNotches}>
+              <span className={styles.topNotch}></span>
+              <span className={styles.topNotch}></span>
+            </div>
+            <div className={styles.topAccentDiamond}></div>
+          </div>
 
           <div className={styles.sidebarMenu}>
             {menuItems.map((item) => {
@@ -160,15 +179,28 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               );
             })}
           </div>
+
+          {/* Đuôi khung đáy Sidebar (Cyber Keel vát đa tầng & viền liền mạch) */}
+          <div className={styles.sidebarBottomAccent}>
+            <div className={styles.bottomChassis}>
+              <div className={styles.bottomChassisInner}>
+                <div className={styles.bottomStripes}>
+                  <span className={styles.bottomStripe}></span>
+                  <span className={styles.bottomStripe}></span>
+                  <span className={styles.bottomStripe}></span>
+                </div>
+              </div>
+            </div>
+            <div className={styles.bottomCornerDiamond}></div>
+            <div className={styles.bottomTechLine}></div>
+          </div>
         </div>
 
-        {/* MAIN CONTENT AREA */}
         <div className={styles.mainContent}>
           {children}
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION (ẨN TRÊN DESKTOP) */}
       <div className={styles.mobileNavWrapper}>
         {mobileMoreOpen && (
           <>

@@ -24,6 +24,7 @@ TẦNG 1: App Shell & Global Layout (Khung tổng & Điều hướng toàn cục
   * `SidebarMenu`: Cột điều hướng bên trái trên Desktop (8 menu items).
   * `MobileBottomNav`: Thanh Dock điều hướng 4 mục chính + nút "Thêm" trên Mobile.
   * `SaoHeaderStatus`: Thanh trạng thái hiển thị Avatar, Level, HP/EXP bar, Đồng hồ, Thông báo.
+  * `SaoHeaderBridge`: Cầu nối dữ liệu quang học holographic (HUD Data Bridge) nối cụm Player Status và System Clock.
   * `YuiAssistant`: Trợ lý AI toàn cục (Nút nổi + Chat dialog + Inline Plan Editor).
   * `SaoAlert`: Toast notification toàn cục.
 
@@ -199,7 +200,9 @@ app/components/
 ├── SaoEmptyState.tsx              # (Tạo mới chuẩn hóa)
 ├── layout/                        # Component riêng theo nghiệp vụ
 │   ├── SaoHeaderStatus.tsx
-│   └── SaoHeaderStatus.module.css
+│   ├── SaoHeaderStatus.module.css
+│   ├── SaoHeaderBridge.tsx
+│   └── SaoHeaderBridge.module.css
 ├── yui/
 │   ├── YuiAssistant.tsx
 │   ├── YuiAssistant.module.css
@@ -221,3 +224,60 @@ app/components/
 └── menu/                          # Gom từ menu/components/
     └── InventoryTab.tsx
 ```
+
+---
+
+## VI. NHẬT KÝ TIẾN ĐỘ AUDIT & CHUẨN HÓA (PROGRESS TRACKING)
+
+> **Quy trình:** Duyệt từ ngoài vào trong: **Tầng 1 (App Shell & Header/Nav)** → **Tầng 2 (Page Controllers)** → **Tầng 3 (Sections/Tabs)** → **Tầng 4 (Cards & Modals)** → **Tầng 5 (Primitives/Atoms)**.
+
+### TẦNG 1: APP SHELL & GLOBAL LAYOUT
+
+#### 1. TopHeader (`app/(main)/layout.tsx` & `app/components/layout/`)
+- [x] **Audit & Nâng cấp phụ kiện kết nối TopHeader (`SaoHeaderBridge` thay thế `topHeaderLine`):**
+  - **Hiện trạng:** Dòng 121 trước đây là `<div className={styles.topHeaderLine}></div>`, chỉ là 1 đường kẻ 2px mờ mờ với dải gradient tĩnh và tọa độ cố định (`left: 450px; right: 350px`). Khi màn hình co giãn hoặc ở các độ phân giải khác nhau, đường kẻ bị thụt lùi hoặc lấn đè, không toát lên được phong cách HUD sci-fi đặc trưng của Sword Art Online (*"tuy có hơn không nhưng chưa đủ wow"*).
+  - **Giải pháp & Triển khai:**
+    - Tạo mới component `<SaoHeaderBridge />` (`app/components/layout/SaoHeaderBridge.tsx` & `.module.css`).
+    - Tích hợp 2 cực kết nối (`terminalLeft`, `terminalRight`) với tinh thể thoi neon (diamond nodes `◇`) và các vạch notch micro-tech nghiêng -25°.
+    - Đường ray quang học hai lớp (`railTrack` + `railGlow`) kèm luồng photon chạy quét liên tục (`pulseBeam` với `@keyframes saoPulseBeam`).
+    - Huy hiệu thông số hệ thống holographic trung tâm: `[ • SYSTEM LINK // ACTIVE ]` với viền vát góc cyber và hiệu ứng thở nhịp chấm tín hiệu.
+    - Responsive thông minh: Co giãn linh hoạt theo tỷ lệ màn hình, tự ẩn nhãn trên màn hình cỡ trung và ẩn hoàn toàn trên mobile khi header xếp chồng.
+- [x] **Bỏ thuộc tính làm nghiêng khối Avatar/Level (`SaoHeaderStatus.tsx:L63-L72`):**
+  - **Hiện trạng:** Khối `.headerLeftTilted` chứa Avatar + Tên/Level bị áp 3D skew/tilt `transform: rotateY(15deg)`. Hiệu ứng này khiến thông tin người dùng bị lệch góc so với cụm thanh HP/MP 2D phẳng liền kề, gây cảm giác méo hình và khó nhìn.
+  - **Khắc phục:** Đã gỡ bỏ `transform: rotateY(15deg);` và `transform-origin: right center;` ở `SaoHeaderStatus.module.css` (cũng như dọn dẹp các thuộc tính 3D bend tương ứng trong `layout.module.css`). Khối Avatar giờ đây phẳng hoàn toàn, tiếp giáp vuông vắn, liền lạc và sắc nét với thanh trạng thái.
+- [x] **Loại bỏ nút chuyển đổi ngôn ngữ ở TopHeader (`SaoHeaderStatus.tsx:L114-L123`):**
+  - **Hiện trạng:** Nút chuyển đổi EN/VI nằm xen vào cụm ngày giờ / thời tiết thế giới (`headerRight`), gây chật chội và phá vỡ bố cục hiển thị thế giới Aincrad.
+  - **Khắc phục:** Đã gỡ bỏ hoàn toàn nút bấm `.langToggleBtn`, dọn dẹp import icon `Languages` và state `language`, `setLanguage` thừa tại `SaoHeaderStatus.tsx`. Chức năng đổi ngôn ngữ đã được quy hoạch tập trung tại trang Cài đặt (Settings).
+- [x] **Đánh giá trực quan sau hiệu chỉnh & Fix lỗi đa ngôn ngữ (Visual Audit Review & i18n Fix):**
+  - Khối Avatar & Level phẳng 2D: Cực kỳ sắc nét, avatar tròn và viền sáng ăn khớp với cụm thanh HP/MP; góc vát đuôi phải tạo điểm kết thúc dứt khoát.
+  - Cụm Ngày / Giờ / Thời tiết bên phải: Gọn gàng, thoáng đãng, mang tính chất màn hình định vị thế giới Aincrad.
+  - Phụ kiện cầu nối `SaoHeaderBridge`: Đường ray laser với luồng photon chuyển động và huy hiệu `[ SYSTEM LINK // ACTIVE ]` tạo điểm nhấn công nghệ HUD mạnh mẽ.
+  - **Khắc phục lỗi che khuất ở bản tiếng Anh (i18n Overflow Fix):**
+    - *Vấn đề phát hiện:* Khi chuyển sang tiếng Anh (`Tuesday, Nov 24, 2026`), chuỗi ngày dài hơn tiếng Việt làm khối `.headerRight` phình to sang trái ~50px, đè lấp mất cụm tinh thể kim cương `◆` và vạch notch `///` của cầu nối do trước đó dùng tọa độ cứng `right: 295px`.
+    - *Giải pháp triệt để:* Chuyển `SaoHeaderBridge` thành item flexbox tự nhiên (`flex: 1; margin: 0 16px;`) đặt xen giữa `headerLeftContainer` và `headerRight`. Nhờ đó, cầu nối tự động co/giãn lấp đầy khoảng trống linh hoạt theo độ dài chuỗi ngày/tháng ở mọi ngôn ngữ (VI/EN) và mọi kích thước màn hình mà không bao giờ bị đè lấn hay hở khoảng cách.
+
+#### 2. SidebarMenu (`app/(main)/layout.tsx` & `layout.module.css`)
+- [x] **Bỏ thuộc tính làm nghiêng 3D của Sidebar (`sidebarContainer:L124-L164`):**
+  - Gỡ bỏ `transform: perspective(1200px) rotateY(15deg) translateZ(0);` và các thuộc tính 3D liên quan. Toàn bộ thanh Sidebar chuyển về phẳng 2D, vuông góc và thẳng hàng song song với màn hình làm việc, giúp toàn bộ 8 menu items sắc nét và dễ tương tác.
+- [x] **Nâng cấp phụ kiện khung công nghệ `sidebarLeftRail` và `sidebarTopAccent` (`L126-L127`):**
+  - **Triết lý thiết kế:** Kế thừa và nâng tầm phong cách vẽ tay thủ công tinh xảo của `activeDecorators` (`activeBorderLeft`, `activeBorderRight` với các góc vát đa tầng `clip-path`, khía rãnh notch cơ khí, viền neon phát sáng).
+  - **`sidebarLeftRail` (Trục xương quang học - Data Spine):**
+    - Giữ trọn chiều dài chạy dài xuống đáy theo chủ ý của người dùng để làm trục neo toàn cục cho giao diện.
+    - Dải ray neon mỏng phát sáng `var(--sao-primary-hex)` dọc cạnh trái với luồng photon xung năng lượng (`railPulse` với animation `saoRailPulse`).
+    - Cụm vạch đo calibration laser HUD (`railTicks`) phân đoạn dọc thân ray và chốt tinh thể kim cương đáy ray (`railDiamond`).
+  - **Khóa ngàm Active & Ray đứng (`activeBorderLeft` Docking Latch):**
+    - Giữ nguyên cấu trúc ngàm cắt qua ray trái theo chủ ý cơ khí để neo giữ menu active vào thanh ray.
+    - **Nâng cấp hiệu ứng WOW:**
+      + *Hiệu ứng Snap-Lock cơ khí:* Khi chọn tab/trang, ngàm cơ khí phóng ra với gia tốc cyber (`saoClampSnap`) và chốt khựng vào thanh ray với một luồng chớp sáng tiếp xúc.
+      + *Chốt tinh thể năng lượng tại điểm giao cắt (`activeBorderLeft::after`):* Một viên ngọc kim cương neon rực rỡ nằm ngay tại giao điểm ngàm & cột ray, nhấp nháy năng lượng nhịp nhàng (`saoCorePulse`), nhìn rõ ngay ở mức zoom 100%.
+      + *Sóng quét năng lượng bề mặt (`activeDecorators::after`):* Cứ mỗi 3.5 giây, một luồng sóng laser quét từ ngàm kẹp xuyên qua bề mặt nút active (`saoBeamSweep`), trực quan hóa quá trình truyền dữ liệu/năng lượng từ cột ray vào tính năng đang chọn.
+  - **`sidebarTopAccent` (Khung xà mũ công nghệ - Cyber Canopy):**
+    - Thiết kế lại thanh xà ngang `topAccentBar` bao phủ trọn vẹn bề rộng 240px của Sidebar.
+    - Mép trên-phải vát 45° (`topAccentCorner`) ôm khít mép menu, kết thúc bằng tinh thể thoi neon (`topAccentDiamond`) ở góc.
+    - Cụm khía cơ khí nhô lên (`topAccentNotches`) nhịp nhàng dọc thanh xà, không bị cụt hay để lại khoảng trống kỳ lạ.
+  - **Tái thiết kế đuôi đáy `sidebarBottomAccent` (Chassis Keel vát đa tầng & viền liền mạch):**
+    - Giải quyết triệt để lỗi viền màu bị đứt đoạn bằng kỹ thuật lồng 2 lớp polygon (`bottomChassis` + `bottomChassisInner`), tạo đường viền neon 2px chạy liền mạch 100% từ mép phải menu men theo góc vát xuống đáy.
+    - Góc vát đa tầng 2 nấc cơ khí phá bỏ sự đơn điệu của nhát cắt thẳng cũ, tích hợp cụm 3 vạch kẻ telemetry `///` (`bottomStripes`) và chốt tinh thể kim cương (`bottomCornerDiamond`).
+
+---
+*(Tiếp tục audit Tầng 1: MobileBottomNav, YuiAssistant, Toast/Alert...)*
