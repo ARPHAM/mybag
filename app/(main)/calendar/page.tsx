@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import DateSelector from './components/DateSelector';
-import SAOTimeline from './components/SAOTimeline';
-import SAOWeekView from './components/SAOWeekView';
-import SAOMonthView from './components/SAOMonthView';
-import SaoModal from '@/app/components/SaoModal/SaoModal';
-import SaoSelect from '@/app/components/SaoSelect/SaoSelect';
-import SaoDatePicker from '@/app/components/SaoDatePicker/SaoDatePicker';
+import DateSelector from '@/app/components/calendar/DateSelector';
+import SAOTimeline from '@/app/components/calendar/SAOTimeline';
+import SAOWeekView from '@/app/components/calendar/SAOWeekView';
+import SAOMonthView from '@/app/components/calendar/SAOMonthView';
+import SaoModal from '@/app/components/SaoModal';
+import SaoSelect from '@/app/components/SaoSelect';
+import SaoDatePicker from '@/app/components/SaoDatePicker';
 import { Plus, Calendar, Edit2, Trash2, PauseCircle, Clock, Columns3, CalendarDays, Award, CheckCircle2, AlertTriangle } from 'lucide-react';
 import styles from './calendar.module.css';
 import { useSaoAlert } from '../../contexts/AlertContext';
-import SaoButton from '@/app/components/SaoButton/SaoButton';
-import SaoInput from '@/app/components/SaoInput/SaoInput';
+import SaoButton from '@/app/components/SaoButton';
+import SaoInput from '@/app/components/SaoInput';
 import { getEvents, createEvent, updateEvent, deleteEvent } from './api';
 import { getTasks } from '../tasks/api';
 import { getLocalDateKey, isSameLocalDate } from './utils';

@@ -16,11 +16,11 @@ import {
   Legend
 } from 'recharts';
 import styles from './health.module.css';
-import SaoModal from '../../components/SaoModal/SaoModal';
-import SaoInput from '../../components/SaoInput/SaoInput';
-import SaoButton from '../../components/SaoButton/SaoButton';
-import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
-import SaoLoading from '../../components/SaoLoading/SaoLoading';
+import SaoModal from '@/app/components/SaoModal';
+import SaoInput from '@/app/components/SaoInput';
+import SaoButton from '@/app/components/SaoButton';
+import SaoDatePicker from '@/app/components/SaoDatePicker';
+import SaoLoading from '@/app/components/SaoLoading';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { getHealthData, getHealthMacros, getAiAnalysis, saveHealthData, requestAiAnalysis } from './api';
 

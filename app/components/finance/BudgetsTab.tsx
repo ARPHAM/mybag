@@ -5,8 +5,8 @@ import {
   Plus, Edit3, AlertTriangle,
   Coffee, Home as HomeIcon, ShoppingBag, Gamepad2, Car, CreditCard, Package
 } from 'lucide-react';
-import SaoButton from '../../../components/SaoButton/SaoButton';
-import styles from '../finance.module.css';
+import SaoButton from '../SaoButton';
+import styles from '@/app/(main)/finance/finance.module.css';
 import type { BudgetPocket } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 

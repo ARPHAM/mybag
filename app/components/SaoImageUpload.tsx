@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import SaoMediaPickerButton, { MediaPickerCustomOption } from "../SaoMediaPickerButton/SaoMediaPickerButton";
+import SaoMediaPickerButton, { MediaPickerCustomOption } from "./SaoMediaPickerButton";
 
 interface SaoImageUploadProps {
   onUploadSuccess: (url: string) => void;

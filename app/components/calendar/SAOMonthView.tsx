@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { getLocalDateKey } from '../utils';
+import { getLocalDateKey } from '@/app/(main)/calendar/utils';
 import { useI18n } from '@/lib/i18n';
 
 interface SAOMonthViewProps {

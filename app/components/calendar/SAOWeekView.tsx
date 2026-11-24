@@ -2,8 +2,8 @@
 
 import React, { useMemo } from 'react';
 import { Clock, ShieldAlert, Award, Check, X } from 'lucide-react';
-import { useI18n } from '../../../contexts/I18nContext';
-import { getLocalDateKey } from '../utils';
+import { useI18n } from '@/lib/i18n';
+import { getLocalDateKey } from '@/app/(main)/calendar/utils';
 
 interface SAOWeekViewProps {
   selectedDate: Date;

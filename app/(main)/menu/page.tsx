@@ -7,21 +7,21 @@ import {
   Wheat, Candy, AlertTriangle, Package, Camera, ImageIcon, Wallet as WalletIcon,
   ShieldAlert, FileText
 } from 'lucide-react';
-import SaoModal from '../../components/SaoModal/SaoModal';
-import SaoInput from '../../components/SaoInput/SaoInput';
-import SaoButton from '../../components/SaoButton/SaoButton';
+import SaoModal from '@/app/components/SaoModal';
+import SaoInput from '@/app/components/SaoInput';
+import SaoButton from '@/app/components/SaoButton';
 import { useSaoAlert } from '../../contexts/AlertContext';
-import SaoLoading from '../../components/SaoLoading/SaoLoading';
-import SaoSelect from '../../components/SaoSelect/SaoSelect';
-import SaoTabs from '../../components/SaoTabs/SaoTabs';
-import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
-import SaoImageUpload from '../../components/SaoImageUpload/SaoImageUpload';
+import SaoLoading from '@/app/components/SaoLoading';
+import SaoSelect from '@/app/components/SaoSelect';
+import SaoTabs from '@/app/components/SaoTabs';
+import SaoDatePicker from '@/app/components/SaoDatePicker';
+import SaoImageUpload from '@/app/components/SaoImageUpload';
 import {
   getRecipes, getMeals, getInventory, calculateMacros, createRecipe,
   createMeal, getWallets, updateMeal, deleteMeal,
   createInventory, updateInventory, deleteInventory
 } from './api';
-import InventoryTab from './components/InventoryTab';
+import InventoryTab from '@/app/components/menu/InventoryTab';
 import styles from './menu.module.css';
 
 import { MenuTabId, Recipe, MealRecord, MealIngredientUsed, InventoryItem } from '@/lib/types';

@@ -49,7 +49,7 @@ import {
 } from '@/lib/vnTime';
 import { getYuiBriefing, parseYuiMessage, executeYuiActions } from './api';
 import styles from './YuiAssistant.module.css';
-import SaoMediaPickerButton from '../SaoMediaPickerButton/SaoMediaPickerButton';
+import SaoMediaPickerButton from '../SaoMediaPickerButton';
 import { useI18n } from '@/lib/i18n';
 
 type Msg =

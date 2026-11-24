@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { User, Mail, Shield, Save, Loader2 } from 'lucide-react';
-import SaoInput from '../../components/SaoInput/SaoInput';
-import SaoButton from '../../components/SaoButton/SaoButton';
-import SaoImageUpload from '../../components/SaoImageUpload/SaoImageUpload';
+import SaoInput from '@/app/components/SaoInput';
+import SaoButton from '@/app/components/SaoButton';
+import SaoImageUpload from '@/app/components/SaoImageUpload';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { useI18n } from '@/lib/i18n';
 import styles from './profile.module.css';

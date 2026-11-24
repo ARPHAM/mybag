@@ -3,11 +3,11 @@
 import React, { useState } from 'react';
 import { Sparkles, CheckCircle2, Wallet, ArrowDownRight, ArrowUpRight, ArrowRightLeft, Users, CalendarDays, HandCoins, CreditCard, Pencil, Trash2, ShoppingBag, Package } from 'lucide-react';
 import { formatVnIsoString, getYuiActionScheduleDisplay } from '@/lib/vnTime';
-import SaoModal from '../../../components/SaoModal/SaoModal';
-import SaoButton from '../../../components/SaoButton/SaoButton';
-import SaoInput from '../../../components/SaoInput/SaoInput';
-import { useSaoAlert } from '../../../contexts/AlertContext';
-import { parseSmartExpense, executeSmartExpense } from '../api';
+import SaoModal from '../SaoModal';
+import SaoButton from '../SaoButton';
+import SaoInput from '../SaoInput';
+import { useSaoAlert } from '@/app/contexts/AlertContext';
+import { parseSmartExpense, executeSmartExpense } from '@/app/(main)/finance/api';
 
 interface SmartExpenseModalProps {
   isOpen: boolean;

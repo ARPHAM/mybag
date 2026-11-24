@@ -8,8 +8,8 @@ import {
   Edit3
 } from 'lucide-react';
 import FinanceCharts from './FinanceCharts';
-import SaoButton from '../../../components/SaoButton/SaoButton';
-import styles from '../finance.module.css';
+import SaoButton from '../SaoButton';
+import styles from '@/app/(main)/finance/finance.module.css';
 import type { WalletSource, Transaction } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 

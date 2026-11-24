@@ -1,8 +1,8 @@
 "use client";
 
 import { Plus, Edit3, Building2, Smartphone, Banknote, Wallet } from 'lucide-react';
-import SaoButton from '../../../components/SaoButton/SaoButton';
-import styles from '../finance.module.css';
+import SaoButton from '../SaoButton';
+import styles from '@/app/(main)/finance/finance.module.css';
 import type { WalletSource } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 

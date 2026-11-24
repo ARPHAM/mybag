@@ -13,8 +13,8 @@ import {
   Loader2,
   PieChart
 } from 'lucide-react';
-import SaoModal from '../../../components/SaoModal/SaoModal';
-import { getCategoryTransactions } from '../api';
+import SaoModal from '../SaoModal';
+import { getCategoryTransactions } from '@/app/(main)/finance/api';
 import type { Transaction } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 import styles from './CategoryDrilldownModal.module.css';

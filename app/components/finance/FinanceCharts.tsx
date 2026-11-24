@@ -13,8 +13,8 @@ import {
   Cell
 } from 'recharts';
 import { TrendingUp, PieChart as PieChartIcon, ChevronRight } from 'lucide-react';
-import SaoButton from '../../../components/SaoButton/SaoButton';
-import styles from '../finance.module.css';
+import SaoButton from '../SaoButton';
+import styles from '@/app/(main)/finance/finance.module.css';
 import type { Transaction } from '@/lib/types';
 import { FINANCE_CATEGORY_OPTIONS } from '@/lib/constants/finance';
 import { useI18n } from '@/lib/i18n';

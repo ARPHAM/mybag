@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Sun, Clock, Brain, Utensils, Languages } from 'lucide-react';
-import { useI18n } from '../../contexts/I18nContext';
+import { useI18n } from '@/lib/i18n';
 import styles from './SaoHeaderStatus.module.css';
 
 interface UserStatus {

@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useSaoAlert } from '../../contexts/AlertContext';
-import { useI18n } from '../../contexts/I18nContext';
+import { useSaoAlert } from '../contexts/AlertContext';
+import { useI18n } from '@/lib/i18n';
 import { AlertCircle, HelpCircle } from 'lucide-react';
 import styles from './SaoAlert.module.css';
 

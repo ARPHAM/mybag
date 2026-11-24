@@ -18,9 +18,9 @@ import {
 import { AlertProvider } from '../contexts/AlertContext';
 import { I18nProvider, useI18n } from '../contexts/I18nContext';
 import { getUserProfile } from './api';
-import SaoAlert from '../components/SaoAlert/SaoAlert';
-import YuiAssistant from '../components/YuiAssistant/YuiAssistant';
-import SaoHeaderStatus from '../components/SaoHeaderStatus/SaoHeaderStatus';
+import SaoAlert from '@/app/components/SaoAlert';
+import YuiAssistant from '@/app/components/yui/YuiAssistant';
+import SaoHeaderStatus from '@/app/components/layout/SaoHeaderStatus';
 import styles from './layout.module.css';
 
 function DashboardContent({ children }: { children: React.ReactNode }) {

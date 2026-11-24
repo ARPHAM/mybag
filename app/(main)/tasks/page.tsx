@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { CheckSquare, Check, Plus, Edit2, Trash2, AlertTriangle, X } from 'lucide-react';
 import styles from './tasks.module.css';
-import SaoModal from '../../components/SaoModal/SaoModal';
-import SaoLoading from '../../components/SaoLoading/SaoLoading';
-import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
-import SaoSelect from '../../components/SaoSelect/SaoSelect';
-import SaoInput from '../../components/SaoInput/SaoInput';
-import SaoButton from '../../components/SaoButton/SaoButton';
+import SaoModal from '@/app/components/SaoModal';
+import SaoLoading from '@/app/components/SaoLoading';
+import SaoDatePicker from '@/app/components/SaoDatePicker';
+import SaoSelect from '@/app/components/SaoSelect';
+import SaoInput from '@/app/components/SaoInput';
+import SaoButton from '@/app/components/SaoButton';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { getTasks, createTask, updateTask, deleteTask } from './api';

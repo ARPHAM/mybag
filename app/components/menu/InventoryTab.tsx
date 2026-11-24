@@ -7,9 +7,9 @@ import {
   Sparkles, Check, AlertCircle, CircleDot, Flame,
   Utensils, Gift, CheckCircle2, XCircle, AlertTriangle
 } from 'lucide-react';
-import SaoButton from '../../../components/SaoButton/SaoButton';
-import { useI18n } from '../../../contexts/I18nContext';
-import styles from '../menu.module.css';
+import SaoButton from '../SaoButton';
+import { useI18n } from '@/lib/i18n';
+import styles from '@/app/(main)/menu/menu.module.css';
 import type { InventoryItem } from '@/lib/types';
 
 interface Props {
@@ -20,7 +20,7 @@ interface Props {
   onManualAdd: () => void;
   onEdit: (item: InventoryItem) => void;
   onUpdateQty: (id: string, delta: number) => void;
-  onUpdateStockStatus: (id: string, status: 'stable' | 'low' | 'out') => void;
+  onUpdateStockStatus?: (id: string, status: 'stable' | 'low' | 'out') => void;
   onScanBill: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -216,7 +216,7 @@ export default function InventoryTab({
                     <button
                       type="button"
                       className={`${styles.spiceStatusBtn} ${resolvedStatus === 'stable' ? styles.spiceStatusBtnStableActive : ''}`}
-                      onClick={() => onUpdateStockStatus(item.id, 'stable')}
+                      onClick={() => onUpdateStockStatus?.(item.id, 'stable')}
                       title={t('menu.statusStable')}
                     >
                       {t('menu.statusStable')}
@@ -224,7 +224,7 @@ export default function InventoryTab({
                     <button
                       type="button"
                       className={`${styles.spiceStatusBtn} ${resolvedStatus === 'low' ? styles.spiceStatusBtnLowActive : ''}`}
-                      onClick={() => onUpdateStockStatus(item.id, 'low')}
+                      onClick={() => onUpdateStockStatus?.(item.id, 'low')}
                       title={t('menu.statusLow')}
                     >
                       {t('menu.statusLow')}
@@ -232,7 +232,7 @@ export default function InventoryTab({
                     <button
                       type="button"
                       className={`${styles.spiceStatusBtn} ${resolvedStatus === 'out' ? styles.spiceStatusBtnOutActive : ''}`}
-                      onClick={() => onUpdateStockStatus(item.id, 'out')}
+                      onClick={() => onUpdateStockStatus?.(item.id, 'out')}
                       title={t('menu.statusOut')}
                     >
                       {t('menu.statusOut')}

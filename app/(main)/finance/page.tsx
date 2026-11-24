@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { Wallet, Plus, Activity, Save, Trash2, ArrowRightLeft, RotateCcw, Sparkles } from 'lucide-react';
-import SaoModal from '../../components/SaoModal/SaoModal';
-import SaoSelect from '../../components/SaoSelect/SaoSelect';
-import SaoTabs from '../../components/SaoTabs/SaoTabs';
-import SaoDatePicker from '../../components/SaoDatePicker/SaoDatePicker';
-import SaoLoading from '../../components/SaoLoading/SaoLoading';
-import SaoInput from '../../components/SaoInput/SaoInput';
-import SaoButton from '../../components/SaoButton/SaoButton';
+import SaoModal from '@/app/components/SaoModal';
+import SaoSelect from '@/app/components/SaoSelect';
+import SaoTabs from '@/app/components/SaoTabs';
+import SaoDatePicker from '@/app/components/SaoDatePicker';
+import SaoLoading from '@/app/components/SaoLoading';
+import SaoInput from '@/app/components/SaoInput';
+import SaoButton from '@/app/components/SaoButton';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { getVnDateStr } from '@/lib/vnTime';
 
@@ -38,13 +38,13 @@ import {
 import { useI18n } from '@/lib/i18n';
 
 // Tab components
-import OverviewTab from './components/OverviewTab';
-import WalletsTab from './components/WalletsTab';
-import HistoryTab from './components/HistoryTab';
-import BudgetsTab from './components/BudgetsTab';
-import DebtsTab from './components/DebtsTab';
-import InventoryTab from './components/InventoryTab';
-import SmartExpenseModal from './components/SmartExpenseModal';
+import OverviewTab from '@/app/components/finance/OverviewTab';
+import WalletsTab from '@/app/components/finance/WalletsTab';
+import HistoryTab from '@/app/components/finance/HistoryTab';
+import BudgetsTab from '@/app/components/finance/BudgetsTab';
+import DebtsTab from '@/app/components/finance/DebtsTab';
+import InventoryTab from '@/app/components/menu/InventoryTab';
+import SmartExpenseModal from '@/app/components/finance/SmartExpenseModal';
 
 export default function FinancePage() {
   const { t } = useI18n();
