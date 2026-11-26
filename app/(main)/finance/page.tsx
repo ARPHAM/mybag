@@ -492,6 +492,44 @@ export default function FinancePage() {
       });
     };
 
+    const handleDeleteWallet = async (walletToDelete: WalletSource) => {
+      if (wallets.length <= 1) {
+        showAlert('Bạn không thể xóa ví duy nhất còn lại của mình.');
+        return;
+      }
+
+      const otherWallets = wallets.filter(w => w.id !== walletToDelete.id);
+      const targetWallet = otherWallets[0];
+
+      if (walletToDelete.balance > 0) {
+        showConfirm(
+          `Ví "${walletToDelete.name}" hiện còn số dư ${formatMoney(walletToDelete.balance)}.\nToàn bộ số dư và lịch sử giao dịch/kho sẽ được tự động chuyển nhượng sang ví "${targetWallet.name}".\nBạn có chắc chắn muốn đóng ví này không?`,
+          async () => {
+            try {
+              await deleteWallet(walletToDelete.id, targetWallet.id);
+              fetchData(true);
+              setIsModalOpen(false);
+            } catch (e: any) {
+              showAlert(e.message || 'Lỗi xóa ví');
+            }
+          }
+        );
+      } else {
+        showConfirm(
+          `Bạn có chắc chắn muốn xóa ví "${walletToDelete.name}"?\nToàn bộ dữ liệu liên quan sẽ được chuyển nhượng an toàn sang ví "${targetWallet.name}".`,
+          async () => {
+            try {
+              await deleteWallet(walletToDelete.id, targetWallet.id);
+              fetchData(true);
+              setIsModalOpen(false);
+            } catch (e: any) {
+              showAlert(e.message || 'Lỗi xóa ví');
+            }
+          }
+        );
+      }
+    };
+
     const handleSaveWallet = async (e: React.FormEvent) => {
       e.preventDefault();
       try {
@@ -651,10 +689,15 @@ export default function FinancePage() {
             <label className={styles.formLabel}>{t('finance.initialBalance')}</label>
             <SaoInput type="number" placeholder="0" value={walletForm.balance} onChange={e => setWalletForm({ ...walletForm, balance: e.target.value })} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
             <SaoButton variant="primary" type="submit">
               <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.addWallet')}
             </SaoButton>
+            {editingItem && (
+              <SaoButton variant="danger" type="button" onClick={() => handleDeleteWallet(editingItem)}>
+                <Trash2 size={18} style={{ display: 'inline', marginRight: 8 }} /> {t('common.delete')}
+              </SaoButton>
+            )}
           </div>
         </form>
       );

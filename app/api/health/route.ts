@@ -64,16 +64,22 @@ export async function POST(req: Request) {
     const user = await User.findById(decoded.userId);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    let rewardExp = 0;
-    let message = 'Đã cập nhật chỉ số sức khoẻ!';
-    
-    // Cập nhật chiều cao nếu có thay đổi
-    if (height && height !== user.height) {
-      user.height = height;
+    // Validate và cập nhật chiều cao nếu có thay đổi
+    if (height !== undefined && height !== null && height !== '') {
+      const h = Number(height);
+      if (isNaN(h) || h < 50 || h > 250) {
+        return NextResponse.json({ error: 'Chiều cao không hợp lệ (50 - 250 cm)' }, { status: 400 });
+      }
+      user.height = Math.round(h);
     }
 
-    // Ghi nhận cân nặng
-    if (weight) {
+    // Validate và ghi nhận cân nặng
+    if (weight !== undefined && weight !== null && weight !== '') {
+      const w = Number(weight);
+      if (isNaN(w) || w < 20 || w > 300) {
+        return NextResponse.json({ error: 'Cân nặng không hợp lệ (20 - 300 kg)' }, { status: 400 });
+      }
+
       const recordDate = date ? (parseVnDateTime(date, '12:00:00') ?? new Date()) : new Date();
       // Xoá log cũ cùng ngày theo múi giờ Việt Nam để tránh trùng lặp
       const vnDateKey = getVnDateStr(recordDate);
@@ -87,44 +93,14 @@ export async function POST(req: Request) {
 
       await WeightLog.create({
         user_id: decoded.userId,
-        weight,
+        weight: Number(w.toFixed(1)),
         date: recordDate,
       });
-
-      // Gamification Logic: BMI 
-      const heightInM = user.height / 100;
-      const bmi = weight / (heightInM * heightInM);
-      const isNormalBmi = bmi >= 18.5 && bmi <= 24.9;
-
-      // Cộng EXP (giả lập một xíu EXP động viên)
-      rewardExp = 100;
-      user.current_exp += rewardExp;
-
-      // Level up logic (Max level = 10)
-      let leveledUp = false;
-      let requiredExp = getExpForNextLevel(user.level);
-      while (user.level < MAX_LEVEL && user.current_exp >= requiredExp) {
-        user.current_exp -= requiredExp;
-        user.level += 1;
-        user.max_hp += 50; 
-        user.max_mp += 20;
-        leveledUp = true;
-        requiredExp = getExpForNextLevel(user.level);
-      }
-      if (user.level >= MAX_LEVEL) {
-        user.level = MAX_LEVEL;
-      }
-
-      if (isNormalBmi) {
-        message = 'Tỉ lệ cơ thể hoàn hảo! Bạn được thưởng HP Vĩnh Viễn!';
-        user.max_hp += 100; // Buff vĩnh viễn
-        user.current_hp = user.max_hp;
-      }
     }
 
     await user.save();
 
-    return NextResponse.json({ message, rewardExp });
+    return NextResponse.json({ message: 'Đã cập nhật chỉ số sức khoẻ!' });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

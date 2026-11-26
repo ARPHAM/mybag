@@ -48,15 +48,16 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { name, ingredients, instructions } = body;
 
-    if (!name) {
-      return NextResponse.json({ error: 'Thiếu tên công thức' }, { status: 400 });
+    const nameStr = typeof name === 'string' ? name.trim() : '';
+    if (!nameStr || nameStr.length > 200) {
+      return NextResponse.json({ error: 'Tên công thức không hợp lệ (1-200 ký tự)' }, { status: 400 });
     }
 
     const newRecipe = await Recipe.create({
       user_id: decoded.userId,
-      name,
-      ingredients: ingredients || [],
-      instructions: instructions || undefined,
+      name: nameStr,
+      ingredients: Array.isArray(ingredients) ? ingredients : [],
+      instructions: typeof instructions === 'string' ? instructions.trim() : undefined,
     });
 
     return NextResponse.json({ message: 'Đã tạo công thức mới!', recipe: newRecipe }, { status: 201 });

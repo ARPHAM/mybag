@@ -27,6 +27,7 @@ const TransactionSchema = new mongoose.Schema<ITransaction>({
 }, { timestamps: true });
 
 TransactionSchema.index({ user_id: 1, date: -1 });
+TransactionSchema.index({ user_id: 1, type: 1, date: -1 });
 
 if (mongoose.models.Transaction) {
   delete mongoose.models.Transaction;

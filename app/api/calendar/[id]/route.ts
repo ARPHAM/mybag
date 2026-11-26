@@ -16,10 +16,44 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const { id } = await params;
     const body = await req.json();
-    const { updateType, exceptionDate, ...updateData } = body; 
+    const { updateType, exceptionDate } = body; 
     // updateType: 'single' (normal event), 'series' (update parent), 'exception' (update one virtual instance)
 
+    // Whitelist allowed fields to prevent Mass Assignment & IDOR
+    const allowedFields = [
+      'title', 'description', 'start_time', 'end_time', 'color_code',
+      'is_recurring', 'recurrence_type', 'recurrence_days', 'recurrence_end', 'is_cancelled'
+    ];
+    const updateData: any = {};
+    for (const key of allowedFields) {
+      if (body[key] !== undefined) {
+        updateData[key] = body[key];
+      }
+    }
+
+    if (updateData.title !== undefined) {
+      const titleStr = String(updateData.title).trim();
+      if (!titleStr || titleStr.length > 200) {
+        return NextResponse.json({ error: 'Tiêu đề sự kiện không hợp lệ (1-200 ký tự)' }, { status: 400 });
+      }
+      updateData.title = titleStr;
+    }
+
+    if (updateData.start_time && updateData.end_time) {
+      const start = new Date(updateData.start_time);
+      const end = new Date(updateData.end_time);
+      if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+        return NextResponse.json({ error: 'Thời gian kết thúc phải sau thời gian bắt đầu' }, { status: 400 });
+      }
+    }
+
     if (updateType === 'exception') {
+      // Xác minh sự kiện cha thực sự thuộc về user hiện tại
+      const parentEvent = await CalendarEvent.findOne({ _id: id, user_id: decoded.userId });
+      if (!parentEvent) {
+        return NextResponse.json({ error: 'Sự kiện cha không tồn tại' }, { status: 404 });
+      }
+
       // Create an exception event that overrides the virtual event on exceptionDate
       const exceptionEvent = await CalendarEvent.create({
         ...updateData,
@@ -34,7 +68,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       // Normal or series update
       const updated = await CalendarEvent.findOneAndUpdate(
         { _id: id, user_id: decoded.userId },
-        updateData,
+        { $set: updateData },
         { new: true }
       );
       if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });

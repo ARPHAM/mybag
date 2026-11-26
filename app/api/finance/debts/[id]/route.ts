@@ -25,82 +25,125 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     // Handle Action (Pay back / Borrow more)
     if (action) {
-      if (!actionAmount || actionAmount <= 0 || !wallet_id) {
+      const cleanActionAmount = Math.round(Number(actionAmount));
+      if (!cleanActionAmount || cleanActionAmount <= 0 || !wallet_id) {
         return NextResponse.json({ error: 'Thông tin giao dịch không hợp lệ' }, { status: 400 });
       }
 
-      if (action === 'pay_back' && actionAmount > debt.remainingAmount) {
+      if (action === 'pay_back' && cleanActionAmount > debt.remainingAmount) {
         return NextResponse.json({ error: 'Số tiền trả không thể lớn hơn số nợ còn lại' }, { status: 400 });
       }
 
-      const wallet = await Wallet.findOne({ _id: wallet_id, user_id: decoded.userId });
-      if (!wallet) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
-
+      let wallet;
       let transactionType: 'income' | 'expense';
       let description = '';
       const actionDate = date ? new Date(date) : new Date();
 
       if (action === 'pay_back') {
         if (debt.type === 'lent') {
-          // Người ta trả tiền cho mình => Mình nhận thu nhập
+          // Người ta trả tiền cho mình => Mình nhận thu nhập (cộng tiền vào ví an toàn)
+          wallet = await Wallet.findOneAndUpdate(
+            { _id: wallet_id, user_id: decoded.userId },
+            { $inc: { balance: cleanActionAmount } },
+            { returnDocument: 'after' }
+          );
+          if (!wallet) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
           transactionType = 'income';
           description = `${debt.personName} trả tiền nợ`;
-          wallet.balance += actionAmount;
         } else {
-          // Mình trả tiền cho người ta => Chi tiêu
-          if (wallet.balance < actionAmount) return NextResponse.json({ error: 'Số dư ví không đủ' }, { status: 400 });
+          // Mình trả tiền cho người ta => Chi tiêu (trừ tiền atomic có kiểm tra số dư)
+          wallet = await Wallet.findOneAndUpdate(
+            { _id: wallet_id, user_id: decoded.userId, balance: { $gte: cleanActionAmount } },
+            { $inc: { balance: -cleanActionAmount } },
+            { returnDocument: 'after' }
+          );
+          if (!wallet) return NextResponse.json({ error: 'Số dư ví không đủ để thanh toán nợ' }, { status: 400 });
           transactionType = 'expense';
           description = `Trả tiền nợ cho ${debt.personName}`;
-          wallet.balance -= actionAmount;
-        }
-        debt.remainingAmount -= actionAmount;
-        if (debt.remainingAmount === 0) {
-          debt.status = 'paid';
-          debt.completedDate = actionDate;
-        } else {
-          debt.status = 'partial';
         }
       } else {
         // borrow_more
         if (debt.type === 'lent') {
-          // Mình cho người ta vay thêm => Chi tiêu
-          if (wallet.balance < actionAmount) return NextResponse.json({ error: 'Số dư ví không đủ' }, { status: 400 });
+          // Mình cho người ta vay thêm => Chi tiêu (trừ tiền atomic có kiểm tra số dư)
+          wallet = await Wallet.findOneAndUpdate(
+            { _id: wallet_id, user_id: decoded.userId, balance: { $gte: cleanActionAmount } },
+            { $inc: { balance: -cleanActionAmount } },
+            { returnDocument: 'after' }
+          );
+          if (!wallet) return NextResponse.json({ error: 'Số dư ví không đủ để cho vay thêm' }, { status: 400 });
           transactionType = 'expense';
           description = `Cho ${debt.personName} vay thêm`;
-          wallet.balance -= actionAmount;
         } else {
-          // Mình vay thêm người ta => Thu nhập
+          // Mình vay thêm người ta => Thu nhập (cộng tiền vào ví)
+          wallet = await Wallet.findOneAndUpdate(
+            { _id: wallet_id, user_id: decoded.userId },
+            { $inc: { balance: cleanActionAmount } },
+            { returnDocument: 'after' }
+          );
+          if (!wallet) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
           transactionType = 'income';
           description = `Vay thêm của ${debt.personName}`;
-          wallet.balance += actionAmount;
         }
-        debt.totalAmount += actionAmount;
-        debt.remainingAmount += actionAmount;
-        debt.status = debt.remainingAmount < debt.totalAmount ? 'partial' : 'unpaid';
       }
 
-      await wallet.save();
+      let txId;
+      try {
+        const tx = await Transaction.create({
+          user_id: decoded.userId,
+          type: transactionType,
+          amount: cleanActionAmount,
+          date: actionDate,
+          description,
+          category: 'debt_loan',
+          wallet_id,
+          walletName: wallet.name
+        });
+        txId = tx._id;
 
-      await Transaction.create({
-        user_id: decoded.userId,
-        type: transactionType,
-        amount: actionAmount,
-        date: actionDate,
-        description,
-        category: 'other',
-        wallet_id,
-        walletName: wallet.name
-      });
+        if (action === 'pay_back') {
+          debt.remainingAmount -= cleanActionAmount;
+          if (debt.remainingAmount <= 0) {
+            debt.remainingAmount = 0;
+            debt.status = 'paid';
+            debt.completedDate = actionDate;
+          } else {
+            debt.status = 'partial';
+          }
+        } else {
+          debt.totalAmount += cleanActionAmount;
+          debt.remainingAmount += cleanActionAmount;
+          debt.status = debt.remainingAmount < debt.totalAmount ? 'partial' : 'unpaid';
+        }
 
-      debt.history.push({
-        date: actionDate,
-        amount: actionAmount,
-        type: action,
-        walletName: wallet.name
-      } as any);
+        debt.history.push({
+          date: actionDate,
+          amount: cleanActionAmount,
+          type: action,
+          walletName: wallet.name
+        } as any);
 
-      await debt.save();
-      return NextResponse.json(debt);
+        await debt.save();
+        return NextResponse.json(debt);
+      } catch (err: any) {
+        // Rollback ví và transaction nếu lưu thất bại
+        if (action === 'pay_back') {
+          if (debt.type === 'lent') {
+            await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId }, { $inc: { balance: -cleanActionAmount } });
+          } else {
+            await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId }, { $inc: { balance: cleanActionAmount } });
+          }
+        } else {
+          if (debt.type === 'lent') {
+            await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId }, { $inc: { balance: cleanActionAmount } });
+          } else {
+            await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId }, { $inc: { balance: -cleanActionAmount } });
+          }
+        }
+        if (txId) {
+          await Transaction.findByIdAndDelete(txId);
+        }
+        throw err;
+      }
     }
 
     // Handle Normal Update (Edit details)

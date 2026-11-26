@@ -9,11 +9,19 @@ export async function POST(req: Request) {
     await dbConnect();
     const { email, password } = await req.json();
 
-    if (!email || !password) {
+    const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!cleanEmail || !password) {
       return NextResponse.json({ error: 'Vui lòng nhập Email và Mật khẩu' }, { status: 400 });
     }
 
-    const user = await User.findOne({ email });
+    // Tra cứu theo email đã chuẩn hóa hoặc regex không phân biệt chữ hoa/thường
+    const user = await User.findOne({
+      $or: [
+        { email: cleanEmail },
+        { email: { $regex: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+      ]
+    });
     if (!user) {
       return NextResponse.json({ error: 'Không tìm thấy tài khoản' }, { status: 401 });
     }

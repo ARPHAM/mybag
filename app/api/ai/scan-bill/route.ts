@@ -20,8 +20,16 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { image_data } = body;
 
-    if (!image_data) {
+    if (!image_data || typeof image_data !== 'string') {
       return NextResponse.json({ error: 'Missing image_data' }, { status: 400 });
+    }
+
+    if (!image_data.startsWith('data:image/') && !image_data.startsWith('http://') && !image_data.startsWith('https://')) {
+      return NextResponse.json({ error: 'Định dạng hình ảnh không hợp lệ' }, { status: 400 });
+    }
+
+    if (image_data.length > 8 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Ảnh hóa đơn quá lớn (>6MB), vui lòng nén ảnh trước khi tải lên' }, { status: 400 });
     }
 
     const prompt = `Bạn là một trợ lý tài chính và quản lý kho thông minh.

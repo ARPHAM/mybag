@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     if (!image_data && meal.image_url) {
       if (meal.image_url.startsWith('data:')) {
         image_data = meal.image_url;
-      } else {
+      } else if (meal.image_url.includes('.amazonaws.com/') || (process.env.AWS_S3_BUCKET_NAME && meal.image_url.includes(process.env.AWS_S3_BUCKET_NAME))) {
         try {
           const imageRes = await fetch(meal.image_url);
           if (imageRes.ok) {

@@ -46,6 +46,26 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       const data: any = await getUserProfile(force);
       if (data.user) {
         setUser({ ...data.user, overdueCount: data.overdueCount || 0 });
+        // Đồng bộ cấu hình hình nền đa thiết bị từ Database xuống LocalStorage nếu có
+        if (data.user.custom_wallpapers) {
+          const { desktop, mobile, overlay_dim } = data.user.custom_wallpapers;
+          let changed = false;
+          if (desktop && !localStorage.getItem('sao-custom-bg-desktop')) {
+            localStorage.setItem('sao-custom-bg-desktop', desktop);
+            changed = true;
+          }
+          if (mobile && !localStorage.getItem('sao-custom-bg-mobile')) {
+            localStorage.setItem('sao-custom-bg-mobile', mobile);
+            changed = true;
+          }
+          if (typeof overlay_dim === 'number' && !localStorage.getItem('sao-bg-overlay')) {
+            localStorage.setItem('sao-bg-overlay', String(overlay_dim));
+            changed = true;
+          }
+          if (changed) {
+            window.dispatchEvent(new CustomEvent('sao-wallpaper-changed'));
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -105,12 +125,22 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     }
   }, [themeColor]);
 
-  // Wallpaper and ambient HUD background management
+  // Wallpaper and ambient HUD background management (Device-aware: Desktop vs Mobile)
   useEffect(() => {
     const applyWallpaper = () => {
-      const savedBg = localStorage.getItem('sao-custom-bg');
-      if (savedBg) {
-        document.documentElement.style.setProperty('--sao-custom-bg', `url("${savedBg}")`);
+      const isMobile = window.innerWidth <= 768;
+      const desktopBg = localStorage.getItem('sao-custom-bg-desktop') || localStorage.getItem('sao-custom-bg');
+      const mobileBg = localStorage.getItem('sao-custom-bg-mobile');
+      
+      let activeBg = '';
+      if (isMobile) {
+        activeBg = mobileBg || desktopBg || '';
+      } else {
+        activeBg = desktopBg || '';
+      }
+
+      if (activeBg && activeBg !== '/image.png') {
+        document.documentElement.style.setProperty('--sao-custom-bg', `url("${activeBg}")`);
       } else {
         document.documentElement.style.removeProperty('--sao-custom-bg');
       }
@@ -130,7 +160,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     };
 
     window.addEventListener('sao-wallpaper-changed', handleWallpaperChange);
-    return () => window.removeEventListener('sao-wallpaper-changed', handleWallpaperChange);
+    window.addEventListener('resize', applyWallpaper);
+
+    return () => {
+      window.removeEventListener('sao-wallpaper-changed', handleWallpaperChange);
+      window.removeEventListener('resize', applyWallpaper);
+    };
   }, []);
 
   if (isInitializing) {

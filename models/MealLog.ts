@@ -40,7 +40,7 @@ const MealLogSchema = new mongoose.Schema<IMealLog>({
     required: true
   },
   hp_restored: { type: Number, required: true },
-  consumed_at: { type: Date, required: true, default: Date.now, expires: 2592000 }, // Auto delete after 30 days
+  consumed_at: { type: Date, required: true, default: Date.now },
   calo: { type: Number },
   protein: { type: Number },
   fat: { type: Number },

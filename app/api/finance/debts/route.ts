@@ -42,60 +42,76 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { personName, type, amount, dueDate, wallet_id } = body;
 
-    if (!personName || !type || !amount || !wallet_id || amount <= 0) {
+    const cleanAmount = Math.round(Number(amount));
+    if (!personName || !type || !cleanAmount || !wallet_id || cleanAmount <= 0) {
       return NextResponse.json({ error: 'Thông tin không hợp lệ' }, { status: 400 });
     }
 
-    const wallet = await Wallet.findOne({ _id: wallet_id, user_id: decoded.userId });
-    if (!wallet) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
-
-    // Handle cash flow and Transaction creation
+    let wallet;
     if (type === 'lent') {
-      if (wallet.balance < amount) {
+      wallet = await Wallet.findOneAndUpdate(
+        { _id: wallet_id, user_id: decoded.userId, balance: { $gte: cleanAmount } },
+        { $inc: { balance: -cleanAmount } },
+        { returnDocument: 'after' }
+      );
+      if (!wallet) {
+        const exists = await Wallet.findOne({ _id: wallet_id, user_id: decoded.userId });
+        if (!exists) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
         return NextResponse.json({ error: 'Số dư ví không đủ để cho vay' }, { status: 400 });
       }
-      wallet.balance -= amount;
-      await wallet.save();
-
-      await Transaction.create({
-        user_id: decoded.userId,
-        type: 'expense',
-        amount,
-        date: new Date(),
-        description: `Cho ${personName} vay tiền`,
-        category: 'other', // Or null
-        wallet_id,
-        walletName: wallet.name
-      });
     } else if (type === 'borrowed') {
-      wallet.balance += amount;
-      await wallet.save();
-
-      await Transaction.create({
-        user_id: decoded.userId,
-        type: 'income',
-        amount,
-        date: new Date(),
-        description: `Vay tiền của ${personName}`,
-        category: 'other',
-        wallet_id,
-        walletName: wallet.name
-      });
+      wallet = await Wallet.findOneAndUpdate(
+        { _id: wallet_id, user_id: decoded.userId },
+        { $inc: { balance: cleanAmount } },
+        { returnDocument: 'after' }
+      );
+      if (!wallet) return NextResponse.json({ error: 'Nguồn tiền không tồn tại' }, { status: 404 });
     }
 
-    // Create Debt record
-    const debt = await Debt.create({
-      user_id: decoded.userId,
-      personName,
-      type,
-      totalAmount: amount,
-      remainingAmount: amount,
-      dueDate: dueDate ? new Date(`${dueDate.split('T')[0]}T12:00:00.000Z`) : undefined,
-      status: 'unpaid',
-      history: []
-    });
+    let txId;
+    try {
+      const tx = await Transaction.create({
+        user_id: decoded.userId,
+        type: type === 'lent' ? 'expense' : 'income',
+        amount: cleanAmount,
+        date: new Date(),
+        description: type === 'lent' ? `Cho ${personName} vay tiền` : `Vay tiền của ${personName}`,
+        category: 'debt_loan',
+        wallet_id,
+        walletName: wallet?.name || ''
+      });
+      txId = tx._id;
 
-    return NextResponse.json(debt, { status: 201 });
+      const debt = await Debt.create({
+        user_id: decoded.userId,
+        personName,
+        type,
+        totalAmount: cleanAmount,
+        remainingAmount: cleanAmount,
+        dueDate: dueDate ? new Date(`${dueDate.split('T')[0]}T12:00:00.000Z`) : undefined,
+        status: 'unpaid',
+        history: []
+      });
+
+      return NextResponse.json(debt, { status: 201 });
+    } catch (err: any) {
+      // Rollback ví và transaction nếu tạo Debt thất bại
+      if (type === 'lent') {
+        await Wallet.findOneAndUpdate(
+          { _id: wallet_id, user_id: decoded.userId },
+          { $inc: { balance: cleanAmount } }
+        );
+      } else {
+        await Wallet.findOneAndUpdate(
+          { _id: wallet_id, user_id: decoded.userId },
+          { $inc: { balance: -cleanAmount } }
+        );
+      }
+      if (txId) {
+        await Transaction.findByIdAndDelete(txId);
+      }
+      throw err;
+    }
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Server Error' }, { status: 500 });
   }

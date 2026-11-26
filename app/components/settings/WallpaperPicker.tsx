@@ -8,7 +8,9 @@ import {
   Check,
   Eye,
   Sliders,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Laptop,
+  Smartphone
 } from 'lucide-react';
 import SaoInput from '@/app/components/SaoInput';
 import SaoButton from '@/app/components/SaoButton';
@@ -24,7 +26,7 @@ interface WallpaperPreset {
   previewUrl: string;
 }
 
-const PRESETS: WallpaperPreset[] = [
+const DESKTOP_PRESETS: WallpaperPreset[] = [
   {
     id: 'aincrad',
     nameKey: 'settings.presets.aincrad.name',
@@ -33,7 +35,7 @@ const PRESETS: WallpaperPreset[] = [
     previewUrl: '/image.png'
   },
   {
-    id: 'cyber_sao',
+    id: 'cybersao',
     nameKey: 'settings.presets.cybersao.name',
     descKey: 'settings.presets.cybersao.desc',
     url: '/wallpapers/cyber_sao.jpg',
@@ -62,6 +64,44 @@ const PRESETS: WallpaperPreset[] = [
   }
 ];
 
+const MOBILE_PRESETS: WallpaperPreset[] = [
+  {
+    id: 'aincrad_mobile',
+    nameKey: 'settings.presets.aincrad_mobile.name',
+    descKey: 'settings.presets.aincrad_mobile.desc',
+    url: '/wallpapers/aincrad_mobile.jpg',
+    previewUrl: '/wallpapers/aincrad_mobile.jpg'
+  },
+  {
+    id: 'underworld_mobile',
+    nameKey: 'settings.presets.underworld_mobile.name',
+    descKey: 'settings.presets.underworld_mobile.desc',
+    url: '/wallpapers/underworld_mobile.jpg',
+    previewUrl: '/wallpapers/underworld_mobile.jpg'
+  },
+  {
+    id: 'yggdrasil_mobile',
+    nameKey: 'settings.presets.yggdrasil_mobile.name',
+    descKey: 'settings.presets.yggdrasil_mobile.desc',
+    url: '/wallpapers/yggdrasil_mobile.jpg',
+    previewUrl: '/wallpapers/yggdrasil_mobile.jpg'
+  },
+  {
+    id: 'cybersao',
+    nameKey: 'settings.presets.cybersao.name',
+    descKey: 'settings.presets.cybersao.desc',
+    url: '/wallpapers/cyber_sao.jpg',
+    previewUrl: '/wallpapers/cyber_sao.jpg'
+  },
+  {
+    id: 'underworld',
+    nameKey: 'settings.presets.underworld.name',
+    descKey: 'settings.presets.underworld.desc',
+    url: '/wallpapers/underworld.jpg',
+    previewUrl: '/wallpapers/underworld.jpg'
+  }
+];
+
 interface DimPresetConfig {
   key: string;
   labelKey: string;
@@ -77,15 +117,27 @@ const DIM_PRESETS: DimPresetConfig[] = [
 
 export default function WallpaperPicker() {
   const { t } = useI18n();
-  const [currentBg, setCurrentBg] = useState<string>('/image.png');
+  const [deviceTab, setDeviceTab] = useState<'desktop' | 'mobile'>('desktop');
+  const [desktopBg, setDesktopBg] = useState<string>('/image.png');
+  const [mobileBg, setMobileBg] = useState<string>('');
   const [dimLevel, setDimLevel] = useState<number>(0.6);
   const [urlInput, setUrlInput] = useState<string>('');
   const [urlError, setUrlError] = useState<string>('');
 
   useEffect(() => {
-    const savedBg = localStorage.getItem('sao-custom-bg');
-    if (savedBg) {
-      setCurrentBg(savedBg);
+    // Detect screen width to initialize device tab
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      setDeviceTab('mobile');
+    }
+
+    const savedDesktop = localStorage.getItem('sao-custom-bg-desktop') || localStorage.getItem('sao-custom-bg');
+    if (savedDesktop) {
+      setDesktopBg(savedDesktop);
+    }
+
+    const savedMobile = localStorage.getItem('sao-custom-bg-mobile');
+    if (savedMobile) {
+      setMobileBg(savedMobile);
     }
 
     const savedDim = localStorage.getItem('sao-bg-overlay');
@@ -101,15 +153,53 @@ export default function WallpaperPicker() {
     window.dispatchEvent(new CustomEvent('sao-wallpaper-changed'));
   };
 
-  const applyWallpaper = (url: string) => {
+  const currentBg = deviceTab === 'desktop' ? desktopBg : (mobileBg || desktopBg || '/image.png');
+  const activePresets = deviceTab === 'desktop' ? DESKTOP_PRESETS : MOBILE_PRESETS;
+
+  const applyWallpaper = async (url: string) => {
     if (!url.trim()) return;
-    setCurrentBg(url);
-    if (url === '/image.png') {
-      localStorage.removeItem('sao-custom-bg');
+
+    let newDesktop = desktopBg;
+    let newMobile = mobileBg;
+
+    if (deviceTab === 'desktop') {
+      newDesktop = url;
+      setDesktopBg(url);
+      if (url === '/image.png') {
+        localStorage.removeItem('sao-custom-bg-desktop');
+        localStorage.removeItem('sao-custom-bg');
+      } else {
+        localStorage.setItem('sao-custom-bg-desktop', url);
+        localStorage.setItem('sao-custom-bg', url);
+      }
     } else {
-      localStorage.setItem('sao-custom-bg', url);
+      newMobile = url;
+      setMobileBg(url);
+      if (url === '/image.png' || !url) {
+        localStorage.removeItem('sao-custom-bg-mobile');
+      } else {
+        localStorage.setItem('sao-custom-bg-mobile', url);
+      }
     }
+
     dispatchUpdate();
+
+    // Đồng bộ lên Backend (Database)
+    try {
+      await fetch('/api/user/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          custom_wallpapers: {
+            desktop: newDesktop === '/image.png' ? '' : newDesktop,
+            mobile: newMobile,
+            overlay_dim: dimLevel
+          }
+        })
+      });
+    } catch (err) {
+      console.error('Failed to sync wallpapers to backend:', err);
+    }
   };
 
   const handleApplyUrl = () => {
@@ -131,33 +221,113 @@ export default function WallpaperPicker() {
     applyWallpaper(url);
   };
 
-  const handleDimChange = (val: number) => {
+  const handleDimChange = async (val: number) => {
     setDimLevel(val);
     localStorage.setItem('sao-bg-overlay', String(val));
     dispatchUpdate();
+
+    try {
+      await fetch('/api/user/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          custom_wallpapers: {
+            desktop: desktopBg === '/image.png' ? '' : desktopBg,
+            mobile: mobileBg,
+            overlay_dim: val
+          }
+        })
+      });
+    } catch (err) {
+      console.error('Failed to sync dim overlay to backend:', err);
+    }
   };
 
-  const handleReset = () => {
-    localStorage.removeItem('sao-custom-bg');
-    localStorage.setItem('sao-bg-overlay', '0.6');
-    setCurrentBg('/image.png');
-    setDimLevel(0.6);
+  const handleReset = async () => {
+    let newDesktop = desktopBg;
+    let newMobile = mobileBg;
+
+    if (deviceTab === 'desktop') {
+      localStorage.removeItem('sao-custom-bg-desktop');
+      localStorage.removeItem('sao-custom-bg');
+      setDesktopBg('/image.png');
+      newDesktop = '';
+    } else {
+      localStorage.removeItem('sao-custom-bg-mobile');
+      setMobileBg('');
+      newMobile = '';
+    }
+
     setUrlInput('');
     setUrlError('');
     dispatchUpdate();
+
+    try {
+      await fetch('/api/user/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          custom_wallpapers: {
+            desktop: newDesktop,
+            mobile: newMobile,
+            overlay_dim: dimLevel
+          }
+        })
+      });
+    } catch (err) {
+      console.error('Failed to sync reset to backend:', err);
+    }
   };
 
-  const isPresetActive = (url: string) => currentBg === url;
-  const isCustomActive = !PRESETS.some(p => p.url === currentBg);
+  const isPresetActive = (url: string) => {
+    if (deviceTab === 'desktop') {
+      return desktopBg === url;
+    }
+    return mobileBg === url || (!mobileBg && desktopBg === url);
+  };
+
+  const isCustomActive = !activePresets.some(p => p.url === currentBg);
 
   return (
     <div className={styles.container}>
+      {/* SECTION 0: DEVICE SELECTION (DESKTOP 16:9 VS MOBILE 9:16) */}
+      <div className={styles.deviceSelectorCard}>
+        <div className={styles.deviceSelectorHeader}>
+          <div className={styles.deviceSelectorTitle}>
+            <Sparkles size={16} className={styles.accentIcon} />
+            <span>{t('settings.deviceTabsTitle')}</span>
+          </div>
+        </div>
+        <div className={styles.deviceTabsRow}>
+          <button
+            type="button"
+            className={`${styles.deviceTabBtn} ${deviceTab === 'desktop' ? styles.deviceTabBtnActive : ''}`}
+            onClick={() => setDeviceTab('desktop')}
+          >
+            <Laptop size={18} />
+            <span>{t('settings.deviceDesktop')}</span>
+            {deviceTab === 'desktop' && <span className={styles.deviceTabPill}>16:9</span>}
+          </button>
+          <button
+            type="button"
+            className={`${styles.deviceTabBtn} ${deviceTab === 'mobile' ? styles.deviceTabBtnActive : ''}`}
+            onClick={() => setDeviceTab('mobile')}
+          >
+            <Smartphone size={18} />
+            <span>{t('settings.deviceMobile')}</span>
+            {deviceTab === 'mobile' && <span className={styles.deviceTabPill}>9:16</span>}
+          </button>
+        </div>
+      </div>
+
       {/* SECTION 1: SAO CURATED PRESETS */}
       <div className={styles.subSection}>
         <div className={styles.subHeader}>
           <div className={styles.subTitle}>
             <Sparkles size={16} className={styles.accentIcon} />
-            <span>{t('settings.wallpaperPresets')}</span>
+            <span>
+              {t('settings.wallpaperPresets')} ({deviceTab === 'desktop' ? '16:9 Landscape' : '9:16 Portrait'})
+            </span>
           </div>
           <button
             type="button"
@@ -171,7 +341,7 @@ export default function WallpaperPicker() {
         </div>
 
         <div className={styles.presetGrid}>
-          {PRESETS.map((preset) => {
+          {activePresets.map((preset) => {
             const active = isPresetActive(preset.url);
             return (
               <div
@@ -188,16 +358,10 @@ export default function WallpaperPicker() {
                 }}
               >
                 <div
-                  className={styles.presetThumb}
+                  className={`${styles.presetThumb} ${deviceTab === 'mobile' ? styles.presetThumbMobile : ''}`}
                   style={{ backgroundImage: `url("${preset.previewUrl}")` }}
                 >
                   <div className={styles.presetOverlay} />
-                  {active && (
-                    <div className={styles.presetBadge}>
-                      <Check size={14} />
-                      <span>{t('settings.wallpaperActive')}</span>
-                    </div>
-                  )}
                 </div>
                 <div className={styles.presetMeta}>
                   <div className={styles.presetName}>{t(preset.nameKey)}</div>
@@ -250,7 +414,7 @@ export default function WallpaperPicker() {
             <div className={styles.uploadRow}>
               <SaoImageUpload
                 onUploadSuccess={handleUploadSuccess}
-                label={t('settings.wallpaperUpload')}
+                label={`${t('settings.wallpaperUpload')} (${deviceTab === 'desktop' ? '16:9' : '9:16'})`}
                 enableClipboardOption={true}
                 variant="primary"
               />
@@ -312,16 +476,19 @@ export default function WallpaperPicker() {
           <div className={styles.previewBox}>
             <div className={styles.boxTitle}>
               <Eye size={16} className={styles.accentIcon} />
-              <span>{t('settings.wallpaperPreview')}</span>
+              <span>
+                {t('settings.wallpaperPreview')} ({deviceTab === 'desktop' ? '16:9 Laptop' : '9:16 Phone'})
+              </span>
               {isCustomActive && (
                 <span className={styles.customBadge}>{t('settings.wallpaperCustomActive')}</span>
               )}
             </div>
 
             <div
-              className={styles.simStage}
+              className={`${styles.simStage} ${deviceTab === 'mobile' ? styles.simStageMobile : ''}`}
               style={{ backgroundImage: `url("${currentBg}")` }}
             >
+              {deviceTab === 'mobile' && <div className={styles.mobileNotch} />}
               <div
                 className={styles.simOverlay}
                 style={{ backgroundColor: `rgba(0, 15, 30, ${dimLevel})` }}
@@ -329,7 +496,9 @@ export default function WallpaperPicker() {
               <div className={styles.simCard}>
                 <div className={styles.simCardHeader}>
                   <span className={styles.simDot} />
-                  <span className={styles.simHudTitle}>SAO SYSTEM HUD</span>
+                  <span className={styles.simHudTitle}>
+                    {deviceTab === 'mobile' ? 'SAO MOBILE HUD' : 'SAO SYSTEM HUD'}
+                  </span>
                 </div>
                 <div className={styles.simBarTrack}>
                   <div className={styles.simBarFill} />

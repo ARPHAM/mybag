@@ -39,12 +39,12 @@ export async function GET(req: Request) {
       status: 'OVERDUE'
     });
 
-    // 3. Tính toán HP/MP theo thời gian
+    // 3. Tính toán HP/MP theo thời gian (Throttled: chỉ ghi DB khi trôi qua ít nhất 1 phút)
     // Nếu last_hp_mp_update chưa có (tài khoản cũ), khởi tạo bằng last_active_at hoặc now
     const lastUpdate = user.last_hp_mp_update || user.last_active_at || now;
     const hoursPassed = (now.getTime() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60);
 
-    if (hoursPassed > 0) {
+    if (hoursPassed >= (1 / 60)) {
       // HP tụt 50 mỗi giờ (làm tròn số nguyên không để số lẻ thập phân)
       const hpLoss = hoursPassed * 50;
       user.current_hp = Math.round(Math.max(0, user.current_hp - hpLoss));
@@ -59,12 +59,12 @@ export async function GET(req: Request) {
         const mpRegen = hoursPassed * 30;
         user.current_mp = Math.round(Math.min(user.max_mp, user.current_mp + mpRegen));
       }
-    }
 
-    // 4. Cập nhật thời gian
-    user.last_hp_mp_update = now;
-    user.last_active_at = now;
-    await user.save();
+      // 4. Cập nhật thời gian
+      user.last_hp_mp_update = now;
+      user.last_active_at = now;
+      await user.save();
+    }
 
     return NextResponse.json({ user, overdueCount }, {
       headers: {
@@ -91,29 +91,41 @@ export async function PUT(req: Request) {
 
     const body = await req.json();
     
-    if (body.username) user.username = body.username;
+    if (body.username !== undefined) {
+      const cleanUsername = String(body.username).trim();
+      if (cleanUsername.length < 2 || cleanUsername.length > 30) {
+        return NextResponse.json({ error: 'Tên nhân vật phải từ 2 đến 30 ký tự' }, { status: 400 });
+      }
+      user.username = cleanUsername;
+    }
     
     if (body.avatar_url && body.avatar_url !== user.avatar_url) {
       let finalAvatarUrl = body.avatar_url;
 
       // 1. Nếu ảnh mới nằm trong thư mục temp/, copy sang avatars/
-      if (BUCKET_NAME && body.avatar_url.includes(`${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/temp/`)) {
+      if (BUCKET_NAME && typeof body.avatar_url === 'string' && body.avatar_url.includes('.amazonaws.com/temp/')) {
         try {
           const tempKey = body.avatar_url.split('.amazonaws.com/')[1];
-          const newKey = tempKey.replace('temp/', 'avatars/');
-          
-          await copyS3Object(tempKey, newKey);
-          finalAvatarUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${newKey}`;
+          // Chống path traversal và đảm bảo an toàn S3
+          if (tempKey && tempKey.startsWith('temp/') && !tempKey.includes('..')) {
+            const filename = tempKey.replace('temp/', '');
+            const newKey = `avatars/${user._id}-${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            
+            await copyS3Object(tempKey, newKey);
+            finalAvatarUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${newKey}`;
+          }
         } catch (e) {
           console.error("Lỗi khi copy ảnh từ temp sang avatars:", e);
         }
       }
 
-      // 2. Xóa ảnh cũ trên S3 (nếu có)
-      if (user.avatar_url && user.avatar_url.includes('.amazonaws.com/')) {
+      // 2. Xóa ảnh cũ trên S3 (chỉ xóa nếu an toàn trong thư mục avatars/)
+      if (user.avatar_url && user.avatar_url.includes('.amazonaws.com/avatars/')) {
         try {
           const oldKey = user.avatar_url.split('.amazonaws.com/')[1];
-          await deleteS3Object(oldKey);
+          if (oldKey && oldKey.startsWith('avatars/') && !oldKey.includes('..')) {
+            await deleteS3Object(oldKey);
+          }
         } catch (e) {
           console.error("Lỗi khi xóa ảnh cũ trên S3:", e);
         }
@@ -123,11 +135,31 @@ export async function PUT(req: Request) {
     }
     
     if (body.password && body.new_password) {
+      if (typeof body.new_password !== 'string' || body.new_password.length < 6) {
+        return NextResponse.json({ error: 'Mật khẩu mới phải có ít nhất 6 ký tự' }, { status: 400 });
+      }
       const isMatch = await bcrypt.compare(body.password, user.password_hash);
       if (!isMatch) {
         return NextResponse.json({ error: 'Mật khẩu cũ không chính xác' }, { status: 400 });
       }
       user.password_hash = await bcrypt.hash(body.new_password, 10);
+      // Thu hồi toàn bộ refresh tokens cũ trên các thiết bị khi đổi mật khẩu
+      user.refresh_tokens = [];
+    }
+
+    // Nâng cấp phân hệ hình nền đa thiết bị (Desktop vs Mobile)
+    if (body.custom_wallpapers) {
+      const desktop = typeof body.custom_wallpapers.desktop === 'string' 
+        ? body.custom_wallpapers.desktop 
+        : (user.custom_wallpapers?.desktop || '');
+      const mobile = typeof body.custom_wallpapers.mobile === 'string' 
+        ? body.custom_wallpapers.mobile 
+        : (user.custom_wallpapers?.mobile || '');
+      const overlay_dim = typeof body.custom_wallpapers.overlay_dim === 'number'
+        ? Math.max(0.1, Math.min(0.99, body.custom_wallpapers.overlay_dim))
+        : (user.custom_wallpapers?.overlay_dim ?? 0.6);
+
+      user.custom_wallpapers = { desktop, mobile, overlay_dim };
     }
 
     await user.save();

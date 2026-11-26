@@ -35,21 +35,7 @@ export async function GET(req: Request) {
     // Sử dụng helper dùng chung để mở rộng sự kiện & sự kiện lặp theo chuẩn múi giờ Việt Nam
     const resultEvents = await getExpandedCalendarEvents(decoded.userId, rangeStart, rangeEnd);
 
-
-    // 5. CLEANUP BACKGROUND JOB (Best effort, non-blocking)
-    // Clean up events that ended more than 30 days ago to keep DB light.
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    // We don't await this so it doesn't slow down the response
-    CalendarEvent.deleteMany({
-      user_id: decoded.userId,
-      $or: [
-        { is_recurring: true, recurrence_end: { $lt: thirtyDaysAgo } },
-        { is_recurring: false, end_time: { $lt: thirtyDaysAgo } }
-      ]
-    }).catch(err => console.error("Cleanup failed:", err));
-
+    // Lưu ý: Dữ liệu sự kiện lịch sử của người dùng được bảo tồn vĩnh viễn, không xóa tự động
     return NextResponse.json(resultEvents);
   } catch (error) {
     console.error(error);
@@ -75,20 +61,40 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { title, description, start_time, end_time, color_code, is_recurring, recurrence_type, recurrence_days, recurrence_end } = body;
 
-    if (!title || !start_time || !end_time) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const titleStr = typeof title === 'string' ? title.trim() : '';
+    if (!titleStr || titleStr.length > 200) {
+      return NextResponse.json({ error: 'Tiêu đề sự kiện không hợp lệ (1-200 ký tự)' }, { status: 400 });
+    }
+
+    if (!start_time || !end_time) {
+      return NextResponse.json({ error: 'Vui lòng chọn thời gian bắt đầu và kết thúc' }, { status: 400 });
+    }
+
+    const startDate = new Date(start_time);
+    const endDate = new Date(end_time);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return NextResponse.json({ error: 'Thời gian không hợp lệ' }, { status: 400 });
+    }
+
+    if (startDate >= endDate) {
+      return NextResponse.json({ error: 'Thời gian kết thúc phải sau thời gian bắt đầu' }, { status: 400 });
+    }
+
+    if (is_recurring && recurrence_type && !['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'].includes(recurrence_type)) {
+      return NextResponse.json({ error: 'Kiểu lặp lại không hợp lệ' }, { status: 400 });
     }
 
     const newEvent = await CalendarEvent.create({
       user_id: decoded.userId,
-      title,
-      description,
-      start_time: new Date(start_time),
-      end_time: new Date(end_time),
+      title: titleStr,
+      description: typeof description === 'string' ? description.trim() : '',
+      start_time: startDate,
+      end_time: endDate,
       color_code: color_code || '#f97316',
       is_recurring: is_recurring || false,
       recurrence_type,
-      recurrence_days,
+      recurrence_days: Array.isArray(recurrence_days) ? recurrence_days : [],
       recurrence_end: recurrence_end ? new Date(recurrence_end) : undefined
     });
 

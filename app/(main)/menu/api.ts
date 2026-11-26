@@ -30,6 +30,8 @@ export const deleteInventory = (id: string) => axiosClient.delete(`/api/finance/
 export const calculateMacros = (payload: any) => axiosClient.post('/api/ai/calculate-macros', payload);
 
 export const createRecipe = (recipeData: any) => axiosClient.post('/api/recipes', recipeData);
+export const updateRecipe = (id: string, recipeData: any) => axiosClient.put(`/api/recipes/${id}`, recipeData);
+export const deleteRecipe = (id: string) => axiosClient.delete(`/api/recipes/${id}`);
 
 export const createMeal = (mealData: any) => axiosClient.post('/api/meals', mealData);
 export const updateMeal = (id: string, mealData: any) => axiosClient.put(`/api/meals/${id}`, mealData);

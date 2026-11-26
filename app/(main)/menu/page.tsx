@@ -8,7 +8,7 @@ import SaoTabs from '@/app/components/SaoTabs';
 import SaoFab from '@/app/components/SaoFab';
 import SaoConfirmModal from '@/app/components/SaoConfirmModal';
 import {
-  getRecipes, getMeals, getInventory, calculateMacros, createRecipe,
+  getRecipes, getMeals, getInventory, calculateMacros, createRecipe, updateRecipe, deleteRecipe,
   createMeal, getWallets, updateMeal, deleteMeal,
   createInventory, updateInventory, deleteInventory, createTransaction
 } from './api';
@@ -63,6 +63,7 @@ export default function MenuPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'cook' | 'recipe' | 'meal' | 'inventory' | 'scan_bill_review'>('meal');
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [recipeToDelete, setRecipeToDelete] = useState<Recipe | null>(null);
 
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [meals, setMeals] = useState<MealRecord[]>([]);
@@ -634,15 +635,50 @@ export default function MenuPage() {
     }
   };
 
+  const openEditRecipeModal = (recipe: Recipe) => {
+    setEditingRecipe(recipe);
+    setFormName(recipe.name);
+    setFormIngredients(recipe.ingredients.join(', '));
+    setFormInstructions(recipe.instructions || '');
+    setModalType('recipe');
+    setIsModalOpen(true);
+  };
+
+  const confirmDeleteRecipe = async () => {
+    if (!recipeToDelete) return;
+    try {
+      await deleteRecipe(recipeToDelete._id);
+      showAlert(t('common.deleteSuccess', 'Đã xóa công thức thành công!'));
+      fetchData(true, true);
+    } catch (err) {
+      showAlert("Lỗi khi xóa công thức");
+    } finally {
+      setRecipeToDelete(null);
+    }
+  };
+
   const handleSaveRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createRecipe({
-        name: formName,
-        ingredients: formIngredients.split(',').map(s => s.trim()).filter(Boolean),
-        instructions: formInstructions ? formInstructions.trim() : undefined
-      });
+      const ingredients = formIngredients.split(',').map(s => s.trim()).filter(Boolean);
+      const instructions = formInstructions ? formInstructions.trim() : undefined;
+      if (editingRecipe) {
+        await updateRecipe(editingRecipe._id, {
+          name: formName.trim(),
+          ingredients,
+          instructions
+        });
+        showAlert(t('common.updateSuccess', 'Đã cập nhật công thức!'));
+      } else {
+        await createRecipe({
+          name: formName.trim(),
+          ingredients,
+          instructions
+        });
+        showAlert(t('common.success', 'Đã tạo công thức mới!'));
+      }
       setIsModalOpen(false);
+      setEditingRecipe(null);
       fetchData(true, true);
     } catch (e) {
       showAlert("Lỗi lưu công thức");
@@ -894,6 +930,8 @@ export default function MenuPage() {
           <RecipesTab
             recipes={recipes}
             onCookRecipe={openCookModal}
+            onEditRecipe={openEditRecipeModal}
+            onDeleteRecipe={(r) => setRecipeToDelete(r)}
             onAddRecipe={openGlobalAddModal}
           />
         )}
@@ -940,6 +978,15 @@ export default function MenuPage() {
         onConfirm={handleDeleteInventory}
         title={t('menu.confirmDeleteInventory')}
         message={t('menu.deleteInventoryDesc')}
+      />
+
+      {/* MODAL XÁC NHẬN XÓA CÔNG THỨC */}
+      <SaoConfirmModal
+        isOpen={!!recipeToDelete}
+        onClose={() => setRecipeToDelete(null)}
+        onConfirm={confirmDeleteRecipe}
+        title={t('common.confirmDelete', 'Xác nhận xóa')}
+        message={`Bạn có chắc chắn muốn xóa công thức "${recipeToDelete?.name}" không?`}
       />
     </div>
   );

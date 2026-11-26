@@ -17,22 +17,36 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json();
     const { name, category, limit } = body;
 
-    if (!name || !category || limit === undefined || limit < 0) {
+    const cleanLimit = Math.max(0, Math.round(Number(limit)));
+    if (!name || !category || limit === undefined || cleanLimit < 0) {
       return NextResponse.json({ error: 'Thông tin không hợp lệ' }, { status: 400 });
     }
 
     const { id } = await params;
-    const budget = await Budget.findOneAndUpdate(
-      { _id: id, user_id: decoded.userId },
-      { name, category, limit },
-      { new: true }
-    );
+    const cleanCategory = category.trim().toLowerCase();
 
-    if (!budget) {
+    // Check duplicate category in same month
+    const currentBudget = await Budget.findOne({ _id: id, user_id: decoded.userId });
+    if (!currentBudget) {
       return NextResponse.json({ error: 'Không tìm thấy hạn mức' }, { status: 404 });
     }
 
-    return NextResponse.json(budget);
+    const existing = await Budget.findOne({
+      _id: { $ne: id },
+      user_id: decoded.userId,
+      category: cleanCategory,
+      month: currentBudget.month
+    });
+    if (existing) {
+      return NextResponse.json({ error: 'Danh mục này đã có hạn mức trong tháng' }, { status: 400 });
+    }
+
+    currentBudget.name = name;
+    currentBudget.category = cleanCategory;
+    currentBudget.limit = cleanLimit;
+    await currentBudget.save();
+
+    return NextResponse.json(currentBudget);
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Server Error' }, { status: 500 });
   }

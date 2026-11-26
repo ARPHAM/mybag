@@ -19,6 +19,7 @@ const BudgetSchema = new mongoose.Schema<IBudget>({
 }, { timestamps: true });
 
 BudgetSchema.index({ user_id: 1, month: 1 });
+BudgetSchema.index({ user_id: 1, category: 1, month: 1 }, { unique: true });
 
 if (mongoose.models.Budget) {
   delete mongoose.models.Budget;

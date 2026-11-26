@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
-import { parseYuiRequest, executeYuiActions, getYuiProactiveBriefing } from '@/lib/yuiEngine';
+import { parseYuiRequest, getYuiProactiveBriefing } from '@/lib/yuiEngine';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,28 +68,4 @@ export async function POST(req: Request) {
   }
 }
 
-export async function PUT(req: Request) {
-  try {
-    const auth = await getAuthenticatedUserId();
-    if (auth instanceof NextResponse) return auth;
 
-    const body = await req.json();
-    const { actions } = body;
-
-    if (!actions || !Array.isArray(actions) || actions.length === 0) {
-      return NextResponse.json({ error: 'Danh sách hành động không hợp lệ' }, { status: 400 });
-    }
-
-    const executedResults = await executeYuiActions(auth, actions);
-
-    return NextResponse.json({
-      success: true,
-      message: `Yui đã ghi nhận thành công ${executedResults.length} mục vào hệ thống!`,
-      results: executedResults
-    });
-  } catch (error: unknown) {
-    console.error('PUT /api/ai/yui error:', error);
-    const msg = error instanceof Error ? error.message : 'Lỗi thực thi hành động';
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
-}

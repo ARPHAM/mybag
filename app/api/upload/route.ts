@@ -1,17 +1,30 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, BUCKET_NAME } from "@/lib/s3";
+import { verifyToken } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded = await verifyToken(token, "access");
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: "Invalid Token" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { filename, contentType, base64Data } = body;
     
     const resolvedContentType = contentType || "image/jpeg";
-    // Create a safe, unique filename in the temp folder
+    // Create a safe, unique filename scoped to the user in the temp folder
     const safeFilename = (filename || "upload.jpg").replace(/[^a-zA-Z0-9.-]/g, "_");
-    const uniqueFilename = `temp/${Date.now()}-${safeFilename}`;
+    const uniqueFilename = `temp/${decoded.userId}-${Date.now()}-${safeFilename}`;
     const publicUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uniqueFilename}`;
 
     // Server-side direct upload fallback (avoids browser S3 CORS issues)

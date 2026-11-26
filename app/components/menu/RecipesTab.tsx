@@ -11,6 +11,7 @@ import { useI18n } from '@/lib/i18n';
 interface RecipesTabProps {
   recipes: Recipe[];
   onEditRecipe?: (recipe: Recipe) => void;
+  onDeleteRecipe?: (recipe: Recipe) => void;
   onCookRecipe: (recipe: Recipe) => void;
   onAddRecipe: () => void;
 }
@@ -18,6 +19,7 @@ interface RecipesTabProps {
 export default function RecipesTab({
   recipes,
   onEditRecipe,
+  onDeleteRecipe,
   onCookRecipe,
   onAddRecipe,
 }: RecipesTabProps) {
@@ -44,6 +46,7 @@ export default function RecipesTab({
               key={recipe._id}
               recipe={recipe}
               onEdit={onEditRecipe}
+              onDelete={onDeleteRecipe}
               onCook={onCookRecipe}
             />
           ))

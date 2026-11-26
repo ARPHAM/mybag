@@ -43,6 +43,20 @@ export async function POST(req: Request) {
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
+    // Kiểm tra cooldown chỉ dựa trên lượt phân tích THÀNH CÔNG đã lưu trước đó (tránh chặn khi AI gặp sự cố/quá tải)
+    const latestAnalysis = await HealthAnalysis.findOne({ user_id: decoded.userId }).sort({ analyzed_at: -1 });
+    if (latestAnalysis && latestAnalysis.analyzed_at) {
+      const elapsedMs = Date.now() - new Date(latestAnalysis.analyzed_at).getTime();
+      const COOLDOWN_MS = 10 * 60 * 1000; // 10 phút cooldown
+      if (elapsedMs < COOLDOWN_MS) {
+        const remainingMinutes = Math.ceil((COOLDOWN_MS - elapsedMs) / 60000);
+        return NextResponse.json(
+          { error: `Hệ thống vừa phân tích thành công. Vui lòng thử lại sau ${remainingMinutes} phút.` },
+          { status: 429 }
+        );
+      }
+    }
+
     const end_date = new Date();
     const start_date = new Date();
     start_date.setDate(start_date.getDate() - 7);

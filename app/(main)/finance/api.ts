@@ -1,4 +1,5 @@
 import axiosClient from '@/lib/axiosClient';
+import { executeActionsViaStandardApis } from '@/lib/clientActionDispatcher';
 
 export interface GetTransactionsParams {
   category?: string;
@@ -66,12 +67,13 @@ export const updateDebt = (id: string, data: any) => axiosClient.put(`/api/finan
 export const updateInventory = (id: string, data: any) => axiosClient.put(`/api/finance/inventory/${id}`, data);
 
 // DELETE
-export const deleteWallet = (id: string) => axiosClient.delete(`/api/finance/wallets/${id}`);
+export const deleteWallet = (id: string, targetWalletId?: string) =>
+  axiosClient.delete(`/api/finance/wallets/${id}${targetWalletId ? `?target_wallet_id=${targetWalletId}` : ''}`);
 export const deleteTransaction = (id: string) => axiosClient.delete(`/api/finance/transactions/${id}`);
 export const deleteBudget = (id: string) => axiosClient.delete(`/api/finance/budgets/${id}`);
 export const deleteDebt = (id: string) => axiosClient.delete(`/api/finance/debts/${id}`);
 export const deleteInventory = (id: string) => axiosClient.delete(`/api/finance/inventory/${id}`);
 
 // SMART EXPENSE AI
-export const parseSmartExpense = (text: string) => axiosClient.post('/api/ai/smart-expense', { text });
-export const executeSmartExpense = (actions: any[]) => axiosClient.put('/api/ai/smart-expense', { actions });
+export const parseSmartExpense = (text: string) => axiosClient.post('/api/ai/yui', { text });
+export const executeSmartExpense = executeActionsViaStandardApis;

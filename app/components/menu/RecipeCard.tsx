@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Utensils, Edit3, Flame } from 'lucide-react';
+import { Utensils, Edit3, Trash2, Flame } from 'lucide-react';
 import SaoButton from '../SaoButton';
 import styles from './RecipeCard.module.css';
 import type { Recipe } from '@/lib/types';
@@ -10,10 +10,11 @@ import { useI18n } from '@/lib/i18n';
 export interface RecipeCardProps {
   recipe: Recipe;
   onEdit?: (recipe: Recipe) => void;
+  onDelete?: (recipe: Recipe) => void;
   onCook: (recipe: Recipe) => void;
 }
 
-export default function RecipeCard({ recipe, onEdit, onCook }: RecipeCardProps) {
+export default function RecipeCard({ recipe, onEdit, onDelete, onCook }: RecipeCardProps) {
   const { t } = useI18n();
 
   return (
@@ -24,15 +25,29 @@ export default function RecipeCard({ recipe, onEdit, onCook }: RecipeCardProps) 
       {/* Ảnh / Icon banner công thức */}
       <div className={styles.banner}>
         <Utensils size={52} strokeWidth={1.2} className={styles.bannerIcon} />
-        {onEdit && (
-          <button
-            type="button"
-            className={styles.editBtn}
-            onClick={() => onEdit(recipe)}
-            title={t('common.edit')}
-          >
-            <Edit3 size={15} />
-          </button>
+        {(onEdit || onDelete) && (
+          <div className={styles.cardActions}>
+            {onEdit && (
+              <button
+                type="button"
+                className={styles.editBtn}
+                onClick={() => onEdit(recipe)}
+                title={t('common.edit')}
+              >
+                <Edit3 size={15} />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                className={styles.deleteBtn}
+                onClick={() => onDelete(recipe)}
+                title={t('common.delete')}
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
         )}
       </div>
 

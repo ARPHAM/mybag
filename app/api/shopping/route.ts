@@ -61,15 +61,28 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { name, quantity, unit, category } = body;
 
-    if (!name || !unit || !category) {
-      return NextResponse.json({ error: 'Thiếu thông tin bắt buộc' }, { status: 400 });
+    const nameStr = typeof name === 'string' ? name.trim() : '';
+    const unitStr = typeof unit === 'string' ? unit.trim() : '';
+    const qty = Number(quantity || 1);
+
+    if (!nameStr || nameStr.length > 200) {
+      return NextResponse.json({ error: 'Tên món hàng không hợp lệ (1-200 ký tự)' }, { status: 400 });
+    }
+    if (!unitStr || unitStr.length > 50) {
+      return NextResponse.json({ error: 'Đơn vị không hợp lệ' }, { status: 400 });
+    }
+    if (!['food', 'household', 'other'].includes(category)) {
+      return NextResponse.json({ error: 'Danh mục không hợp lệ' }, { status: 400 });
+    }
+    if (isNaN(qty) || qty <= 0 || qty > 10000) {
+      return NextResponse.json({ error: 'Số lượng phải từ 1 đến 10,000' }, { status: 400 });
     }
 
     const newItem = await ShoppingItem.create({
       user_id: decoded.userId,
-      name,
-      quantity: quantity || 1,
-      unit,
+      name: nameStr,
+      quantity: qty,
+      unit: unitStr,
       category,
       checked: false,
     });

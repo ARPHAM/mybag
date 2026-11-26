@@ -26,6 +26,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'No image attached to this meal' }, { status: 400 });
     }
 
+    // SSRF Protection: Đảm bảo URL ảnh thuộc S3 bucket của hệ thống hoặc data URI an toàn
+    const isS3Url = meal.image_url.includes('.amazonaws.com/') || (process.env.AWS_S3_BUCKET_NAME && meal.image_url.includes(process.env.AWS_S3_BUCKET_NAME));
+    const isDataUri = meal.image_url.startsWith('data:image/');
+    if (!isS3Url && !isDataUri) {
+      return NextResponse.json({ error: 'URL hình ảnh không hợp lệ hoặc không an toàn' }, { status: 400 });
+    }
+
     // 1. Fetch the image from S3 URL to get its base64 buffer for Gemini
     const imageRes = await fetch(meal.image_url);
     if (!imageRes.ok) {

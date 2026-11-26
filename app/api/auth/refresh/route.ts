@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       return response;
     }
 
-    const payload = await verifyToken(refreshToken);
+    const payload = await verifyToken(refreshToken, 'refresh');
     if (!payload || !payload.userId) {
       console.log('Refresh Token Failed: Invalid payload or expired', payload);
       const response = NextResponse.json({ error: 'Refresh token không hợp lệ hoặc đã hết hạn' }, { status: 401 });

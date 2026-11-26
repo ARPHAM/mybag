@@ -1,4 +1,5 @@
 import axiosClient from '@/lib/axiosClient';
+import { executeActionsViaStandardApis } from '@/lib/clientActionDispatcher';
 
 export const getYuiBriefing = (lang: string = 'vi') => axiosClient.get(`/api/ai/yui?lang=${lang}`);
 
@@ -9,4 +10,4 @@ export const parseYuiMessage = (text: string, history: any[] = [], imageData?: s
     ...(imageData ? { imageData } : {})
   });
 
-export const executeYuiActions = (actions: any[]) => axiosClient.put('/api/ai/yui', { actions });
+export const executeYuiActions = executeActionsViaStandardApis;

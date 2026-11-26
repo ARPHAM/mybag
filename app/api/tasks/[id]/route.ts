@@ -41,15 +41,26 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     // Nếu chuyển status thành COMPLETED
     if (status === 'COMPLETED' && task.status !== 'COMPLETED') {
-      task.status = 'COMPLETED';
-      task.completed_at = new Date();
-      await task.save();
-
       // Cấp phát EXP
       const user = await User.findById(decoded.userId);
       if (user) {
-        const rewardExp = EXP_REWARDS[task.quest_rank as keyof typeof EXP_REWARDS] || 50;
-        user.current_exp += rewardExp;
+        // 1. Kiểm tra giới hạn EXP nhận mỗi ngày theo giờ Việt Nam
+        const vnDate = new Date(Date.now() + 7 * 60 * 60 * 1000);
+        const todayKey = `${vnDate.getUTCFullYear()}-${String(vnDate.getUTCMonth() + 1).padStart(2, '0')}-${String(vnDate.getUTCDate()).padStart(2, '0')}`;
+
+        if (user.last_task_exp_date !== todayKey) {
+          user.last_task_exp_date = todayKey;
+          user.today_task_exp = 0;
+        }
+
+        const baseRewardExp = EXP_REWARDS[task.quest_rank as keyof typeof EXP_REWARDS] || 50;
+        const MAX_DAILY_EXP = 3000;
+        const currentTodayExp = user.today_task_exp || 0;
+        const availableExp = Math.max(0, MAX_DAILY_EXP - currentTodayExp);
+        const actualRewardExp = Math.min(baseRewardExp, availableExp);
+
+        user.current_exp += actualRewardExp;
+        user.today_task_exp = currentTodayExp + actualRewardExp;
 
         let leveledUp = false;
         let requiredExp = getExpForNextLevel(user.level);
@@ -67,27 +78,33 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
         // Hồi lại MP khi hoàn thành task (có chút ngẫu nhiên)
         const mpReward = Math.floor(Math.random() * 21) + 40; // 40 - 60 MP
-        
         user.current_mp = Math.min(user.max_mp, user.current_mp + mpReward);
 
         await user.save();
 
+        task.status = 'COMPLETED';
+        task.completed_at = new Date();
+        task.mp_rewarded = mpReward;
+        task.exp_rewarded = actualRewardExp;
+        await task.save();
+
         return NextResponse.json({ 
-          message: 'Quest Cleared!', 
+          message: actualRewardExp < baseRewardExp ? 'Quest Cleared! (Đạt giới hạn EXP ngày)' : 'Quest Cleared!', 
           task, 
-          reward: { exp: rewardExp, leveledUp, newLevel: user.level } 
+          reward: { exp: actualRewardExp, leveledUp, newLevel: user.level } 
         });
       }
     } else if (status === 'PENDING' && task.status === 'COMPLETED') {
       // Undo a completed task
-      task.status = 'PENDING';
-      task.completed_at = undefined;
-      await task.save();
-
       const user = await User.findById(decoded.userId);
       if (user) {
-        const penaltyExp = EXP_REWARDS[task.quest_rank as keyof typeof EXP_REWARDS] || 50;
+        // Thu hồi lượng EXP thực tế đã nhận
+        const penaltyExp = task.exp_rewarded !== undefined ? task.exp_rewarded : (EXP_REWARDS[task.quest_rank as keyof typeof EXP_REWARDS] || 50);
         user.current_exp -= penaltyExp;
+
+        if (user.today_task_exp && user.today_task_exp >= penaltyExp) {
+          user.today_task_exp -= penaltyExp;
+        }
 
         let leveledDown = false;
         
@@ -101,6 +118,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         if (user.current_exp < 0) {
           user.current_exp = 0; // Floor at level 1
         }
+
+        // Khấu trừ lại lượng MP đã thưởng khi hoàn thành quest (tránh exploit hồi MP vô tận)
+        const mpToDeduct = task.mp_rewarded || 50;
+        user.current_mp = Math.max(0, user.current_mp - mpToDeduct);
         
         // Capping HP/MP if max dropped
         if (user.current_hp > user.max_hp) user.current_hp = user.max_hp;
@@ -108,21 +129,49 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
         await user.save();
 
+        task.status = 'PENDING';
+        task.completed_at = undefined;
+        task.mp_rewarded = 0;
+        task.exp_rewarded = 0;
+        await task.save();
+
         return NextResponse.json({ 
           message: 'Đã hoàn tác Quest', 
           task,
-          penalty: { expLost: penaltyExp, leveledDown, newLevel: user.level }
+          penalty: { expLost: penaltyExp, mpLost: mpToDeduct, leveledDown, newLevel: user.level }
         });
       }
     } else {
-      // Đổi sang status khác (PENDING -> IN_PROGRESS) hoặc cập nhật thông tin task
-      if (status) task.status = status;
-      if (title) task.title = title;
-      if (description !== undefined) task.description = description;
-      if (quest_rank) task.quest_rank = quest_rank;
+      // Đổi sang status khác hoặc cập nhật thông tin task
+      if (status) {
+        if (!['PENDING', 'IN_PROGRESS', 'COMPLETED', 'OVERDUE'].includes(status)) {
+          return NextResponse.json({ error: 'Trạng thái không hợp lệ' }, { status: 400 });
+        }
+        task.status = status;
+      }
+      if (title !== undefined) {
+        const titleStr = String(title).trim();
+        if (!titleStr || titleStr.length > 200) {
+          return NextResponse.json({ error: 'Tiêu đề nhiệm vụ không hợp lệ (1-200 ký tự)' }, { status: 400 });
+        }
+        task.title = titleStr;
+      }
+      if (description !== undefined) {
+        task.description = String(description).trim();
+      }
+      if (quest_rank) {
+        if (!['S', 'A', 'B', 'C', 'D'].includes(quest_rank)) {
+          return NextResponse.json({ error: 'Xếp hạng Quest không hợp lệ' }, { status: 400 });
+        }
+        task.quest_rank = quest_rank;
+      }
       
       if (due_date) {
-        task.due_date = new Date(due_date);
+        const d = new Date(due_date);
+        if (isNaN(d.getTime())) {
+          return NextResponse.json({ error: 'Hạn chót không hợp lệ' }, { status: 400 });
+        }
+        task.due_date = d;
         
         // Nếu thay đổi hạn và task đang OVERDUE, kiểm tra xem ngày mới đã qua chưa
         // Nếu ngày mới lớn hơn hiện tại thì reset lại về PENDING

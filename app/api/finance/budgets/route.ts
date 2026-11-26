@@ -47,15 +47,19 @@ export async function GET(req: Request) {
     ]);
 
     const spentMap = spendings.reduce((acc, curr) => {
-      acc[curr._id] = curr.totalSpent;
+      const catKey = (curr._id || '').toString().trim().toLowerCase();
+      acc[catKey] = (acc[catKey] || 0) + curr.totalSpent;
       return acc;
     }, {} as Record<string, number>);
 
     // Merge spent into budget
-    const result = budgets.map(b => ({
-      ...b,
-      spent: spentMap[b.category] || 0
-    }));
+    const result = budgets.map(b => {
+      const cleanCat = (b.category || '').trim().toLowerCase();
+      return {
+        ...b,
+        spent: spentMap[cleanCat] || 0
+      };
+    });
 
     return NextResponse.json(result, {
       headers: {
@@ -79,12 +83,15 @@ export async function POST(req: Request) {
 
     const { name, category, month, limit } = await req.json();
 
-    if (!name || !category || !month || limit === undefined || limit < 0) {
+    const cleanLimit = Math.max(0, Math.round(Number(limit)));
+    if (!name || !category || !month || limit === undefined || cleanLimit < 0) {
       return NextResponse.json({ error: 'Thông tin không hợp lệ' }, { status: 400 });
     }
 
+    const cleanCategory = category.trim().toLowerCase();
+
     // Check if budget for this category and month already exists
-    const existing = await Budget.findOne({ user_id: decoded.userId, category, month });
+    const existing = await Budget.findOne({ user_id: decoded.userId, category: cleanCategory, month });
     if (existing) {
       return NextResponse.json({ error: 'Danh mục này đã có hạn mức trong tháng' }, { status: 400 });
     }
@@ -92,9 +99,9 @@ export async function POST(req: Request) {
     const budget = await Budget.create({
       user_id: decoded.userId,
       name,
-      category,
+      category: cleanCategory,
       month,
-      limit
+      limit: cleanLimit
     });
 
     return NextResponse.json({ ...budget.toObject(), spent: 0 }, { status: 201 });

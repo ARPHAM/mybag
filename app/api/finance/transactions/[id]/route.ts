@@ -78,7 +78,8 @@ export async function PUT(
     const body = await req.json();
     const { type, amount, date, description, category, wallet_id, to_wallet_id } = body;
 
-    if (!type || !amount || !description || amount <= 0) {
+    const cleanAmount = Math.round(Number(amount));
+    if (!type || !cleanAmount || !description || cleanAmount <= 0) {
       return NextResponse.json({ error: 'Thông tin không hợp lệ' }, { status: 400 });
     }
 
@@ -124,28 +125,28 @@ export async function PUT(
     // 2. Apply new transaction
     let walletName = '';
     if (type === 'income') {
-      const w = await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId }, { $inc: { balance: amount } }, { returnDocument: 'after' });
+      const w = await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId }, { $inc: { balance: cleanAmount } }, { returnDocument: 'after' });
       if (!w) {
         await rollbackRevert();
         return NextResponse.json({ error: 'Ví không tồn tại' }, { status: 404 });
       }
       walletName = w.name;
     } else if (type === 'expense') {
-      const w = await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+      const w = await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId, balance: { $gte: cleanAmount } }, { $inc: { balance: -cleanAmount } }, { returnDocument: 'after' });
       if (!w) {
         await rollbackRevert();
         return NextResponse.json({ error: 'Số dư không đủ' }, { status: 400 });
       }
       walletName = w.name;
     } else if (type === 'transfer') {
-      const sourceWallet = await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+      const sourceWallet = await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId, balance: { $gte: cleanAmount } }, { $inc: { balance: -cleanAmount } }, { returnDocument: 'after' });
       if (!sourceWallet) {
         await rollbackRevert();
         return NextResponse.json({ error: 'Số dư ví nguồn không đủ' }, { status: 400 });
       }
-      const destWallet = await Wallet.findOneAndUpdate({ _id: to_wallet_id, user_id: decoded.userId }, { $inc: { balance: amount } }, { returnDocument: 'after' });
+      const destWallet = await Wallet.findOneAndUpdate({ _id: to_wallet_id, user_id: decoded.userId }, { $inc: { balance: cleanAmount } }, { returnDocument: 'after' });
       if (!destWallet) {
-        await Wallet.findByIdAndUpdate(wallet_id, { $inc: { balance: amount } }); // Hoàn lại nguồn
+        await Wallet.findOneAndUpdate({ _id: wallet_id, user_id: decoded.userId }, { $inc: { balance: cleanAmount } }); // Hoàn lại nguồn an toàn
         await rollbackRevert();
         return NextResponse.json({ error: 'Ví nhận không tồn tại' }, { status: 404 });
       }
@@ -154,10 +155,10 @@ export async function PUT(
 
     // 3. Update Transaction record
     oldTx.type = type;
-    oldTx.amount = amount;
+    oldTx.amount = cleanAmount;
     oldTx.date = date ? new Date(`${date.split('T')[0]}T12:00:00.000Z`) : new Date();
     oldTx.description = description;
-    oldTx.category = category;
+    oldTx.category = category ? category.trim().toLowerCase() : undefined;
     oldTx.wallet_id = wallet_id;
     oldTx.to_wallet_id = type === 'transfer' ? to_wallet_id : undefined;
     oldTx.walletName = walletName;

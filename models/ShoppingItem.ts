@@ -27,4 +27,6 @@ const ShoppingItemSchema = new mongoose.Schema<IShoppingItem>({
   checkedAt: { type: Date, default: null },
 }, { timestamps: true });
 
+ShoppingItemSchema.index({ user_id: 1, checked: 1, checkedAt: 1 });
+
 export default mongoose.models.ShoppingItem || mongoose.model<IShoppingItem>('ShoppingItem', ShoppingItemSchema);

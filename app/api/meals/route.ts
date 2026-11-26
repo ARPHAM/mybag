@@ -133,7 +133,24 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { food_name, consumed_at, recipe_id, source, ingredients_used, cost, ingredients_text, wallet_id, image_url } = body;
+    const {
+      food_name,
+      consumed_at,
+      recipe_id,
+      source,
+      ingredients_used,
+      cost,
+      ingredients_text,
+      wallet_id,
+      image_url,
+      calo,
+      protein,
+      fat,
+      carb,
+      meal_tier: inputMealTier,
+      hp_restored: inputHp,
+      ai_description
+    } = body;
 
     if (!food_name) {
       return NextResponse.json({ error: 'Thiếu tên món ăn' }, { status: 400 });
@@ -242,9 +259,15 @@ export async function POST(req: Request) {
           transaction_id = newTx._id;
         }
 
-        // Determine random hp_restored and a default meal_tier based on random values for now
-        const hp_restored = Math.floor(Math.random() * 101) + 200; // 200 - 300 HP
-        const meal_tier = 'LIGHT';
+        // Determine hp_restored and meal_tier
+        const numCalo = Number(calo) || 0;
+        const numProtein = Number(protein) || 0;
+        const numFat = Number(fat) || 0;
+        const numCarb = Number(carb) || 0;
+        const cleanAiDesc = typeof ai_description === 'string' ? ai_description.trim() : undefined;
+        const hp_restored = Number(inputHp) || (numCalo > 0 ? Math.floor(numCalo * 1.0) : Math.floor(Math.random() * 101) + 200);
+        const meal_tier = ['HEAVY', 'LIGHT', 'DRINK'].includes(inputMealTier) ? inputMealTier : 'LIGHT';
+        const ai_status = numCalo > 0 ? 'completed' : 'pending';
 
         const newMealLog = await MealLog.create({
           user_id: decoded.userId,
@@ -252,7 +275,7 @@ export async function POST(req: Request) {
           meal_tier,
           hp_restored,
           consumed_at: resolvedDate,
-          ai_status: 'pending',
+          ai_status,
           recipe_id: recipe_id || undefined,
           source: source || 'home',
           ingredients_text: cleanManualIngredientsNote(ingredients_text),
@@ -260,7 +283,12 @@ export async function POST(req: Request) {
           cost: source === 'home' ? calculatedCost : (Number(cost) || 0),
           ingredients_used: source === 'home' ? processedIngredientsUsed : undefined,
           transaction_id: transaction_id,
-          wallet_id: source === 'eat_out' ? wallet_id : undefined
+          wallet_id: source === 'eat_out' ? wallet_id : undefined,
+          calo: numCalo,
+          protein: numProtein,
+          fat: numFat,
+          carbs: numCarb,
+          ai_description: cleanAiDesc
         });
 
         // Cộng máu cho User

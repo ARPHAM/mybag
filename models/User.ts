@@ -16,6 +16,13 @@ export interface IUser extends mongoose.Document {
   last_hp_mp_update: Date;
   ai_daily_buff?: string;
   refresh_tokens?: string[];
+  today_task_exp?: number;
+  last_task_exp_date?: string;
+  custom_wallpapers?: {
+    desktop?: string;
+    mobile?: string;
+    overlay_dim?: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +43,13 @@ const UserSchema = new mongoose.Schema<IUser>({
   last_hp_mp_update: { type: Date, required: true, default: Date.now },
   ai_daily_buff: { type: String },
   refresh_tokens: { type: [String], default: [] },
+  today_task_exp: { type: Number, default: 0 },
+  last_task_exp_date: { type: String, default: '' },
+  custom_wallpapers: {
+    desktop: { type: String, default: '' },
+    mobile: { type: String, default: '' },
+    overlay_dim: { type: Number, default: 0.6 },
+  },
 }, { timestamps: true });
 
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

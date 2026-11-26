@@ -13,7 +13,7 @@ const getJwtSecretKey = () => {
 };
 
 export async function signAccessToken(payload: { userId: string; username: string }) {
-  const token = await new SignJWT(payload)
+  const token = await new SignJWT({ ...payload, token_type: 'access' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('15m') // Access token lives for 15 minutes
@@ -22,7 +22,7 @@ export async function signAccessToken(payload: { userId: string; username: strin
 }
 
 export async function signRefreshToken(payload: { userId: string }) {
-  const token = await new SignJWT(payload)
+  const token = await new SignJWT({ ...payload, token_type: 'refresh' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d') // Refresh token lives for 30 days
@@ -30,10 +30,15 @@ export async function signRefreshToken(payload: { userId: string }) {
   return token;
 }
 
-export async function verifyToken(token: string) {
+export async function verifyToken(token: string, expectedType?: 'access' | 'refresh') {
   try {
     const { payload } = await jwtVerify(token, getJwtSecretKey());
-    return payload as { userId: string; username: string };
+    const tokenType = payload.token_type as string | undefined;
+    // Backwards-compatible: if tokenType is present and expectedType is set, enforce matching
+    if (expectedType && tokenType && tokenType !== expectedType) {
+      return null;
+    }
+    return payload as { userId: string; username?: string; token_type?: string };
   } catch (error) {
     return null;
   }

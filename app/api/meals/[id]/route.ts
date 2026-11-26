@@ -131,12 +131,15 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     // Hoàn tác tài chính hoặc kho dự trữ
     if (meal.source === 'eat_out' && meal.transaction_id) {
-      const tx = await Transaction.findById(meal.transaction_id);
+      const tx = await Transaction.findOne({ _id: meal.transaction_id, user_id: decoded.userId });
       if (tx) {
-        await Wallet.findByIdAndUpdate(tx.wallet_id, { $inc: { balance: tx.amount } });
-        await Transaction.findByIdAndDelete(tx._id);
+        await Wallet.findOneAndUpdate(
+          { _id: tx.wallet_id, user_id: decoded.userId },
+          { $inc: { balance: tx.amount } }
+        );
+        await Transaction.findOneAndDelete({ _id: tx._id, user_id: decoded.userId });
       }
-      } else if (meal.source === 'home' && meal.ingredients_used && meal.ingredients_used.length > 0) {
+    } else if (meal.source === 'home' && meal.ingredients_used && meal.ingredients_used.length > 0) {
         for (const oldIng of meal.ingredients_used) {
           const oldQty = Number(oldIng.qty) || 0;
           if (!oldIng.invId || oldQty <= 0) continue;

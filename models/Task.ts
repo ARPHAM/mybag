@@ -9,6 +9,8 @@ export interface ITask extends mongoose.Document {
   due_date: Date;
   completed_at?: Date;
   mp_penalty_applied: boolean;
+  mp_rewarded?: number;
+  exp_rewarded?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +34,8 @@ const TaskSchema = new mongoose.Schema<ITask>({
   due_date: { type: Date, required: true },
   completed_at: { type: Date },
   mp_penalty_applied: { type: Boolean, required: true, default: false },
+  mp_rewarded: { type: Number, default: 0 },
+  exp_rewarded: { type: Number, default: 0 },
 }, { timestamps: true });
 
 TaskSchema.index({ user_id: 1, status: 1, due_date: 1 });

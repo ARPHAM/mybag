@@ -23,8 +23,42 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = resolvedParams;
     const body = await req.json();
 
-    const updateData = { ...body };
+    // Whitelist allowed fields to prevent Mass Assignment / IDOR tampering
+    const updateData: any = {};
+
+    if (body.name !== undefined) {
+      const nameStr = String(body.name).trim();
+      if (!nameStr || nameStr.length > 200) {
+        return NextResponse.json({ error: 'Tên món hàng không hợp lệ (1-200 ký tự)' }, { status: 400 });
+      }
+      updateData.name = nameStr;
+    }
+
+    if (body.quantity !== undefined) {
+      const qty = Number(body.quantity);
+      if (isNaN(qty) || qty <= 0 || qty > 10000) {
+        return NextResponse.json({ error: 'Số lượng phải từ 1 đến 10,000' }, { status: 400 });
+      }
+      updateData.quantity = qty;
+    }
+
+    if (body.unit !== undefined) {
+      const unitStr = String(body.unit).trim();
+      if (!unitStr || unitStr.length > 50) {
+        return NextResponse.json({ error: 'Đơn vị không hợp lệ' }, { status: 400 });
+      }
+      updateData.unit = unitStr;
+    }
+
+    if (body.category !== undefined) {
+      if (!['food', 'household', 'other'].includes(body.category)) {
+        return NextResponse.json({ error: 'Danh mục không hợp lệ' }, { status: 400 });
+      }
+      updateData.category = body.category;
+    }
+
     if (typeof body.checked === 'boolean') {
+      updateData.checked = body.checked;
       updateData.checkedAt = body.checked ? new Date() : null;
     }
 

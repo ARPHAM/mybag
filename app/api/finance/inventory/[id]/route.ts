@@ -197,25 +197,30 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     // Hoàn tiền nếu xóa món đồ:
     // Nếu quantity <= 0 hoặc totalValue <= 0, có nghĩa là đã dùng hết -> Không hoàn tiền, giữ nguyên lịch sử giao dịch.
     // Nếu chưa dùng hết, hoàn lại số tiền tương ứng với lượng giá trị còn lại (totalValue).
-    const currentTotalValue = item.totalValue || 0;
+    const currentTotalValue = Math.round(item.totalValue || 0);
     if (item.transaction_id && item.quantity > 0 && currentTotalValue > 0) {
       const tx = await Transaction.findById(item.transaction_id);
       if (tx && item.wallet_id) {
-        // Nếu số lượng vẫn y nguyên lúc mua (chưa ăn), hoặc totalValue == tx.amount
-        if (currentTotalValue === tx.amount || item.quantity === item.originalQuantity) {
+        // Nếu số lượng còn nguyên vẹn hoặc giá trị còn lại >= số tiền giao dịch ban đầu:
+        // Hoàn lại toàn bộ chi tiêu gốc và xóa bản ghi transaction
+        if (currentTotalValue >= tx.amount || item.quantity >= (item.originalQuantity || 1)) {
+          const refundAmount = Math.round(tx.amount);
           await Wallet.findOneAndUpdate(
             { _id: item.wallet_id, user_id: decoded.userId },
-            { $inc: { balance: tx.amount } }
+            { $inc: { balance: refundAmount } }
           );
-          await Transaction.findByIdAndDelete(item.transaction_id); // Xóa chi tiêu
+          await Transaction.findByIdAndDelete(item.transaction_id);
         } else {
-          // Nếu đã ăn một phần
-          await Wallet.findOneAndUpdate(
-            { _id: item.wallet_id, user_id: decoded.userId },
-            { $inc: { balance: currentTotalValue } }
-          );
-          tx.amount -= currentTotalValue; // Giảm giá trị chi tiêu đi phần hoàn lại
-          await tx.save();
+          // Nếu đã dùng một phần: hoàn lại giá trị còn lại, đảm bảo tx.amount còn lại luôn >= 1
+          const refundAmount = Math.min(currentTotalValue, Math.max(0, tx.amount - 1));
+          if (refundAmount > 0) {
+            await Wallet.findOneAndUpdate(
+              { _id: item.wallet_id, user_id: decoded.userId },
+              { $inc: { balance: refundAmount } }
+            );
+            tx.amount -= refundAmount;
+            await tx.save();
+          }
         }
       }
     }

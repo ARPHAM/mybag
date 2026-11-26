@@ -5,6 +5,80 @@
   width: 100%;
 }
 
+/* Device Mode Switcher (Laptop 16:9 vs Mobile 9:16) */
+.deviceSelectorCard {
+  background: rgba(8, 20, 36, 0.7);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deviceSelectorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.deviceSelectorTitle {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.deviceTabsRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.deviceTabBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  user-select: none;
+}
+
+.deviceTabBtn:hover {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+  color: #fff;
+}
+
+.deviceTabBtnActive {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.18);
+  border-color: var(--sao-primary-hex, #00f0ff);
+  color: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+}
+
+.deviceTabPill {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+  border: 1px solid var(--sao-primary-hex, #00f0ff);
+  border-radius: 2px;
+}
+
 .subSection {
   display: flex;
   flex-direction: column;
@@ -103,6 +177,11 @@
   align-items: flex-start;
   justify-content: flex-end;
   padding: 8px;
+}
+
+.presetThumbMobile {
+  aspect-ratio: 9 / 16;
+  min-height: 220px;
 }
 
 .presetOverlay {
@@ -351,6 +430,26 @@
   padding: 16px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.simStageMobile {
+  height: 280px;
+  max-width: 180px;
+  margin: 0 auto;
+  border-radius: 20px;
+  clip-path: none;
+  border: 2px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+}
+
+.mobileNotch {
+  position: absolute;
+  top: 8px;
+  width: 44px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 3px;
+  z-index: 5;
 }
 
 .simOverlay {

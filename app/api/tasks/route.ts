@@ -61,16 +61,28 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { title, description, quest_rank, due_date } = body;
 
-    if (!title || !due_date) {
-      return NextResponse.json({ error: 'Thiếu thông tin bắt buộc' }, { status: 400 });
+    const titleStr = typeof title === 'string' ? title.trim() : '';
+    if (!titleStr || titleStr.length > 200) {
+      return NextResponse.json({ error: 'Tiêu đề nhiệm vụ không hợp lệ (1-200 ký tự)' }, { status: 400 });
     }
+
+    if (!due_date) {
+      return NextResponse.json({ error: 'Vui lòng chọn hạn chót nhiệm vụ' }, { status: 400 });
+    }
+
+    const dueDateObj = new Date(due_date);
+    if (isNaN(dueDateObj.getTime())) {
+      return NextResponse.json({ error: 'Hạn chót không hợp lệ' }, { status: 400 });
+    }
+
+    const validRank = ['S', 'A', 'B', 'C', 'D'].includes(quest_rank) ? quest_rank : 'C';
 
     const newTask = await Task.create({
       user_id: decoded.userId,
-      title,
-      description,
-      quest_rank: quest_rank || 'C',
-      due_date: new Date(due_date),
+      title: titleStr,
+      description: typeof description === 'string' ? description.trim() : '',
+      quest_rank: validRank,
+      due_date: dueDateObj,
       status: 'PENDING',
     });
 
