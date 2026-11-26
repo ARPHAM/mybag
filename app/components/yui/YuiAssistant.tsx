@@ -1027,6 +1027,14 @@ export default function YuiAssistant() {
       const res: any = await parseYuiMessage(text, recentHistory, attached?.dataUrl, language);
       const plan = res?.data;
 
+      if (plan && Array.isArray(plan.actions) && attached?.dataUrl) {
+        for (const act of plan.actions) {
+          if (act.actionType === 'meal' && !act.image_url) {
+            act.image_url = attached.dataUrl;
+          }
+        }
+      }
+
       if (plan && !plan.actions?.length && (plan.reply || plan.summary)) {
         setMsgs(m => [...m, { role: 'yui', text: plan.reply || plan.summary }]);
       } else if (!plan?.actions?.length) {

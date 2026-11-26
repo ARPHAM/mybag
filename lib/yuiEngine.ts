@@ -1022,6 +1022,12 @@ CRITICAL LANGUAGE DIRECTIVE: The user speaks ENGLISH. You MUST output all respon
    - For all "description" or "title" fields in actions ("expense", "income", "transfer", "debt_lent", "debt_borrowed", "create_task", "create_calendar_event"), keep them SHORT, crisp, and natural (2 to 5 words), just like real personal bookkeeping.
    - Do NOT output verbose, bureaucratic, or robotic phrases like "Convert cash according to request of...", "Perform transfer transaction for...", "Money spent for dining purposes...".
    - Instead, write direct, concise phrases: "Em Tú đổi tiền", "Ăn bún cá", "Cà phê", "Đổ xăng", "Chuyển tiền trọ", etc.
+8. MEALS, NUTRITION & HEALTH ANALYSIS:
+   - NO DUPLICATE EXPENSE FOR EAT-OUT MEALS: When Papa eats out ("source": "eat_out"), the "amount": <price> and "wallet_id": <wallet_id> inside the "meal" action AUTOMATICALLY deduct the wallet and create an expense transaction in the backend. NEVER generate a separate duplicate "expense" action, which would charge Papa twice!
+   - DETAILED INGREDIENT ESTIMATION & MACROS ("ai_description"): You MUST estimate the specific ingredients and quantities (e.g. fresh noodles ~160g, crispy fried fish ~100g, sweet & sour broth, fresh herbs) in "ai_description". This detail is vital for the AI Health Analysis model.
+   - MANDATORY 4 MACRO METRICS: Always estimate realistic values for "calo" (kcal), "protein" (g), "fat" (g), "carbs" (g). NEVER leave protein, fat, or carbs as 0! Every meal has quantifiable protein, fat, and carbohydrates.
+   - NUTRITIONAL ANALYSIS IN "reply": Do NOT just give a generic hollow greeting. In "reply", Yui MUST provide sweet, intelligent nutritional feedback on the meal's metrics (calories, protein/carb/fat balance, health benefits of the food, and gentle reminders like drinking water or balancing daily calories).
+   - VISUAL OBSERVATION WHEN IMAGE ATTACHED: When Papa attaches a photo, Yui MUST actively observe and comment on the real visual details seen in the photo (colors, textures, presentation, freshness) in "reply" and "ai_description". Prove to Papa that Yui is looking at the meal with him!
 </grounding_rules>
 
 <user_context>
@@ -1059,7 +1065,7 @@ Valid actionType values and required fields:
 
 <user_input>
 Current System Time: ${nowStr}
-Papa says: "${cleanUserText}"
+Papa says: "${cleanUserText}"${hasImage ? '\n[NOTE: Papa attached an IMAGE. Observe the visual details closely to provide vivid comments, sweet appreciation, and accurate nutritional/item estimates!]' : ''}
 </user_input>
 
 Return ONLY valid JSON:
@@ -1092,6 +1098,12 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC: Người dùng nói TIẾNG VIỆT. Bạn B�
    - Mọi trường "description" hoặc "title" trong actions ("expense", "income", "transfer", "debt_lent", "debt_borrowed", "create_task", "create_calendar_event") PHẢI viết NGẮN GỌN, trực diện như người dùng ghi chép sổ tay cá nhân (tối ưu từ 2 đến 5 từ).
    - TUYỆT ĐỐI TRÁNH câu chữ dài dòng, máy móc hoặc rườm rà như: "Đổi tiền mặt theo yêu cầu của em Tú", "Thực hiện giao dịch chuyển tiền cho...", "Khoản chi phục vụ mục đích ăn uống...".
    - THAY VÀO ĐÓ, viết súc tích, tự nhiên: "Em Tú đổi tiền", "Ăn bún cá", "Cà phê", "Đổ xăng", "Chuyển tiền trọ", "Anh Nam mượn tiền", v.v.
+8. QUY TẮC BỮA ĂN, DINH DƯỠNG & SỨC KHỎE (MEALS & NUTRITION):
+   - TUYỆT ĐỐI KHÔNG TẠO EXPENSE THỪA KHI ĂN NGOÀI: Khi Papa ăn ngoài có trả tiền ("source": "eat_out"), trường "amount": <số tiền> và "wallet_id": <id_ví> trong action "meal" ĐÃ TỰ ĐỘNG khấu trừ số dư ví và tạo giao dịch chi tiêu tương ứng trong hệ thống. TUYỆT ĐỐI KHÔNG tạo thêm action "expense" trùng lặp vì sẽ khiến Papa bị trừ tiền 2 lần!
+   - ĐỊNH LƯỢNG & ĐỊNH CHẤT NGUYÊN LIỆU CHI TIẾT ("ai_description"): Bắt buộc phải ước tính định lượng cụ thể của các thành phần trong món (ví dụ: bún tươi ~160g, cá rô phi chiên giòn ~100g, nước dùng chua ngọt, thì là, rau sống ăn kèm). Mô tả chi tiết này là cơ sở dữ liệu cốt lõi để mô hình AI Health Analysis phân tích và bảo vệ sức khỏe cho Papa!
+   - BẮT BUỘC ƯỚC TÍNH ĐỦ 4 CHỈ SỐ DINH DƯỠNG: "calo" (kcal), "protein" (g), "fat" (g), "carbs" (g). TUYỆT ĐỐI KHÔNG ĐỂ 0 cho protein, fat, carbs! Mọi bữa ăn đều có đạm, béo, tinh bột thực tế tương ứng định lượng.
+   - PHÂN TÍCH CHỈ SỐ ĂN UỐNG & ĐỒNG HÀNH SỨC KHỎE TRONG "reply": Yui KHÔNG ĐƯỢC chỉ chúc mừng xã giao qua loa. Trong "reply", Yui PHẢI phân tích các chỉ số dinh dưỡng của bữa ăn cho Papa: lượng calo nạp vào, tỉ lệ đạm (protein) / chất béo (fat) / tinh bột (carbs) thế nào, có ưu điểm gì (ví dụ: cá giàu đạm nạc tốt cho cơ bắp, rau xanh nhiều chất xơ) và có lưu ý gì cho sức khỏe (ví dụ: đồ chiên có dầu mỡ nên uống nhiều nước, cân bằng calo trong ngày).
+   - QUAN SÁT & NHẬN XÉT HÌNH ẢNH TRỰC QUAN: Khi Papa đính kèm ảnh, Yui BẮT BUỘC phải quan sát kỹ và miêu tả trực quan các chi tiết nhìn thấy từ ảnh (màu sắc cá chiên vàng ươm, đĩa bún, bát nước chấm, rau tươi, cách bài trí...) trong "reply" và "ai_description". Tuyệt đối không phớt lờ bức ảnh của Papa!
 </grounding_rules>
 
 <user_context>
@@ -1129,7 +1141,7 @@ Các actionType hợp lệ và các trường yêu cầu:
 
 <user_input>
 Thời gian hệ thống hiện tại: ${nowStr}
-Papa nói: "${cleanUserText}"
+Papa nói: "${cleanUserText}"${hasImage ? '\n[LƯU Ý QUAN TRỌNG: Papa có đính kèm HÌNH ẢNH. Yui hãy quan sát kỹ từng chi tiết trong ảnh (màu sắc, món ăn, cách bày biện, độ tươi ngon...) để nhận xét sinh động, khen ngợi và định lượng món ăn / hóa đơn thật chính xác nhé!]' : ''}
 </user_input>
 
 Trả về DUY NHẤT chuỗi JSON hợp lệ:
@@ -1152,6 +1164,13 @@ Trả về DUY NHẤT chuỗi JSON hợp lệ:
     parsed.actions = normalizeYuiActions(parsed.actions, now);
     if (parsed.actions.length > 0) {
       parsed.actions = await sanitizeYuiPlanActions(userId, parsed.actions, cleanUserText);
+    }
+    if (hasImage && imageData) {
+      for (const act of parsed.actions) {
+        if (act.actionType === 'meal' && !act.image_url) {
+          act.image_url = imageData;
+        }
+      }
     }
   } else {
     parsed.actions = [];
@@ -1336,6 +1355,13 @@ export async function sanitizeYuiPlanActions(userId: string, rawActions: any[], 
             a.wallet_id = w.id;
             a.walletName = w.name;
           }
+          // Loại bỏ action expense thừa trước đó nếu trùng với meal ăn ngoài này (tránh trừ ví 2 lần)
+          sanitized = sanitized.filter(
+            (s) => !(s.actionType === 'expense' &&
+              (Math.abs(Number(s.amount) - a.amount) <= 1000 ||
+               normalizeVietnamese(a.food_name || '').includes(normalizeVietnamese(s.description || '')) ||
+               normalizeVietnamese(s.description || '').includes(normalizeVietnamese(a.food_name || ''))))
+          );
         }
       }
       sanitized.push(a);
@@ -1358,6 +1384,20 @@ export async function sanitizeYuiPlanActions(userId: string, rawActions: any[], 
       if (w) {
         a.wallet_id = w.id;
         a.walletName = w.name;
+
+        // Nếu đã có action meal (ăn ngoài) trùng số tiền hoặc mô tả món ăn, bỏ qua expense này để tránh trừ ví 2 lần
+        if (type === 'expense') {
+          const duplicateEatOutMeal = sanitized.some(
+            (s) => s.actionType === 'meal' && s.source === 'eat_out' && Number(s.amount) > 0 &&
+            (Math.abs(Number(s.amount) - a.amount) <= 1000 ||
+             normalizeVietnamese(s.food_name || '').includes(normalizeVietnamese(a.description || '')) ||
+             normalizeVietnamese(a.description || '').includes(normalizeVietnamese(s.food_name || '')))
+          );
+          if (duplicateEatOutMeal) {
+            continue;
+          }
+        }
+
         sanitized.push(a);
       }
       continue;

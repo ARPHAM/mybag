@@ -28,7 +28,8 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
         fat: Number(action.fat) || 0,
         carb: Number(action.carb ?? action.carbs) || 0,
         meal_tier: action.meal_tier,
-        ai_description: action.ai_description
+        ai_description: action.ai_description,
+        image_url: action.image_url || action.imageUrl
       };
       const res = await axiosClient.post('/api/meals', payload);
       const meal = res.data?.mealLog;
