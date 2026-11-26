@@ -1,7 +1,37 @@
 import axiosClient from '@/lib/axiosClient';
 
+export interface GetTransactionsParams {
+  category?: string;
+  startDate?: string;
+  endDate?: string;
+  type?: string;
+  search?: string;
+  sort?: 'date' | 'amount' | 'date_asc';
+  limit?: number;
+  force?: boolean;
+}
+
 export const getWallets = (force = false) => axiosClient.get(`/api/finance/wallets${force ? `?_t=${Date.now()}` : ''}`);
-export const getTransactions = (force = false) => axiosClient.get(`/api/finance/transactions${force ? `?_t=${Date.now()}` : ''}`);
+
+export const getTransactions = (paramsOrForce?: boolean | GetTransactionsParams) => {
+  if (typeof paramsOrForce === 'boolean') {
+    return axiosClient.get(`/api/finance/transactions${paramsOrForce ? `?_t=${Date.now()}` : ''}`);
+  }
+  if (!paramsOrForce) {
+    return axiosClient.get('/api/finance/transactions');
+  }
+  const query = new URLSearchParams();
+  if (paramsOrForce.category) query.set('category', paramsOrForce.category);
+  if (paramsOrForce.startDate) query.set('startDate', paramsOrForce.startDate);
+  if (paramsOrForce.endDate) query.set('endDate', paramsOrForce.endDate);
+  if (paramsOrForce.type && paramsOrForce.type !== 'all') query.set('type', paramsOrForce.type);
+  if (paramsOrForce.search) query.set('search', paramsOrForce.search);
+  if (paramsOrForce.sort) query.set('sort', paramsOrForce.sort);
+  if (paramsOrForce.limit) query.set('limit', paramsOrForce.limit.toString());
+  if (paramsOrForce.force) query.set('_t', Date.now().toString());
+  const qs = query.toString();
+  return axiosClient.get(`/api/finance/transactions${qs ? `?${qs}` : ''}`);
+};
 export const getCategoryTransactions = (params: {
   category?: string;
   startDate?: string;

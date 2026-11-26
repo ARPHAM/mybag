@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Wallet, Plus, Activity, Save, Trash2, ArrowRightLeft, RotateCcw, Sparkles } from 'lucide-react';
+import { Wallet, Plus, Activity, Save, Trash2, ArrowRightLeft, RotateCcw } from 'lucide-react';
 import SaoModal from '@/app/components/SaoModal';
 import SaoSelect from '@/app/components/SaoSelect';
 import SaoTabs from '@/app/components/SaoTabs';
@@ -44,12 +44,17 @@ import HistoryTab from '@/app/components/finance/HistoryTab';
 import BudgetsTab from '@/app/components/finance/BudgetsTab';
 import DebtsTab from '@/app/components/finance/DebtsTab';
 import InventoryTab from '@/app/components/menu/InventoryTab';
-import SmartExpenseModal from '@/app/components/finance/SmartExpenseModal';
 
 export default function FinancePage() {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<FinanceTabId>('overview');
-  const [isSmartModalOpen, setIsSmartModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<FinanceTabId>(() => {
+    if (typeof window !== 'undefined') {
+      const tabFromUrl = new URLSearchParams(window.location.search).get('tab') as FinanceTabId | null;
+      const validTabs: FinanceTabId[] = ['overview', 'wallets', 'budgets', 'debts', 'history'];
+      if (tabFromUrl && validTabs.includes(tabFromUrl)) return tabFromUrl;
+    }
+    return 'overview';
+  });
 
   const [wallets, setWallets] = useState<WalletSource[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -57,6 +62,7 @@ export default function FinancePage() {
   const [debts, setDebts] = useState<DebtItem[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataVersion, setDataVersion] = useState(0);
 
   // Form states
   const [walletForm, setWalletForm] = useState({ name: '', type: 'bank', color: '#00f0ff', balance: '' });
@@ -166,6 +172,7 @@ export default function FinancePage() {
           walletName: i.walletName
         })));
       }
+      setDataVersion(v => v + 1);
     } catch (err) {
       console.error(err);
     } finally {
@@ -303,7 +310,7 @@ export default function FinancePage() {
     }
   };
 
-  const openModal = (type: 'wallets' | 'transaction' | 'budgets' | 'debts' | 'debt_action' | 'inventory' | 'history' | 'scan_bill_review', item: any = null) => {
+  const openModal = (type: 'wallets' | 'transaction' | 'budgets' | 'debts' | 'debt_action' | 'inventory' | 'history' | 'scan_bill_review', item: any = null) => { //**********
     setModalType(type);
     setEditingItem(item);
     if (type === 'wallets') {
@@ -535,21 +542,17 @@ export default function FinancePage() {
     if (modalType === 'transaction' || modalType === 'history') {
       return (
         <form onSubmit={handleSaveTransaction}>
-          <div className={styles.formRow}>
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>{t('finance.txType')}</label>
-              <div className={styles.formRadioGroup}>
-                <label className={styles.formRadioLabel}>
-                  <input type="radio" name="type" checked={txForm.type === 'expense'} onChange={() => setTxForm({ ...txForm, type: 'expense' })} /> {t('finance.expense')}
-                </label>
-                <label className={styles.formRadioLabel}>
-                  <input type="radio" name="type" checked={txForm.type === 'income'} onChange={() => setTxForm({ ...txForm, type: 'income' })} /> {t('finance.income')}
-                </label>
-                <label className={styles.formRadioLabel}>
-                  <input type="radio" name="type" checked={txForm.type === 'transfer'} onChange={() => setTxForm({ ...txForm, type: 'transfer' })} /> {t('finance.transfer')}
-                </label>
-              </div>
-            </div>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>{t('finance.txType')}</label>
+            <SaoSelect
+              value={txForm.type}
+              options={[
+                { value: 'expense', label: t('finance.expense') },
+                { value: 'income', label: t('finance.income') },
+                { value: 'transfer', label: t('finance.transfer') }
+              ]}
+              onChange={v => setTxForm({ ...txForm, type: v as 'expense' | 'income' | 'transfer' })}
+            />
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
@@ -560,7 +563,7 @@ export default function FinancePage() {
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>{t('finance.category')}</label>
                 <SaoSelect
-                  initialValue={txForm.category}
+                  value={txForm.category}
                   options={getFinanceCategoryOptions(t)}
                   onChange={v => setTxForm({ ...txForm, category: v })}
                 />
@@ -573,7 +576,7 @@ export default function FinancePage() {
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>{t('finance.fromWallet')}</label>
                 <SaoSelect
-                  initialValue={txForm.wallet_id}
+                  value={txForm.wallet_id}
                   placeholder={t('finance.selectSenderWallet')}
                   options={wallets.map(w => ({ value: w.id, label: `${w.name} (${formatMoney(w.balance)})` }))}
                   onChange={v => setTxForm({ ...txForm, wallet_id: v })}
@@ -582,7 +585,7 @@ export default function FinancePage() {
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>{t('finance.toWallet')}</label>
                 <SaoSelect
-                  initialValue={txForm.to_wallet_id}
+                  value={txForm.to_wallet_id}
                   placeholder={t('finance.selectReceiverWallet')}
                   options={wallets.map(w => ({ value: w.id, label: w.name }))}
                   onChange={v => setTxForm({ ...txForm, to_wallet_id: v })}
@@ -593,7 +596,7 @@ export default function FinancePage() {
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>{t('finance.walletsTab')}</label>
               <SaoSelect
-                initialValue={txForm.wallet_id}
+                value={txForm.wallet_id}
                 placeholder={t('finance.selectWalletPlaceholder')}
                 options={wallets.map(w => ({ value: w.id, label: `${w.name} (${formatMoney(w.balance)})` }))}
                 onChange={v => setTxForm({ ...txForm, wallet_id: v })}
@@ -609,7 +612,7 @@ export default function FinancePage() {
             <label className={styles.formLabel}>{t('finance.description')}</label>
             <SaoInput isTextarea placeholder={t('finance.descPlaceholder')} value={txForm.description} onChange={e => setTxForm({ ...txForm, description: e.target.value })} required></SaoInput>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
             <SaoButton variant="primary" type="submit">
               <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.saveTransaction')}
             </SaoButton>
@@ -634,7 +637,7 @@ export default function FinancePage() {
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>{t('finance.walletType')}</label>
               <SaoSelect
-                initialValue={walletForm.type}
+                value={walletForm.type}
                 options={getWalletTypeOptions(t)}
                 onChange={v => setWalletForm({ ...walletForm, type: v })}
               />
@@ -648,9 +651,11 @@ export default function FinancePage() {
             <label className={styles.formLabel}>{t('finance.initialBalance')}</label>
             <SaoInput type="number" placeholder="0" value={walletForm.balance} onChange={e => setWalletForm({ ...walletForm, balance: e.target.value })} />
           </div>
-          <SaoButton variant="primary" type="submit">
-            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.addWallet')}
-          </SaoButton>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+            <SaoButton variant="primary" type="submit">
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.addWallet')}
+            </SaoButton>
+          </div>
         </form>
       );
     }
@@ -680,7 +685,7 @@ export default function FinancePage() {
             <label className={styles.formLabel}>{t('finance.budgetLimit')}</label>
             <SaoInput type="number" placeholder="VD: 5000000" value={budgetForm.limit} onChange={e => setBudgetForm({ ...budgetForm, limit: e.target.value })} required />
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
             <SaoButton variant="primary" type="submit">
               <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.setupBudget')}
             </SaoButton>
@@ -704,7 +709,7 @@ export default function FinancePage() {
         <form onSubmit={handleSaveDebtAction}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>{t('finance.transactWith')}: <span style={{ color: '#fff' }}>{editingItem?.personName}</span></label>
-            <div style={{ padding: '10px', background: 'rgba(0, 240, 255, 0.1)', borderRadius: '8px', color: '#00f0ff', margin: '5px 0 15px' }}>
+            <div style={{ padding: '10px', background: 'rgba(0, 240, 255, 0.1)', borderRadius: '0', border: '1px solid rgba(0, 240, 255, 0.3)', color: '#00f0ff', margin: '5px 0 15px' }}>
               {t('finance.actionLabel')}: <strong>{titleLabel}</strong>
             </div>
           </div>
@@ -727,9 +732,11 @@ export default function FinancePage() {
             <label className={styles.formLabel}>{t('finance.actionDate')}</label>
             <SaoDatePicker value={debtActionForm.date} onChange={v => setDebtActionForm({ ...debtActionForm, date: v })} required />
           </div>
-          <SaoButton variant="primary" type="submit">
-            <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {t('finance.recordAction')}
-          </SaoButton>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+            <SaoButton variant="primary" type="submit">
+              <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {t('finance.recordAction')}
+            </SaoButton>
+          </div>
         </form>
       );
     }
@@ -791,7 +798,7 @@ export default function FinancePage() {
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
             <SaoButton variant="primary" type="submit">
               <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.addDebt')}
             </SaoButton>
@@ -885,7 +892,7 @@ export default function FinancePage() {
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
             <SaoButton variant="primary" type="submit">
               <Save size={18} style={{ display: 'inline', marginRight: 8 }} /> {editingItem ? t('finance.saveChanges') : t('finance.addToInventory')}
             </SaoButton>
@@ -1011,12 +1018,6 @@ export default function FinancePage() {
   if (isLoading) {
     return (
       <div className={styles.financeContainer}>
-        <div className={styles.header}>
-          <div className={styles.titleWrapper}>
-            <Wallet className={styles.titleIcon} size={28} />
-            <h1 className={styles.title}>{t('finance.title')}</h1>
-          </div>
-        </div>
         <SaoLoading fullPage />
       </div>
     );
@@ -1024,24 +1025,11 @@ export default function FinancePage() {
 
   return (
     <div className={styles.financeContainer}>
-      <div className={styles.header}>
-        <div className={styles.titleWrapper}>
-          <Wallet className={styles.titleIcon} size={28} />
-          <h1 className={styles.title}>{t('finance.title')}</h1>
-        </div>
-        <SaoButton
-          variant="primary"
-          onClick={() => setIsSmartModalOpen(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.85rem', boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)' }}
-        >
-          <Sparkles size={16} /> <span className="hidden sm:inline">{t('finance.smartCommandFull')}</span><span className="sm:hidden">{t('finance.smartCommand')}</span>
-        </SaoButton>
-      </div>
-
       <SaoTabs
         tabs={getFinanceTabs(t).map(tab => ({ id: tab.id, label: tab.label, icon: <tab.icon size={18} /> }))}
         activeTab={activeTab}
         onChange={(id) => setActiveTab(id as FinanceTabId)}
+        urlParamKey="tab"
       />
 
       <div className={styles.tabContent}>
@@ -1051,7 +1039,6 @@ export default function FinancePage() {
             transactions={transactions}
             formatMoney={formatMoney}
             onAddTransaction={() => openModal('transaction')}
-            onEditWallet={(w) => openModal('wallets', w)}
           />
         )}
         {activeTab === 'wallets' && (
@@ -1077,6 +1064,7 @@ export default function FinancePage() {
             onAdd={() => openModal('transaction')}
             onEdit={(tx) => openModal('history', tx)}
             onDelete={handleDeleteTransaction}
+            refreshTrigger={dataVersion}
           />
         )}
         {activeTab === 'debts' && (
@@ -1109,21 +1097,14 @@ export default function FinancePage() {
           modalType === 'scan_bill_review'
             ? t('finance.scanBillReview')
             : modalType === 'debt_action'
-            ? t('finance.debtActionTitle')
-            : editingItem
-              ? `${t('common.edit')} ${modalType === 'transaction' || modalType === 'history' ? t('finance.expense') : modalType === 'wallets' ? t('finance.walletsTab') : modalType === 'budgets' ? t('finance.budgetsTab') : modalType === 'debts' ? t('finance.debtsTab') : t('finance.inventoryTab')}`
-              : `${t('common.add')} ${modalType === 'transaction' ? t('finance.expense') : modalType === 'wallets' ? t('finance.walletsTab') : modalType === 'budgets' ? t('finance.budgetsTab') : modalType === 'debts' ? t('finance.debtsTab') : t('finance.inventoryTab')}`
+              ? t('finance.debtActionTitle')
+              : editingItem
+                ? `${t('common.edit')} ${modalType === 'transaction' || modalType === 'history' ? t('finance.expense') : modalType === 'wallets' ? t('finance.walletsTab') : modalType === 'budgets' ? t('finance.budgetsTab') : modalType === 'debts' ? t('finance.debtsTab') : t('finance.inventoryTab')}`
+                : `${t('common.add')} ${modalType === 'transaction' ? t('finance.expense') : modalType === 'wallets' ? t('finance.walletsTab') : modalType === 'budgets' ? t('finance.budgetsTab') : modalType === 'debts' ? t('finance.debtsTab') : t('finance.inventoryTab')}`
         }
       >
         {renderModalContent()}
       </SaoModal>
-
-      <SmartExpenseModal
-        isOpen={isSmartModalOpen}
-        onClose={() => setIsSmartModalOpen(false)}
-        onSuccess={() => fetchData(true)}
-        formatMoney={formatMoney}
-      />
     </div>
   );
 }

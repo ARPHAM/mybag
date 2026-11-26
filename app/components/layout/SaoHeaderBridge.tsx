@@ -20,14 +20,6 @@ export default function SaoHeaderBridge() {
         <div className={styles.railTrack} />
         <div className={styles.railGlow} />
         <div className={styles.pulseBeam} />
-
-        {/* Holographic Badge trung tâm */}
-        <div className={styles.telemetryBadge}>
-          <span className={styles.bracketLeft}>[</span>
-          <span className={styles.statusDot} />
-          <span className={styles.telemetryText}>SYSTEM LINK // ACTIVE</span>
-          <span className={styles.bracketRight}>]</span>
-        </div>
       </div>
 
       {/* Cực nối bên phải (HUD Right Terminal) */}

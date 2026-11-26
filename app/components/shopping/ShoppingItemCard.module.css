@@ -1,0 +1,252 @@
+/* =========================================================
+   SAO SHOPPING ITEM CARD (LAYER 4 CYBER HUD)
+   ========================================================= */
+
+.itemCard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px 14px 18px;
+  background: rgba(6, 18, 35, 0.6);
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.itemCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
+  background-size: 16px 16px;
+  pointer-events: none;
+}
+
+.itemCard:hover {
+  background: rgba(8, 24, 48, 0.8);
+  border-color: rgba(0, 240, 255, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 15px rgba(0, 240, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Checked state */
+.itemCardChecked {
+  background: rgba(4, 12, 24, 0.45);
+  border-color: rgba(255, 255, 255, 0.1);
+  opacity: 0.75;
+}
+
+.itemCardChecked:hover {
+  background: rgba(6, 16, 32, 0.65);
+  border-color: rgba(0, 240, 255, 0.25);
+  opacity: 0.95;
+}
+
+/* Left Laser Accent Bar */
+.leftLaserBar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3.5px;
+  background: #00f0ff;
+  box-shadow: 0 0 10px #00f0ff;
+  transition: all 0.25s ease;
+}
+
+.itemCardChecked .leftLaserBar {
+  background: rgba(0, 240, 255, 0.35);
+  box-shadow: none;
+}
+
+/* Left Checkbox Section */
+.checkWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.checkBoxBtn {
+  width: 28px;
+  height: 28px;
+  background: rgba(0, 240, 255, 0.06);
+  border: 1.5px solid rgba(0, 240, 255, 0.4);
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+}
+
+.itemCard:hover .checkBoxBtn {
+  border-color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.35);
+}
+
+.checkBoxBtnChecked {
+  background: rgba(0, 240, 255, 0.22);
+  border-color: #00f0ff;
+  color: #00f0ff;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.45);
+}
+
+/* Middle Content Section */
+.itemBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 2;
+}
+
+.nameRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.itemName {
+  font-family: 'Tauri', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+  word-break: break-word;
+  transition: all 0.2s ease;
+}
+
+.itemNameChecked {
+  color: #64748b;
+  text-decoration: line-through;
+  text-decoration-color: rgba(0, 240, 255, 0.6);
+  text-decoration-thickness: 1.5px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Badges */
+.badgeCategory {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+  text-transform: uppercase;
+}
+
+.badgeCategoryFood {
+  background: rgba(0, 255, 170, 0.12);
+  border: 1px solid rgba(0, 255, 170, 0.4);
+  color: #00ffaa;
+}
+
+.badgeCategoryHousehold {
+  background: rgba(245, 166, 35, 0.12);
+  border: 1px solid rgba(245, 166, 35, 0.4);
+  color: #f5a623;
+}
+
+.badgeCategoryOther {
+  background: rgba(160, 196, 255, 0.12);
+  border: 1px solid rgba(160, 196, 255, 0.4);
+  color: #a0c4ff;
+}
+
+.qtyTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 2px 8px;
+  clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+}
+
+.qtyValue {
+  color: #00f0ff;
+  font-weight: 700;
+}
+
+.cleanupBadge {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-style: italic;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Actions Section */
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.deleteBtn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 68, 68, 0.08);
+  border: 1px solid rgba(255, 68, 68, 0.25);
+  color: #ff5555;
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+}
+
+.deleteBtn:hover {
+  background: rgba(255, 68, 68, 0.25);
+  border-color: #ff4444;
+  color: #ff3333;
+  box-shadow: 0 0 12px rgba(255, 68, 68, 0.45);
+  transform: scale(1.08);
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .itemCard {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .itemName {
+    font-size: 0.95rem;
+  }
+
+  .metaRow {
+    gap: 6px;
+  }
+}

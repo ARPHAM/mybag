@@ -1,37 +1,39 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { ShoppingCart, Check, Plus, Trash2, Apple, Home as HomeIcon, Package, AlertTriangle, PackagePlus, Wallet as WalletIcon } from 'lucide-react';
-import styles from './shopping.module.css';
-import SaoModal from '@/app/components/SaoModal';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ShoppingCart, Plus, CheckSquare, Clock, Award, CheckCircle2 } from 'lucide-react';
 import SaoLoading from '@/app/components/SaoLoading';
 import SaoTabs from '@/app/components/SaoTabs';
-import SaoSelect from '@/app/components/SaoSelect';
-import SaoInput from '@/app/components/SaoInput';
-import SaoButton from '@/app/components/SaoButton';
-import SaoDatePicker from '@/app/components/SaoDatePicker';
+import SaoSearchInput from '@/app/components/SaoSearchInput';
+import SaoSummaryCard from '@/app/components/SaoSummaryCard';
+import SaoConfirmModal from '@/app/components/SaoConfirmModal';
+import SaoFab from '@/app/components/SaoFab';
+import ShoppingItemCard from '@/app/components/shopping/ShoppingItemCard';
+import ShoppingAddModal from '@/app/components/shopping/ShoppingAddModal';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { getShoppingItems, createShoppingItem, updateShoppingItem, deleteShoppingItem } from './api';
-import { getWallets, createInventory } from '../finance/api';
+import { GroceryItem } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
+import styles from './shopping.module.css';
 
 type CategoryType = 'all' | 'food' | 'household' | 'other';
-
-import { GroceryItem, WalletSource } from '@/lib/types';
-import { getGroceryCategoryOptions } from '@/lib/constants';
-import { useI18n } from '@/lib/i18n';
+type StatusFilterType = 'all' | 'pending' | 'completed';
 
 export default function ShoppingPage() {
   const { t } = useI18n();
-  const [items, setItems] = useState<GroceryItem[]>([]);
-  const [wallets, setWallets] = useState<WalletSource[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'food' | 'household' | 'other'>('all');
-
   const { showAlert } = useSaoAlert();
+
+  const [items, setItems] = useState<GroceryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<CategoryType>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchItems();
-    fetchWallets();
     const handleShoppingUpdate = () => fetchItems(true);
     window.addEventListener('sao-shopping-updated', handleShoppingUpdate);
     return () => window.removeEventListener('sao-shopping-updated', handleShoppingUpdate);
@@ -40,7 +42,7 @@ export default function ShoppingPage() {
   const fetchItems = async (force = false) => {
     try {
       const data: any = await getShoppingItems(force);
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -48,42 +50,58 @@ export default function ShoppingPage() {
     }
   };
 
-  const fetchWallets = async () => {
-    try {
-      const data: any = await getWallets();
-      setWallets(data || []);
-    } catch (err) {
-      console.error("Error fetching wallets:", err);
-    }
+  // Helper: check if checked item was bought more than 24h ago
+  const isOlderThan24h = (item: GroceryItem): boolean => {
+    if (!item.checked) return false;
+    const timeStr = item.checkedAt || item.updatedAt;
+    if (!timeStr) return false;
+    const time = new Date(timeStr).getTime();
+    return time > 0 && Date.now() - time > 24 * 60 * 60 * 1000;
   };
-  
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    quantity: 1,
-    unit: 'cái',
-    category: 'food' as 'food' | 'household' | 'other'
-  });
 
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  // Active items (excluding completed items older than 24h)
+  const activeItems = useMemo(() => {
+    return items.filter(item => !isOlderThan24h(item));
+  }, [items]);
 
-  // Transfer to Inventory Modal state
-  const [inventoryItem, setInventoryItem] = useState<GroceryItem | null>(null);
-  const [invData, setInvData] = useState({
-    name: '',
-    quantity: 1,
-    unit: 'kg',
-    category: 'food',
-    totalValue: 0,
-    wallet_id: '',
-    isGift: false,
-    expiryDate: ''
-  });
-  const [isTransferring, setIsTransferring] = useState(false);
+  // Counts for stats header
+  const totalCount = activeItems.length;
+  const completedCount = useMemo(() => activeItems.filter(i => i.checked).length, [activeItems]);
+  const pendingCount = useMemo(() => activeItems.filter(i => !i.checked).length, [activeItems]);
+  const progressPercent = totalCount === 0 ? 0 : (completedCount / totalCount) * 100;
 
-  const filteredItems = items.filter(
-    item => activeTab === 'all' || item.category === activeTab
-  );
+  const pendingFood = useMemo(() => activeItems.filter(i => !i.checked && i.category === 'food').length, [activeItems]);
+  const pendingHousehold = useMemo(() => activeItems.filter(i => !i.checked && i.category === 'household').length, [activeItems]);
+
+  // Filtered & Searched items
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    return activeItems.filter(item => {
+      // Category filter
+      if (activeCategory !== 'all' && item.category !== activeCategory) {
+        return false;
+      }
+
+      // Status filter
+      if (statusFilter === 'pending' && item.checked) return false;
+      if (statusFilter === 'completed' && !item.checked) return false;
+
+      // Search query
+      if (query) {
+        const itemName = (item.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (!itemName.includes(query)) return false;
+      }
+
+      return true;
+    }).sort((a, b) => {
+      // Pending first, completed last
+      if (a.checked !== b.checked) {
+        return a.checked ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [activeItems, activeCategory, statusFilter, searchQuery]);
 
   const toggleCheck = async (item: GroceryItem) => {
     try {
@@ -91,411 +109,274 @@ export default function ShoppingPage() {
       fetchItems(true);
     } catch (err) {
       console.error(err);
+      showAlert(t('common.error', 'Có lỗi xảy ra'));
     }
   };
 
-  const openInventoryModal = (e: React.MouseEvent, item: GroceryItem) => {
-    e.stopPropagation();
-    setInventoryItem(item);
-    setInvData({
-      name: item.name,
-      quantity: item.quantity || 1,
-      unit: item.unit || 'kg',
-      category: item.category === 'household' ? 'utilities' : 'food',
-      totalValue: 0,
-      wallet_id: wallets[0]?.id || '',
-      isGift: false,
-      expiryDate: ''
-    });
-  };
-
-  const handleConfirmTransfer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inventoryItem) return;
-
-    if (!invData.isGift && invData.totalValue > 0 && !invData.wallet_id) {
-      showAlert("Vui lòng chọn ví thanh toán để trừ tiền!");
-      return;
-    }
-
-    setIsTransferring(true);
+  const handleAddItem = async (data: {
+    name: string;
+    quantity: number;
+    unit: string;
+    category: 'food' | 'household' | 'other';
+  }) => {
     try {
-      await createInventory({
-        name: invData.name,
-        category: invData.category,
-        quantity: Number(invData.quantity),
-        unit: invData.unit,
-        totalValue: invData.isGift ? 0 : Number(invData.totalValue),
-        wallet_id: invData.isGift ? undefined : invData.wallet_id,
-        isGift: invData.isGift,
-        expiryDate: invData.expiryDate || undefined
-      });
-
-      // Mark shopping item as checked
-      await updateShoppingItem(inventoryItem._id, { checked: true });
-
-      showAlert(`Đã nhập "${invData.name}" vào Kho dự trữ và ghi chép chi tiêu!`);
-      setInventoryItem(null);
+      await createShoppingItem(data);
       fetchItems(true);
-    } catch (err: any) {
-      console.error(err);
-      showAlert(err.response?.data?.error || "Lỗi khi nhập kho");
-    } finally {
-      setIsTransferring(false);
-    }
-  };
-
-  const confirmDelete = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setItemToDelete(id);
-  };
-
-  const handleDelete = async () => {
-    if (itemToDelete) {
-      try {
-        await deleteShoppingItem(itemToDelete);
-        fetchItems(true);
-      } catch (err) {
-        console.error(err);
-      }
-      setItemToDelete(null);
-    }
-  };
-
-  const openAddModal = () => {
-    setFormData({ name: '', quantity: 1, unit: 'cái', category: 'food' });
-    setIsAddModalOpen(true);
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) return;
-
-    try {
-      await createShoppingItem(formData);
-      fetchItems();
+      showAlert(t('common.success', 'Đã thêm món hàng vào danh sách!'));
     } catch (err) {
       console.error(err);
-    }
-    
-    setIsAddModalOpen(false);
-  };
-
-  const completedCount = items.filter(i => i.checked).length;
-  const totalCount = items.length;
-  const progressPercent = totalCount === 0 ? 0 : (completedCount / totalCount) * 100;
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'food': return <Apple size={16} color="#00ffaa" />;
-      case 'household': return <HomeIcon size={16} color="#00f0ff" />;
-      default: return <Package size={16} color="#a0c4ff" />;
+      showAlert(t('common.error', 'Không thể thêm món hàng'));
     }
   };
 
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'food': return t('shopping.foodTab');
-      case 'household': return t('shopping.householdTab');
-      default: return t('shopping.otherTab');
+  const handleDeleteItem = async () => {
+    if (!itemToDelete) return;
+    try {
+      await deleteShoppingItem(itemToDelete);
+      fetchItems(true);
+      showAlert(t('common.deleteSuccess', 'Đã xóa khỏi danh sách'));
+    } catch (err) {
+      console.error(err);
+      showAlert(t('common.error', 'Lỗi khi xóa'));
+    } finally {
+      setItemToDelete(null);
     }
   };
 
   const tabOptions = [
     { id: 'all', label: `${t('common.all')} (${totalCount})` },
-    { id: 'food', label: t('shopping.foodTab') },
-    { id: 'household', label: t('shopping.householdTab') },
-    { id: 'other', label: t('shopping.otherTab') }
+    { id: 'food', label: `${t('shopping.foodTab')} (${activeItems.filter(i => i.category === 'food').length})` },
+    { id: 'household', label: `${t('shopping.householdTab')} (${activeItems.filter(i => i.category === 'household').length})` },
+    { id: 'other', label: `${t('shopping.otherTab')} (${activeItems.filter(i => i.category === 'other').length})` }
   ];
 
-  const walletSelectOptions = wallets.map(w => ({
-    value: w.id,
-    label: `${w.name} (${w.balance.toLocaleString('vi-VN')} VND)`
-  }));
-
   return (
-    <div className={styles.container}>
-      {/* HEADER */}
-      <div className={styles.header}>
-        <div className={styles.titleWrapper}>
-          <ShoppingCart className={styles.titleIcon} size={28} />
-          <h1 className={styles.title}>{t('shopping.title')}</h1>
+    <div className={styles.shoppingContainer}>
+      {/* ========================================================
+         1.A. BẢN DESKTOP: BỘ 3 THẺ TỔNG QUAN TIẾN ĐỘ ĐI CHỢ (ĐỒNG BỘ TASKS)
+         ======================================================== */}
+      <div className={styles.desktopStats}>
+        <SaoSummaryCard
+          title={t('shopping.pending', 'Cần mua')}
+          amount={pendingCount}
+          currency="món"
+          icon={<Clock size={18} />}
+          subText={pendingCount > 0 ? `${pendingFood} thực phẩm • ${pendingHousehold} gia dụng` : t('shopping.allBought', 'Đã mua đủ!')}
+          variant="balance"
+          onClick={() => setStatusFilter('pending')}
+        />
+
+        <SaoSummaryCard
+          title={t('shopping.completed', 'Đã mua')}
+          amount={completedCount}
+          currency={`/${totalCount}`}
+          icon={<CheckCircle2 size={18} />}
+          subText={completedCount > 0 ? t('shopping.autoCleanupNotice', 'Tự xóa sau 24h') : 'Chưa có món nào'}
+          variant="income"
+          onClick={() => setStatusFilter('completed')}
+        />
+
+        <SaoSummaryCard
+          title={t('tasks.progress', 'Tiến độ')}
+          amount={`${Math.round(progressPercent)}%`}
+          currency=""
+          icon={<Award size={18} />}
+          subText={`${completedCount}/${totalCount} món hoàn thành`}
+          variant="primary"
+          onClick={() => setStatusFilter('all')}
+          className={styles.thirdMetricCard}
+        />
+      </div>
+
+      {/* ========================================================
+         1.B. BẢN MOBILE: KHUNG TỔNG HỢP 3 TRONG 1 COMPACT HUD (ĐỒNG BỘ TASKS)
+         ======================================================== */}
+      <div className={styles.mobileStatsCard}>
+        {/* Cột 1: Cần mua */}
+        <div
+          className={`${styles.mobileStatCol} ${statusFilter === 'pending' ? styles.colActivePending : ''}`}
+          onClick={() => setStatusFilter('pending')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className={`${styles.mobileStatHeader} ${styles.headerPending}`}>
+            <Clock size={12} />
+            <span>{t('shopping.pending', 'Cần mua')}</span>
+          </div>
+          <div className={styles.mobileStatBody}>
+            <span className={styles.mobileStatVal}>{pendingCount}</span>
+            <span className={styles.mobileStatUnit}>món</span>
+          </div>
+          <div className={styles.mobileStatSubPending}>
+            {pendingCount > 0 ? `${pendingCount} món chưa mua` : 'Đã mua hết'}
+          </div>
         </div>
 
-        {/* PROGRESS BAR */}
-        <div className={styles.progressContainer}>
-          <div className={styles.progressHeader}>
-            <span className={styles.progressLabel}>{t('tasks.progress')}</span>
-            <span className={styles.progressValue}>{completedCount}/{totalCount} ({Math.round(progressPercent)}%)</span>
+        <div className={styles.mobileStatDivider} />
+
+        {/* Cột 2: Đã mua */}
+        <div
+          className={`${styles.mobileStatCol} ${statusFilter === 'completed' ? styles.colActiveCompleted : ''}`}
+          onClick={() => setStatusFilter('completed')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className={`${styles.mobileStatHeader} ${styles.headerCompleted}`}>
+            <CheckSquare size={12} />
+            <span>{t('shopping.completed', 'Đã mua')}</span>
           </div>
-          <div className={styles.progressBarBg}>
-            <div 
-              className={styles.progressBarFill} 
-              style={{ width: `${progressPercent}%` }}
+          <div className={styles.mobileStatBody}>
+            <span className={`${styles.mobileStatVal} ${styles.valCompleted}`}>{completedCount}</span>
+            <span className={styles.mobileStatUnit}>/{totalCount}</span>
+          </div>
+          <div className={styles.mobileStatSubCompleted}>
+            {t('shopping.autoCleanupNotice', 'Tự xóa sau 24h')}
+          </div>
+        </div>
+
+        <div className={styles.mobileStatDivider} />
+
+        {/* Cột 3: Tiến độ */}
+        <div
+          className={`${styles.mobileStatCol} ${statusFilter === 'all' ? styles.colActivePrimary : ''}`}
+          onClick={() => setStatusFilter('all')}
+          role="button"
+          tabIndex={0}
+        >
+          <div className={`${styles.mobileStatHeader} ${styles.headerPrimary}`}>
+            <Award size={12} />
+            <span>{t('tasks.progress', 'Tiến độ')}</span>
+          </div>
+          <div className={styles.mobileStatBody}>
+            <span className={styles.mobileStatVal}>{Math.round(progressPercent)}%</span>
+          </div>
+          <div className={styles.mobileStatSubPrimary}>{completedCount}/{totalCount} xong</div>
+        </div>
+
+        {/* Họa tiết SAO: Góc trên - trái (Diamond + Hairline) */}
+        <div className={styles.cardCornerTL} aria-hidden="true">
+          <div className={styles.cardDiamondTL} />
+          <div className={styles.cardLineTL} />
+        </div>
+
+        {/* Họa tiết SAO: Góc dưới - phải (Diamond + Hairline) */}
+        <div className={styles.cardCornerBR} aria-hidden="true">
+          <div className={styles.cardDiamondBR} />
+          <div className={styles.cardLineBR} />
+        </div>
+      </div>
+
+      {/* ========================================================
+         2. THANH DANH MỤC & CÔNG CỤ (TABS + SEARCH + BỘ LỌC TRẠNG THÁI)
+         ======================================================== */}
+      <div className={styles.toolbar}>
+        <SaoTabs
+          tabs={tabOptions}
+          activeTab={activeCategory}
+          onChange={(id) => setActiveCategory(id as CategoryType)}
+        />
+
+        <div className={styles.filtersRow}>
+          <div className={styles.searchBox}>
+            <SaoSearchInput
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('shopping.searchPlaceholder', 'Tìm kiếm món đồ cần mua...')}
+              onClear={() => setSearchQuery('')}
             />
+          </div>
+
+          <div className={styles.statusFilters}>
+            <button
+              type="button"
+              className={`${styles.statusPill} ${statusFilter === 'all' ? styles.statusPillActive : ''}`}
+              onClick={() => setStatusFilter('all')}
+            >
+              {t('common.all', 'Tất cả')}
+            </button>
+            <button
+              type="button"
+              className={`${styles.statusPill} ${statusFilter === 'pending' ? styles.statusPillActive : ''}`}
+              onClick={() => setStatusFilter('pending')}
+            >
+              {t('shopping.pending', 'Cần mua')} ({pendingCount})
+            </button>
+            <button
+              type="button"
+              className={`${styles.statusPill} ${statusFilter === 'completed' ? styles.statusPillActive : ''}`}
+              onClick={() => setStatusFilter('completed')}
+            >
+              {t('shopping.completed', 'Đã mua')} ({completedCount})
+            </button>
           </div>
         </div>
       </div>
 
-      {/* FILTER TABS */}
-      <SaoTabs
-        tabs={tabOptions}
-        activeTab={activeTab}
-        onChange={id => setActiveTab(id as CategoryType)}
-      />
-
-      {/* GROCERY LIST */}
+      {/* ========================================================
+         3. DANH SÁCH MÓN ĐỒ ĐI CHỢ (GROCERY LIST)
+         ======================================================== */}
       <div className={styles.groceryList}>
         {isLoading ? (
           <SaoLoading fullPage />
         ) : filteredItems.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8', fontStyle: 'italic' }}>
-            {t('shopping.empty')}
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIconBox}>
+              <ShoppingCart size={38} />
+            </div>
+            <p className={styles.emptyTitle}>
+              {searchQuery
+                ? t('shopping.noSearchResult', 'Không tìm thấy món hàng phù hợp với từ khóa')
+                : statusFilter === 'completed' && completedCount === 0
+                ? t('shopping.noCompleted', 'Chưa có món nào được đánh dấu đã mua')
+                : statusFilter === 'pending' && totalCount > 0
+                ? t('shopping.allBought', 'Tuyệt vời! Bạn đã mua đủ tất cả món hàng!')
+                : t('shopping.empty')}
+            </p>
+            <p className={styles.emptySubTitle}>
+              {searchQuery
+                ? t('shopping.tryOtherSearch', 'Thử tìm với tên hoặc từ khóa khác')
+                : t('shopping.addItemHint', 'Nhấn nút bên dưới hoặc nút dấu cộng để thêm món đồ cần mua')}
+            </p>
           </div>
         ) : (
-          filteredItems.map(item => (
-            <div 
-              key={item._id} 
-              className={`${styles.groceryItem} ${item.checked ? styles.checked : ''}`}
-              onClick={() => toggleCheck(item)}
-            >
-              <div className={styles.itemCheckBtn}>
-                <Check size={16} className={styles.checkIcon} strokeWidth={3} />
-              </div>
-            
-              <div className={styles.itemContent}>
-                <div className={styles.itemName}>{item.name}</div>
-                <div className={styles.itemDetails}>
-                  <span>
-                    {getCategoryIcon(item.category)} {getCategoryLabel(item.category)}
-                  </span>
-                  <span>
-                    • {t('shopping.expectedQuantity')}: {item.quantity} {item.unit}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={e => e.stopPropagation()}>
-                {!item.checked && (
-                  <SaoButton
-                    variant="ghost"
-                    onClick={(e) => openInventoryModal(e, item)}
-                    title={t('shopping.moveToPantry')}
-                    style={{ color: '#00ffaa', borderColor: 'rgba(0, 255, 170, 0.4)' }}
-                  >
-                    <PackagePlus size={16} style={{ marginRight: 4 }} />
-                    <span className="hidden sm:inline">{t('shopping.moveToPantry')}</span>
-                  </SaoButton>
-                )}
-
-                <SaoButton
-                  variant="ghost"
-                  ghostType="danger"
-                  onClick={(e) => confirmDelete(e, item._id)}
-                  title={t('common.delete')}
-                >
-                  <Trash2 size={16} />
-                </SaoButton>
-              </div>
-            </div>
+          filteredItems.map((item) => (
+            <ShoppingItemCard
+              key={item._id}
+              item={item}
+              onToggleCheck={toggleCheck}
+              onDelete={(id) => setItemToDelete(id)}
+            />
           ))
         )}
-        
-        <SaoButton variant="dashed" onClick={openAddModal}>
-          <Plus size={20} /> {t('shopping.addItem')}
-        </SaoButton>
       </div>
 
-      {/* MODAL: THÊM MỚI */}
-      <SaoModal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        title={t('shopping.addItemModal')} 
-        icon={<Plus size={20} />}
-      >
-        <form onSubmit={handleSave}>
-          <div className={styles.formGroup}>
-            <label>{t('shopping.itemName')}</label>
-            <SaoInput
-              type="text"
-              placeholder={t('shopping.itemNamePlaceholder')}
-              value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
-              required
-              autoFocus
-            />
-          </div>
+      {/* ========================================================
+         NÚT THÊM MÓN ĐỒ DẠNG ICON TRÒN NỔI BÊN DƯỚI (SAO FAB)
+         ======================================================== */}
+      <SaoFab
+        title={t('shopping.addItem')}
+        onClick={() => setIsAddModalOpen(true)}
+      />
 
-          <div className={styles.flexRow}>
-            <div className={styles.formGroup}>
-              <label>{t('shopping.quantity')}</label>
-              <SaoInput
-                type="number"
-                min="1"
-                value={formData.quantity}
-                onChange={e => setFormData({...formData, quantity: Number(e.target.value)})}
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label>{t('shopping.unit')}</label>
-              <SaoInput
-                type="text"
-                placeholder={t('shopping.unitPlaceholder')}
-                value={formData.unit}
-                onChange={e => setFormData({...formData, unit: e.target.value})}
-              />
-            </div>
-          </div>
+      {/* ========================================================
+         4. MODAL: THÊM MỚI MÓN ĐỒ (SHOPPING ADD MODAL)
+         ======================================================== */}
+      <ShoppingAddModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={handleAddItem}
+      />
 
-          <div className={styles.formGroup}>
-            <label>{t('shopping.category')}</label>
-            <SaoSelect
-              options={getGroceryCategoryOptions(t)}
-              initialValue={formData.category}
-              onChange={val => setFormData({...formData, category: val as 'food' | 'household' | 'other'})}
-            />
-          </div>
-
-          <div className={styles.modalFooter}>
-            <SaoButton variant="default" onClick={() => setIsAddModalOpen(false)} type="button">
-              {t('common.cancel')}
-            </SaoButton>
-            <SaoButton variant="primary" type="submit">
-              {t('common.add')}
-            </SaoButton>
-          </div>
-        </form>
-      </SaoModal>
-
-      {/* MODAL: NHẬP KHO DỰ TRỮ (INVENTORY TRANSFER) */}
-      <SaoModal
-        isOpen={!!inventoryItem}
-        onClose={() => setInventoryItem(null)}
-        title={t('shopping.transferToPantryTitle')}
-        icon={<PackagePlus size={20} color="#00ffaa" />}
-      >
-        <form onSubmit={handleConfirmTransfer}>
-          <div style={{ color: '#a0c4ff', fontSize: '0.85rem', marginBottom: '14px', lineHeight: 1.4 }}>
-            {t('shopping.transferDesc')}
-          </div>
-
-          <div className={styles.formGroup}>
-            <label>{t('shopping.itemName')}</label>
-            <SaoInput
-              type="text"
-              value={invData.name}
-              onChange={e => setInvData({ ...invData, name: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className={styles.flexRow}>
-            <div className={styles.formGroup}>
-              <label>{t('shopping.actualQuantity')}</label>
-              <SaoInput
-                type="number"
-                min="0.1"
-                step="any"
-                value={invData.quantity}
-                onChange={e => setInvData({ ...invData, quantity: Number(e.target.value) })}
-                required
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label>{t('shopping.unit')}</label>
-              <SaoInput
-                type="text"
-                placeholder={t('shopping.unitPlaceholder')}
-                value={invData.unit}
-                onChange={e => setInvData({ ...invData, unit: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Toggle Gift / Free */}
-          <div style={{ margin: '10px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#fff', fontSize: '0.9rem' }}>
-              <input
-                type="checkbox"
-                checked={invData.isGift}
-                onChange={e => setInvData({ ...invData, isGift: e.target.checked })}
-                className="accent-cyan-400"
-              />
-              {t('shopping.isGiftFree')}
-            </label>
-          </div>
-
-          {!invData.isGift && (
-            <>
-              <div className={styles.formGroup}>
-                <label>{t('shopping.totalSpentVnd')}</label>
-                <SaoInput
-                  type="number"
-                  min="0"
-                  step="1000"
-                  placeholder="VD: 45000"
-                  value={invData.totalValue}
-                  onChange={e => setInvData({ ...invData, totalValue: Number(e.target.value) })}
-                  required
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>{t('shopping.walletSource')}</label>
-                {wallets.length === 0 ? (
-                  <div style={{ color: '#f59e0b', fontSize: '0.85rem' }}>{t('shopping.noWallets')}</div>
-                ) : (
-                  <SaoSelect
-                    options={walletSelectOptions}
-                    initialValue={invData.wallet_id || wallets[0]?.id}
-                    onChange={val => setInvData({ ...invData, wallet_id: val })}
-                  />
-                )}
-              </div>
-            </>
-          )}
-
-          <div className={styles.formGroup}>
-            <label>{t('shopping.expiryDateOptional')}</label>
-            <SaoDatePicker
-              value={invData.expiryDate}
-              onChange={val => setInvData({ ...invData, expiryDate: val })}
-              placeholder={t('shopping.pickExpiryDate')}
-            />
-          </div>
-
-          <div className={styles.modalFooter}>
-            <SaoButton variant="default" onClick={() => setInventoryItem(null)} type="button">
-              {t('common.cancel')}
-            </SaoButton>
-            <SaoButton variant="primary" type="submit" disabled={isTransferring}>
-              {isTransferring ? t('shopping.transferring') : t('shopping.confirmTransfer')}
-            </SaoButton>
-          </div>
-        </form>
-      </SaoModal>
-
-      {/* MODAL: XÓA ITEM */}
-      <SaoModal
+      {/* ========================================================
+         6. MODAL: XÁC NHẬN XÓA (SAO CONFIRM MODAL)
+         ======================================================== */}
+      <SaoConfirmModal
         isOpen={!!itemToDelete}
         onClose={() => setItemToDelete(null)}
+        onConfirm={handleDeleteItem}
         title={t('shopping.confirmDeleteTitle')}
-        icon={<AlertTriangle size={20} />}
-      >
-        <div className={styles.confirmText}>
-          {t('shopping.deleteItemDesc')}
-        </div>
-        <div className={styles.modalFooter}>
-          <SaoButton variant="default" onClick={() => setItemToDelete(null)} type="button">
-            {t('common.cancel')}
-          </SaoButton>
-          <SaoButton variant="danger" onClick={handleDelete} type="button">
-            <Trash2 size={16} /> {t('common.delete')}
-          </SaoButton>
-        </div>
-      </SaoModal>
+        message={t('shopping.deleteItemDesc')}
+      />
     </div>
   );
 }

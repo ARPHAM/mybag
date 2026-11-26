@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { Activity, Edit2, Plus, Scale, Ruler, Sparkles, RefreshCw } from 'lucide-react';
+import { Activity, Scale, Ruler, Sparkles, RefreshCw, Clock, Zap } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import {
+  ComposedChart,
   LineChart,
   Line,
   XAxis,
@@ -11,9 +12,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  Legend
+  Bar
 } from 'recharts';
 import styles from './health.module.css';
 import SaoModal from '@/app/components/SaoModal';
@@ -21,6 +20,8 @@ import SaoInput from '@/app/components/SaoInput';
 import SaoButton from '@/app/components/SaoButton';
 import SaoDatePicker from '@/app/components/SaoDatePicker';
 import SaoLoading from '@/app/components/SaoLoading';
+import SaoPanel from '@/app/components/SaoPanel';
+import SaoSummaryCard, { SummaryCardVariant } from '@/app/components/SaoSummaryCard';
 import { useSaoAlert } from '../../contexts/AlertContext';
 import { getHealthData, getHealthMacros, getAiAnalysis, saveHealthData, requestAiAnalysis } from './api';
 
@@ -112,11 +113,11 @@ export default function HealthPage() {
     return (currentWeight / (heightInMeters * heightInMeters)).toFixed(1);
   }, [height, currentWeight]);
 
-  const getBmiStatus = (bmiValue: number) => {
-    if (bmiValue < 18.5) return { label: t('health.bmiUnderweight'), colorClass: styles.warningText };
-    if (bmiValue >= 18.5 && bmiValue < 24.9) return { label: t('health.bmiNormal'), colorClass: styles.statFooter };
-    if (bmiValue >= 25 && bmiValue < 29.9) return { label: t('health.bmiOverweight'), colorClass: styles.warningText };
-    return { label: t('health.bmiObese'), colorClass: styles.dangerText };
+  const getBmiStatus = (bmiValue: number): { label: string; variant: SummaryCardVariant } => {
+    if (bmiValue < 18.5) return { label: t('health.bmiUnderweight'), variant: 'balance' };
+    if (bmiValue >= 18.5 && bmiValue < 24.9) return { label: t('health.bmiNormal'), variant: 'income' };
+    if (bmiValue >= 25 && bmiValue < 29.9) return { label: t('health.bmiOverweight'), variant: 'balance' };
+    return { label: t('health.bmiObese'), variant: 'expense' };
   };
 
   const bmiStatus = getBmiStatus(parseFloat(bmi.toString()));
@@ -160,12 +161,53 @@ export default function HealthPage() {
     }
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomWeightTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div style={{ background: 'rgba(5, 15, 25, 0.9)', border: '1px solid #00ffaa', padding: '10px', borderRadius: '4px' }}>
-          <p style={{ color: '#a0c4ff', margin: '0 0 5px 0' }}>{label}</p>
-          <p style={{ color: '#00ffaa', margin: 0, fontWeight: 'bold' }}>{payload[0].value} {payload[0].name?.includes('Kcal') ? 'Kcal' : 'kg'}</p>
+        <div className={styles.chartTooltip}>
+          <p className={styles.tooltipLabel}>{label}</p>
+          <p className={styles.tooltipValue} style={{ color: 'var(--sao-primary-hex)' }}>
+            {payload[0].value} kg
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomNutritionComboTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const caloEntry = payload.find((p: any) => p.dataKey === 'calo');
+      const macroEntries = payload.filter((p: any) => p.dataKey !== 'calo');
+      
+      const formattedLabel = typeof label === 'string' && label.includes('-') 
+        ? label.split('-').reverse().join('/') 
+        : label;
+
+      return (
+        <div className={styles.chartTooltip}>
+          <p className={styles.tooltipLabel}>{formattedLabel}</p>
+          {caloEntry && (
+            <div className={styles.tooltipCaloHeader}>
+              <span className={styles.tooltipCaloBadge}>
+                <Zap size={13} className={styles.caloIcon} /> Calo:
+              </span>
+              <span className={styles.tooltipCaloValue}>{caloEntry.value} Kcal</span>
+            </div>
+          )}
+          {macroEntries.length > 0 && (
+            <div className={styles.tooltipMacroSection}>
+              {macroEntries.map((entry: any, index: number) => (
+                <div key={index} className={styles.tooltipMacroRow}>
+                  <span style={{ color: entry.color, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: entry.color, display: 'inline-block' }} />
+                    {entry.name}:
+                  </span>
+                  <span className={styles.tooltipMacroVal}>{entry.value} g</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -175,12 +217,6 @@ export default function HealthPage() {
   if (isLoading) {
     return (
       <div className={styles.healthContainer}>
-        <div className={styles.header}>
-          <div className={styles.titleWrapper}>
-            <Activity className={styles.titleIcon} size={28} />
-            <h1 className={styles.title}>{t('health.title')}</h1>
-          </div>
-        </div>
         <SaoLoading fullPage />
       </div>
     );
@@ -188,146 +224,189 @@ export default function HealthPage() {
 
   return (
     <div className={styles.healthContainer}>
-      <div className={styles.header}>
-        <div className={styles.titleWrapper}>
-          <Activity className={styles.titleIcon} size={28} />
-          <h1 className={styles.title}>{t('health.title')}</h1>
-        </div>
-      </div>
-
       <div className={styles.scrollArea}>
+        {/* 3 THẺ CHỈ SỐ CƠ THỂ (VITALS METRIC CARDS) */}
         <div className={styles.gridStats}>
-        <div className={styles.statCard}>
-          <div className={styles.statHeader}>
-            <Scale size={18} /> {t('health.weight')}
-          </div>
-          <div className={styles.statValue}>
-            {currentWeight} <span className={styles.statUnit}>kg</span>
-          </div>
-          <div className={styles.statFooter}>
-            {lastUpdateText}
-          </div>
-          <SaoButton className={styles.actionButton} onClick={openWeightModal}>
-            <Edit2 size={18} />
-          </SaoButton>
+          <SaoSummaryCard
+            title={t('health.weight')}
+            amount={currentWeight}
+            currency="kg"
+            icon={<Scale size={18} />}
+            subText={lastUpdateText}
+            variant="primary"
+            onClick={openWeightModal}
+          />
+
+          <SaoSummaryCard
+            title={t('health.height')}
+            amount={height}
+            currency="cm"
+            icon={<Ruler size={18} />}
+            subText={lastUpdateText}
+            variant="default"
+            onClick={openWeightModal}
+          />
+
+          <SaoSummaryCard
+            title={t('health.bmi')}
+            amount={bmi}
+            currency=""
+            icon={<Activity size={18} />}
+            subText={`${t('common.status')}: ${bmiStatus.label}`}
+            variant={bmiStatus.variant}
+            className={styles.bmiCard}
+          />
         </div>
 
-        <div className={styles.statCard}>
-          <div className={styles.statHeader}>
-            <Ruler size={18} /> {t('health.height')}
-          </div>
-          <div className={styles.statValue}>
-            {height} <span className={styles.statUnit}>cm</span>
-          </div>
-          <div className={styles.statFooter}>
-            {lastUpdateText}
-          </div>
-          <SaoButton className={styles.actionButton} onClick={openWeightModal}>
-            <Edit2 size={18} />
-          </SaoButton>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statHeader}>
-            <Activity size={18} /> {t('health.bmi')}
-          </div>
-          <div className={styles.statValue}>
-            {bmi}
-          </div>
-          <div className={`${styles.statFooter} ${bmiStatus.colorClass}`}>
-            {t('common.status')}: {bmiStatus.label}
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.chartSection}>
-        <div className={styles.chartHeader}>
-          <div className={styles.chartTitle}>{t('health.weightFluctuation')}</div>
-          <SaoButton className={styles.logButton} onClick={openWeightModal}>
-            <Plus size={16} /> {t('common.edit')}
-          </SaoButton>
-        </div>
-        <div className={styles.chartContainer}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={weightHistory} margin={{ top: 5, right: 20, bottom: 25, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--sao-primary-rgb), 0.2)" vertical={false} />
-              <XAxis dataKey="dateLabel" stroke="#a0c4ff" tick={{ fill: '#a0c4ff' }} />
-              <YAxis domain={['dataMin - 2', 'dataMax + 2']} stroke="#a0c4ff" tick={{ fill: '#a0c4ff' }} />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(var(--sao-primary-rgb), 0.4)', strokeWidth: 2 }} />
-              <Line 
-                type="monotone" 
-                dataKey="weight" 
-                stroke="var(--sao-primary-hex)" 
-                strokeWidth={3}
-                dot={{ r: 5, fill: '#0a192d', stroke: 'var(--sao-primary-hex)', strokeWidth: 2 }}
-                activeDot={{ r: 8, fill: 'var(--sao-primary-hex)', stroke: '#fff', strokeWidth: 2 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className={styles.chartSection} style={{ marginTop: '20px' }}>
-        <div className={styles.chartHeader}>
-          <div className={styles.chartTitle}>{t('health.nutrition7Days')}</div>
-        </div>
-        <div className={styles.chartContainer} style={{ height: '350px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ flex: 1, minHeight: '150px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={macros} margin={{ top: 5, right: 20, bottom: 25, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--sao-primary-rgb), 0.2)" vertical={false} />
-                <XAxis dataKey="date" stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 12 }} />
-                <YAxis stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 12 }} />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(var(--sao-primary-rgb), 0.4)', strokeWidth: 2 }} />
-                <Line type="monotone" dataKey="calo" name="Calories (Kcal)" stroke="#ffaa00" strokeWidth={3} dot={{ r: 4, fill: '#ffaa00' }} />
+        {/* PANEL 1: BIẾN ĐỘNG CÂN NẶNG */}
+        <SaoPanel
+          title={t('health.weightFluctuation')}
+          icon={<Scale size={18} />}
+          variant="primary"
+        >
+          <div className={styles.chartContainer}>
+            <ResponsiveContainer width="100%" height={260} minHeight={260}>
+              <LineChart data={weightHistory} margin={{ top: 10, right: 20, bottom: 25, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--sao-primary-rgb), 0.15)" vertical={false} />
+                <XAxis dataKey="dateLabel" stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 12 }} />
+                <YAxis domain={['dataMin - 2', 'dataMax + 2']} stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 12 }} />
+                <Tooltip content={<CustomWeightTooltip />} cursor={{ stroke: 'rgba(var(--sao-primary-rgb), 0.4)', strokeWidth: 1.5 }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="weight" 
+                  name={t('health.weight')}
+                  stroke="var(--sao-primary-hex)" 
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#0a192d', stroke: 'var(--sao-primary-hex)', strokeWidth: 2 }}
+                  activeDot={{ r: 7, fill: 'var(--sao-primary-hex)', stroke: '#fff', strokeWidth: 2 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <div style={{ flex: 1, minHeight: '150px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={macros} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--sao-primary-rgb), 0.1)" vertical={false} />
-                <XAxis dataKey="date" stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 12 }} />
-                <YAxis stroke="#a0c4ff" tick={{ fill: '#a0c4ff', fontSize: 12 }} />
-                <Tooltip contentStyle={{ background: 'rgba(5, 15, 25, 0.9)', border: '1px solid #00ffaa', color: '#fff', borderRadius: '4px' }} />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="protein" name={`${t('health.protein')} (g)`} stackId="a" fill="#00f0ff" />
-                <Bar dataKey="carbs" name={`${t('health.carbs')} (g)`} stackId="a" fill="#00ffaa" />
-                <Bar dataKey="fat" name={`${t('health.fat')} (g)`} stackId="a" fill="#ffaa00" />
-                <Bar dataKey="sugar" name={`${t('health.sugar')} (g)`} stackId="a" fill="#ff4444" />
-              </BarChart>
+        </SaoPanel>
+
+        {/* PANEL 2: DINH DƯỠNG 7 NGÀY GẦN NHẤT (COMBO CHART CALO & MACROS) */}
+        <SaoPanel
+          title={t('health.nutrition7Days')}
+          icon={<Activity size={18} />}
+          variant="cyan"
+        >
+          {/* Cụm chú thích Legend đưa lên đầu biểu đồ, đường Calo đứng đầu */}
+          <div className={styles.legendRow}>
+            <div className={styles.legendItem}>
+              <span className={styles.legendCaloLine}>
+                <span className={styles.legendCaloDot} />
+              </span>
+              <span className={styles.legendCaloText}>Calories (Kcal)</span>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={styles.legendMacroSquare} style={{ background: '#00f0ff', boxShadow: '0 0 6px #00f0ff' }} />
+              <span style={{ color: '#00f0ff' }}>{t('health.protein')} (g)</span>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={styles.legendMacroSquare} style={{ background: '#00ffaa', boxShadow: '0 0 6px #00ffaa' }} />
+              <span style={{ color: '#00ffaa' }}>{t('health.carbs')} (g)</span>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={styles.legendMacroSquare} style={{ background: '#ffaa00', boxShadow: '0 0 6px #ffaa00' }} />
+              <span style={{ color: '#ffaa00' }}>{t('health.fat')} (g)</span>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={styles.legendMacroSquare} style={{ background: '#ff4444', boxShadow: '0 0 6px #ff4444' }} />
+              <span style={{ color: '#ff4444' }}>{t('health.sugar')} (g)</span>
+            </div>
+          </div>
+
+          <div className={styles.chartContainer}>
+            <ResponsiveContainer width="100%" height={270} minHeight={270}>
+              <ComposedChart data={macros} margin={{ top: 10, right: 15, bottom: 5, left: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--sao-primary-rgb), 0.12)" vertical={false} />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#a0c4ff" 
+                  tick={{ fill: '#a0c4ff', fontSize: 11 }}
+                  tickFormatter={(str: string) => {
+                    if (!str) return '';
+                    const parts = str.split('-');
+                    return parts.length === 3 ? `${parts[2]}/${parts[1]}` : str;
+                  }}
+                />
+                {/* Trục trái (Left Y-Axis): Năng lượng Calo (Kcal) */}
+                <YAxis 
+                  yAxisId="calo" 
+                  orientation="left" 
+                  stroke="#ffaa00" 
+                  tick={{ fill: '#ffaa00', fontSize: 11 }}
+                  tickFormatter={(v) => `${v}`}
+                  width={46}
+                />
+                {/* Trục phải (Right Y-Axis): Cơ cấu dinh dưỡng Macros (g) */}
+                <YAxis 
+                  yAxisId="macro" 
+                  orientation="right" 
+                  stroke="#00f0ff" 
+                  tick={{ fill: '#00f0ff', fontSize: 11 }}
+                  tickFormatter={(v) => `${v}g`}
+                  width={46}
+                />
+                <Tooltip content={<CustomNutritionComboTooltip />} />
+                {/* Cột xếp chồng: Macros dinh dưỡng (g) - Nâng độ rộng lên 52px để cột to, rõ ràng */}
+                <Bar yAxisId="macro" dataKey="protein" name={`${t('health.protein')} (g)`} stackId="macro" fill="#00f0ff" maxBarSize={52} />
+                <Bar yAxisId="macro" dataKey="carbs" name={`${t('health.carbs')} (g)`} stackId="macro" fill="#00ffaa" maxBarSize={52} />
+                <Bar yAxisId="macro" dataKey="fat" name={`${t('health.fat')} (g)`} stackId="macro" fill="#ffaa00" maxBarSize={52} />
+                <Bar yAxisId="macro" dataKey="sugar" name={`${t('health.sugar')} (g)`} stackId="macro" fill="#ff4444" radius={[4, 4, 0, 0]} maxBarSize={52} />
+                {/* Đường line nổi bật: Tổng năng lượng Calories (Kcal) */}
+                <Line 
+                  yAxisId="calo" 
+                  type="monotone" 
+                  dataKey="calo" 
+                  name="Calories (Kcal)" 
+                  stroke="#ffaa00" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, fill: '#0a192d', stroke: '#ffaa00', strokeWidth: 2 }} 
+                  activeDot={{ r: 7, fill: '#ffaa00', stroke: '#fff', strokeWidth: 2 }} 
+                />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      </div>
+        </SaoPanel>
 
-      <div className={styles.chartSection} style={{ marginTop: '20px' }}>
-        <div className={styles.chartHeader}>
-          <div className={styles.chartTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={20} color="#00f0ff" /> {t('health.aiAnalysisTitle')}
-          </div>
-          <SaoButton className={styles.logButton} onClick={handleRequestAI} disabled={isAnalyzing}>
-            {isAnalyzing ? <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> {t('health.analyzing')}</> : <><Sparkles size={16} /> {t('health.analyzeNow')}</>}
-          </SaoButton>
-        </div>
-        <div style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', marginTop: '10px' }}>
+        {/* PANEL 3: BÁC SĨ AI (TRỢ LÝ YUI PHÂN TÍCH THỂ TRẠNG) */}
+        <SaoPanel
+          title={t('health.aiAnalysisTitle')}
+          icon={<Sparkles size={18} />}
+          variant="gold"
+          headerActions={
+            <SaoButton onClick={handleRequestAI} disabled={isAnalyzing} variant="primary">
+              {isAnalyzing ? (
+                <>
+                  <RefreshCw size={15} className={styles.spin} /> {t('health.analyzing')}
+                </>
+              ) : (
+                <>
+                  <Sparkles size={15} /> {t('health.analyzeNow')}
+                </>
+              )}
+            </SaoButton>
+          }
+        >
           {aiAnalysis ? (
-            <>
-              <div style={{ fontSize: '0.8rem', color: '#a0c4ff', marginBottom: '15px' }}>
-                {t('health.analyzedAt')}: {new Date(aiAnalysis.analyzed_at).toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')}
+            <div className={styles.aiResultWrapper}>
+              <div className={styles.analyzedTimeBadge}>
+                <Clock size={13} />
+                <span>{t('health.analyzedAt')}: {new Date(aiAnalysis.analyzed_at).toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')}</span>
               </div>
               <div className={styles.markdownContent}>
                 <ReactMarkdown>{aiAnalysis.analysis_text}</ReactMarkdown>
               </div>
-            </>
+            </div>
           ) : (
-            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '20px' }}>
-              {t('health.emptyAiAnalysis')}
+            <div className={styles.emptyAiBox}>
+              <Sparkles size={32} className={styles.emptySparkleIcon} />
+              <p>{t('health.emptyAiAnalysis')}</p>
             </div>
           )}
-        </div>
-      </div>
-
+        </SaoPanel>
       </div>
 
       {/* MODAL: WEIGHT & HEIGHT */}
@@ -337,9 +416,9 @@ export default function HealthPage() {
         title={t('health.updateVitalsModal')}
         icon={<Scale size={20} />}
       >
-        <form onSubmit={handleSaveWeight}>
+        <form onSubmit={handleSaveWeight} className={styles.modalForm}>
           <div className={styles.formGroup}>
-            <label>{t('health.recordDate')}</label>
+            <label className={styles.fieldLabel}>{t('health.recordDate')}</label>
             <SaoDatePicker 
               value={weightForm.date}
               onChange={v => setWeightForm({...weightForm, date: v})}
@@ -347,11 +426,10 @@ export default function HealthPage() {
             />
           </div>
           <div className={styles.formGroup}>
-            <label>{t('health.weight')} (kg)</label>
+            <label className={styles.fieldLabel}>{t('health.weight')} (kg)</label>
             <SaoInput 
               type="number" 
               step="0.1"
-              
               placeholder="Vd: 65.5" 
               value={weightForm.weight}
               onChange={e => setWeightForm({...weightForm, weight: e.target.value})}
@@ -360,10 +438,9 @@ export default function HealthPage() {
             />
           </div>
           <div className={styles.formGroup}>
-            <label>{t('health.currentHeight')} (cm)</label>
+            <label className={styles.fieldLabel}>{t('health.currentHeight')} (cm)</label>
             <SaoInput 
               type="number" 
-              
               value={heightForm}
               onChange={e => setHeightForm(e.target.value)}
               required
@@ -371,10 +448,10 @@ export default function HealthPage() {
           </div>
 
           <div className={styles.modalFooter}>
-            <SaoButton type="button" className={`${styles.btn} ${styles.cancelBtn}`} onClick={() => setIsWeightModalOpen(false)}>
+            <SaoButton type="button" variant="default" onClick={() => setIsWeightModalOpen(false)}>
               {t('common.cancel')}
             </SaoButton>
-            <SaoButton type="submit" className={`${styles.btn} ${styles.saveBtn}`}>
+            <SaoButton type="submit" variant="primary">
               {t('common.save')}
             </SaoButton>
           </div>

@@ -1,25 +1,44 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import styles from './SaoDatePicker.module.css';
 
 interface SaoDatePickerProps {
   value?: string; // YYYY-MM-DD
   defaultValue?: string;
   onChange?: (date: string) => void;
+  onClear?: () => void;
+  clearable?: boolean;
   required?: boolean;
   name?: string;
   placeholder?: string;
 }
 
-export default function SaoDatePicker({ value, defaultValue, onChange, required, name, placeholder = "DD/MM/YYYY" }: SaoDatePickerProps) {
+export default function SaoDatePicker({
+  value,
+  defaultValue,
+  onChange,
+  onClear,
+  clearable = false,
+  required,
+  name,
+  placeholder = "DD/MM/YYYY"
+}: SaoDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [popoverCoords, setPopoverCoords] = useState<{ top: number; left: number } | null>(null);
+
   // Uncontrolled vs Controlled support
   const [internalValue, setInternalValue] = useState(value || defaultValue || '');
   const actualValue = value !== undefined ? value : internalValue;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const parseDateString = (str: string): Date => {
     if (!str) return new Date();
@@ -49,16 +68,70 @@ export default function SaoDatePicker({ value, defaultValue, onChange, required,
     }
   }, [value]);
 
+  // Tính toán vị trí hiển thị popover thông minh, tự động lật lên trên nếu chạm đáy màn hình/popup
+  const updatePosition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const popoverHeight = 310;
+    const popoverWidth = 280;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUpward = spaceBelow < popoverHeight && spaceAbove > spaceBelow;
+
+    const top = openUpward
+      ? Math.max(10, rect.top - popoverHeight - 6)
+      : Math.min(window.innerHeight - popoverHeight - 10, rect.bottom + 6);
+
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 10) {
+      left = Math.max(10, window.innerWidth - popoverWidth - 10);
+    }
+
+    setPopoverCoords({ top, left });
+  }, []);
+
+  // Lắng nghe sự kiện scroll (capture) và resize để popover luôn dính chặt vào input
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+
+    const handleReposition = () => {
+      updatePosition();
+    };
+
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+    return () => {
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [isOpen, updatePosition]);
+
   // Handle outside click / tap
   useEffect(() => {
+    if (!isOpen) return;
     const handleClickOutside = (e: PointerEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        popoverRef.current && !popoverRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     };
     document.addEventListener('pointerdown', handleClickOutside);
     return () => document.removeEventListener('pointerdown', handleClickOutside);
-  }, []);
+  }, [isOpen]);
+
+  const handleToggle = () => {
+    if (!isOpen) {
+      updatePosition();
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
+  };
 
   const formatDateDisplay = (isoString: string) => {
     if (!isoString) return '';
@@ -148,20 +221,47 @@ export default function SaoDatePicker({ value, defaultValue, onChange, required,
   return (
     <div className={styles.datePickerContainer} ref={containerRef}>
       {name && <input type="hidden" name={name} value={actualValue} />}
-      <div className={styles.inputWrapper} onClick={() => setIsOpen(!isOpen)}>
+      <div className={styles.inputWrapper} onClick={handleToggle}>
         <input 
           type="text" 
-          className={styles.dateInput} 
+          className={`${styles.dateInput} ${clearable ? styles.clearable : ''}`} 
           value={formatDateDisplay(actualValue)} 
           readOnly 
           placeholder={placeholder}
           required={required}
         />
-        <CalendarIcon size={18} className={styles.calendarIcon} />
+        {clearable && actualValue && (
+          <button
+            type="button"
+            className={styles.clearBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              setInternalValue('');
+              if (onChange) onChange('');
+              if (onClear) onClear();
+            }}
+            title="Xóa ngày"
+            tabIndex={-1}
+          >
+            <X size={13} />
+          </button>
+        )}
+        <CalendarIcon size={16} className={styles.calendarIcon} />
       </div>
 
-      {isOpen && (
-        <div className={styles.calendarPopover}>
+      {/* Render Popover qua React Portal ra document.body để không bao giờ bị overflow-hidden hay clip-path cắt cụt */}
+      {isOpen && mounted && popoverCoords && createPortal(
+        <div
+          ref={popoverRef}
+          className={styles.calendarPopover}
+          style={{
+            position: 'fixed',
+            top: `${popoverCoords.top}px`,
+            left: `${popoverCoords.left}px`,
+            zIndex: 99999
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className={styles.calendarHeader}>
             <button className={styles.navButton} onClick={handlePrevMonth} type="button">
               <ChevronLeft size={16} />
@@ -198,7 +298,8 @@ export default function SaoDatePicker({ value, defaultValue, onChange, required,
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

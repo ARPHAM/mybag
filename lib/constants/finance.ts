@@ -20,8 +20,7 @@ export const WALLET_TYPE_OPTIONS = [
 
 export const INVENTORY_CATEGORY_OPTIONS = [
   { value: 'food', label: 'Thực phẩm' },
-  { value: 'spices', label: 'Gia vị' },
-  { value: 'utilities', label: 'Đồ dùng' }
+  { value: 'spices', label: 'Gia vị' }
 ];
 
 export const INVENTORY_UNIT_OPTIONS = [
@@ -85,6 +84,5 @@ export function getInventoryCategoryOptions(t?: (key: any) => string) {
   return [
     { value: 'food', label: t('finance.categories.food') },
     { value: 'spices', label: t('finance.categories.spices') },
-    { value: 'utilities', label: t('finance.categories.utilities') },
   ];
 }

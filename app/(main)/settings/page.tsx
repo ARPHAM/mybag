@@ -1,34 +1,39 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Settings, Palette, CheckCircle2, LogOut, Languages } from 'lucide-react';
+import {
+  Palette,
+  LogOut,
+  Languages,
+  Image as ImageIcon,
+  Shield
+} from 'lucide-react';
 import { logoutUser } from './api';
-import { useSaoAlert } from '../../contexts/AlertContext';
-import { useI18n, Language } from '../../contexts/I18nContext';
+import { useI18n } from '@/lib/i18n';
+import SaoPanel from '@/app/components/SaoPanel';
+import SaoButton from '@/app/components/SaoButton';
+import SaoConfirmModal from '@/app/components/SaoConfirmModal';
+import LanguageCard from '@/app/components/settings/LanguageCard';
+import ThemeCard, { ThemeConfig } from '@/app/components/settings/ThemeCard';
+import WallpaperPicker from '@/app/components/settings/WallpaperPicker';
 import styles from './settings.module.css';
 
-interface ThemeConfig {
-  id: string;
-  nameKey: string;
-  descKey: string;
-  color: string;
-}
-
-const THEMES: ThemeConfig[] = [
-  { id: 'cyan', nameKey: 'settings.themes.cyan.name', descKey: 'settings.themes.cyan.desc', color: '#00f0ff' },
-  { id: 'yellow', nameKey: 'settings.themes.yellow.name', descKey: 'settings.themes.yellow.desc', color: '#ffaa00' },
-  { id: 'red', nameKey: 'settings.themes.red.name', descKey: 'settings.themes.red.desc', color: '#ff4444' },
-  { id: 'green', nameKey: 'settings.themes.green.name', descKey: 'settings.themes.green.desc', color: '#00ffaa' },
-  { id: 'purple', nameKey: 'settings.themes.purple.name', descKey: 'settings.themes.purple.desc', color: '#b900ff' },
-  { id: 'magenta', nameKey: 'settings.themes.magenta.name', descKey: 'settings.themes.magenta.desc', color: '#ff00ff' },
-  { id: 'orange', nameKey: 'settings.themes.orange.name', descKey: 'settings.themes.orange.desc', color: '#ff5500' },
-  { id: 'white', nameKey: 'settings.themes.white.name', descKey: 'settings.themes.white.desc', color: '#ffffff' },
+const THEME_IDS = [
+  { id: 'cyan', color: '#00f0ff' },
+  { id: 'yellow', color: '#ffaa00' },
+  { id: 'red', color: '#ff4444' },
+  { id: 'green', color: '#00ffaa' },
+  { id: 'purple', color: '#b900ff' },
+  { id: 'magenta', color: '#ff00ff' },
+  { id: 'orange', color: '#ff5500' },
+  { id: 'white', color: '#ffffff' },
 ];
 
 export default function SettingsPage() {
   const { t, language, setLanguage } = useI18n();
   const [activeTheme, setActiveTheme] = useState('cyan');
-  const { showConfirm } = useSaoAlert();
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('sao-theme');
@@ -40,118 +45,132 @@ export default function SettingsPage() {
   const handleThemeSelect = (themeId: string) => {
     setActiveTheme(themeId);
     localStorage.setItem('sao-theme', themeId);
-    
+
     // Dispatch event to layout to update variables instantly
     const event = new CustomEvent('sao-theme-changed', { detail: themeId });
     window.dispatchEvent(event);
   };
 
   const handleLogout = async () => {
-    showConfirm(t('settings.logoutConfirm'), async () => {
-      try {
-        await logoutUser();
-      } catch (err) {
-        console.error(err);
-      } finally {
-        window.location.href = '/login';
-      }
-    });
+    try {
+      setIsLoggingOut(true);
+      await logoutUser();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      window.location.href = '/login';
+    }
   };
+
+  const themes: ThemeConfig[] = THEME_IDS.map((item) => ({
+    id: item.id,
+    name: t(`settings.themes.${item.id}.name`),
+    desc: t(`settings.themes.${item.id}.desc`),
+    color: item.color
+  }));
 
   return (
     <div className={styles.settingsContainer}>
-      <div className={styles.header}>
-        <div className={styles.titleWrapper}>
-          <Settings className={styles.titleIcon} size={28} />
-          <h1 className={styles.title}>{t('settings.title')}</h1>
-        </div>
-      </div>
-
       <div className={styles.scrollArea}>
-        {/* LANGUAGE SECTION */}
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>
-            <Languages size={20} />
-            <span>{t('settings.language')}</span>
-          </div>
-
+        {/* SECTION 1: LANGUAGE */}
+        <SaoPanel
+          variant="cyan"
+          title={t('settings.language')}
+          icon={<Languages size={20} />}
+          className={styles.sectionPanel}
+        >
+          <div className={styles.sectionDesc}>{t('settings.languageDesc')}</div>
           <div className={styles.languageGrid}>
-            <div
-              className={`${styles.languageCard} ${language === 'vi' ? styles.active : ''}`}
-              onClick={() => setLanguage('vi')}
-            >
-              <div className={styles.languageInfo}>
-                <div className={styles.languageTitle}>Tiếng Việt</div>
-                <div className={styles.languageSub}>Ngôn ngữ tiếng Việt mặc định</div>
-              </div>
-              {language === 'vi' && <CheckCircle2 size={24} color="var(--sao-primary-hex)" />}
-            </div>
-
-            <div
-              className={`${styles.languageCard} ${language === 'en' ? styles.active : ''}`}
-              onClick={() => setLanguage('en')}
-            >
-              <div className={styles.languageInfo}>
-                <div className={styles.languageTitle}>English</div>
-                <div className={styles.languageSub}>English language interface</div>
-              </div>
-              {language === 'en' && <CheckCircle2 size={24} color="var(--sao-primary-hex)" />}
-            </div>
+            <LanguageCard
+              code="vi"
+              flag="🇻🇳"
+              title="Tiếng Việt"
+              sub={t('settings.viSub')}
+              isActive={language === 'vi'}
+              onSelect={() => setLanguage('vi')}
+            />
+            <LanguageCard
+              code="en"
+              flag="🇺🇸"
+              title="English"
+              sub={t('settings.enSub')}
+              isActive={language === 'en'}
+              onSelect={() => setLanguage('en')}
+            />
           </div>
-        </div>
+        </SaoPanel>
 
-        {/* THEME SECTION */}
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>
-            <Palette size={20} />
-            <span>{t('settings.theme')}</span>
-          </div>
-          
+        {/* SECTION 2: THEME */}
+        <SaoPanel
+          variant="primary"
+          title={t('settings.theme')}
+          icon={<Palette size={20} />}
+          className={styles.sectionPanel}
+        >
           <div className={styles.themeGrid}>
-            {THEMES.map(theme => (
-              <div 
+            {themes.map((theme) => (
+              <ThemeCard
                 key={theme.id}
-                className={`${styles.themeCard} ${activeTheme === theme.id ? styles.active : ''}`}
-                onClick={() => handleThemeSelect(theme.id)}
-              >
-                <div className={styles.colorPreview} style={{ color: theme.color, background: `radial-gradient(circle, ${theme.color}40 0%, transparent 70%)` }}>
-                  {activeTheme === theme.id ? <CheckCircle2 size={32} /> : null}
-                </div>
-                <div className={styles.themeName}>{t(theme.nameKey)}</div>
-                <div className={styles.themeDesc}>{t(theme.descKey)}</div>
-              </div>
+                theme={theme}
+                isActive={activeTheme === theme.id}
+                onSelect={handleThemeSelect}
+              />
             ))}
           </div>
-        </div>
+        </SaoPanel>
 
-        {/* ACCOUNT SECTION */}
-        <div className={styles.section} style={{ marginTop: '30px' }}>
-          <div className={styles.sectionTitle} style={{ color: '#ff4444' }}>
-            <LogOut size={20} />
-            <span>{t('settings.account')}</span>
+        {/* SECTION 3: WALLPAPER & AMBIENT HUD */}
+        <SaoPanel
+          variant="primary"
+          title={t('settings.wallpaper')}
+          icon={<ImageIcon size={20} />}
+          className={styles.sectionPanel}
+        >
+          <div className={styles.sectionDesc}>{t('settings.wallpaperDesc')}</div>
+          <WallpaperPicker />
+        </SaoPanel>
+
+        {/* SECTION 4: ACCOUNT MANAGEMENT */}
+        <SaoPanel
+          variant="danger"
+          title={t('settings.account')}
+          icon={<LogOut size={20} />}
+          className={styles.sectionPanel}
+        >
+          <div className={styles.accountBox}>
+            <div className={styles.accountInfo}>
+              <div className={styles.accountTitleRow}>
+                <Shield size={18} className={styles.shieldIcon} />
+                <span className={styles.accountTitle}>{t('settings.accountSessionTitle')}</span>
+              </div>
+              <p className={styles.accountDesc}>
+                {t('settings.accountSessionDesc')}
+              </p>
+            </div>
+            <div className={styles.accountAction}>
+              <SaoButton
+                variant="danger"
+                onClick={() => setLogoutModalOpen(true)}
+              >
+                <LogOut size={16} />
+                <span>{t('settings.logout')}</span>
+              </SaoButton>
+            </div>
           </div>
-          <button 
-            onClick={handleLogout}
-            style={{
-              background: 'rgba(255, 68, 68, 0.1)',
-              border: '1px solid #ff4444',
-              color: '#ff4444',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              transition: 'all 0.3s ease'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 68, 68, 0.2)'}
-            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 68, 68, 0.1)'}
-          >
-            <LogOut size={18} /> {t('settings.logout')}
-          </button>
-        </div>
+        </SaoPanel>
       </div>
+
+      {/* CONFIRM LOGOUT MODAL */}
+      <SaoConfirmModal
+        isOpen={logoutModalOpen}
+        onClose={() => setLogoutModalOpen(false)}
+        onConfirm={handleLogout}
+        title={t('settings.logout')}
+        message={t('settings.logoutConfirm')}
+        confirmText={t('settings.logout')}
+        confirmVariant="danger"
+        isLoading={isLoggingOut}
+      />
     </div>
   );
 }

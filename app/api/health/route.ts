@@ -5,6 +5,7 @@ import User from '@/models/User';
 import WeightLog from '@/models/WeightLog';
 import { verifyToken } from '@/lib/auth';
 import { getVnDateStr, parseVnDateTime } from '@/lib/vnTime';
+import { getExpForNextLevel, MAX_LEVEL } from '@/lib/gameLevel';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,17 +100,19 @@ export async function POST(req: Request) {
       rewardExp = 100;
       user.current_exp += rewardExp;
 
-      // Level up logic (đơn giản hoá, bạn có thể tái sử dụng hàm từ tasks nếu muốn)
+      // Level up logic (Max level = 10)
       let leveledUp = false;
-      const getExpForNextLevel = (level: number) => level * 500;
       let requiredExp = getExpForNextLevel(user.level);
-      while (user.current_exp >= requiredExp) {
+      while (user.level < MAX_LEVEL && user.current_exp >= requiredExp) {
         user.current_exp -= requiredExp;
         user.level += 1;
         user.max_hp += 50; 
         user.max_mp += 20;
         leveledUp = true;
         requiredExp = getExpForNextLevel(user.level);
+      }
+      if (user.level >= MAX_LEVEL) {
+        user.level = MAX_LEVEL;
       }
 
       if (isNormalBmi) {

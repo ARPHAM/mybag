@@ -1,0 +1,210 @@
+.card {
+  position: relative;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  padding: 16px 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+/* Inactive (Not selected): Faded, subtle, transparent */
+.inactive {
+  background: rgba(6, 14, 26, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0.72;
+}
+
+.inactive:hover {
+  background: rgba(10, 22, 40, 0.75);
+  border-color: rgba(255, 255, 255, 0.25);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.inactive .title {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.inactive .sub {
+  color: #64748b;
+}
+
+.inactive .codeBadge {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+}
+
+.inactive .flagBadge {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  filter: grayscale(0.5);
+  opacity: 0.7;
+}
+
+/* Active (Selected): Opaque, bold, luminous, solid high-tech */
+.active {
+  background: linear-gradient(135deg, rgba(8, 24, 48, 0.96) 0%, rgba(12, 36, 68, 0.96) 100%);
+  border: 1.5px solid var(--sao-primary-hex, #00f0ff);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 1;
+  box-shadow:
+    0 0 24px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35),
+    inset 0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+  transform: translateY(-1px);
+}
+
+.active .title {
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+}
+
+.active .sub {
+  color: #a0c4ff;
+}
+
+.active .codeBadge {
+  background: var(--sao-primary-hex, #00f0ff);
+  border: 1px solid var(--sao-primary-hex, #00f0ff);
+  color: #000;
+  font-weight: 800;
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+}
+
+.active .flagBadge {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+  border: 1.5px solid var(--sao-primary-hex, #00f0ff);
+  filter: none;
+  opacity: 1;
+  box-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+}
+
+/* Left Accent Laser Bar */
+.leftBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: transparent;
+  transition: all 0.25s;
+}
+
+.active .leftBar {
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 10px var(--sao-primary-hex, #00f0ff);
+}
+
+/* Flag Frame */
+.flagBadge {
+  font-size: 1.8rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  flex-shrink: 0;
+  transition: all 0.25s;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title {
+  font-size: 1rem;
+  letter-spacing: 0.3px;
+  transition: color 0.2s;
+}
+
+.codeBadge {
+  font-size: 0.68rem;
+  font-family: 'Tauri', sans-serif;
+  padding: 1px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+
+.sub {
+  font-size: 0.78rem;
+  line-height: 1.3;
+  transition: color 0.2s;
+}
+
+/* Status Indicator */
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Active Pill Badge */
+.activePill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 4px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+  border: 1px solid var(--sao-primary-hex, #00f0ff);
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+}
+
+.checkIconWrap {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--sao-primary-hex, #00f0ff);
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+}
+
+.activeText {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--sao-primary-hex, #00f0ff);
+  letter-spacing: 0.8px;
+}
+
+/* Inactive slot */
+.inactiveSlot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inactiveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+}

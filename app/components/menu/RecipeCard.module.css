@@ -1,0 +1,182 @@
+/* ========================================================
+   RecipeCard.module.css - Thẻ công thức nấu ăn chuẩn SAO Cyber HUD
+   Nền trong suốt kính Hologram, vát góc polygon, trục quang học
+   ======================================================== */
+
+.card {
+  position: relative;
+  background-color: transparent;
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 20px 20px, 20px 20px;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35),
+              inset 0 0 15px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease,
+              box-shadow 0.2s ease,
+              background-color 0.2s ease;
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-family: var(--font-tauri, monospace);
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: var(--sao-primary-hex, #00f0ff);
+  background-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.04);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45),
+              0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25),
+              inset 0 0 20px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.05);
+}
+
+/* Trục quang học cạnh trái */
+.leftAccentBar {
+  position: absolute;
+  top: 14px;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+  pointer-events: none;
+  z-index: 5;
+  transition: width 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover .leftAccentBar {
+  width: 4px;
+  box-shadow: 0 0 12px var(--sao-primary-hex, #00f0ff);
+}
+
+/* Ngàm vát neon góc trên - trái */
+.bevelTL {
+  position: absolute;
+  top: 4px;
+  left: -2px;
+  width: 18px;
+  height: 2px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.banner {
+  height: 110px;
+  background-color: transparent;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.02) 0px, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.02) 1px, transparent 1px, transparent 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+}
+
+.bannerIcon {
+  color: var(--sao-primary-hex, #00f0ff);
+  opacity: 0.75;
+  filter: drop-shadow(0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5));
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.card:hover .bannerIcon {
+  transform: scale(1.08);
+  opacity: 1;
+  filter: drop-shadow(0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.8));
+}
+
+.editBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+  color: #00f0ff;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+
+.editBtn:hover {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  border-color: #00f0ff;
+  box-shadow: 0 0 8px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+  transform: scale(1.08);
+}
+
+.content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.recipeName {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+  margin-bottom: 8px;
+}
+
+.ingredientsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.ingredientTag {
+  font-size: 0.75rem;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22);
+  color: #a0c4ff;
+  padding: 2px 8px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.instructions {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 14px;
+  line-height: 1.4;
+  border-left: 2px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+  padding-left: 8px;
+}
+
+.cookBtn {
+  margin-top: auto;
+  width: 100%;
+}

@@ -1,427 +1,841 @@
 .tasksContainer {
+  position: relative;
   flex: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   overflow: hidden;
-  animation: fadeIn 0.5s ease-out;
+  animation: fadeIn 0.4s ease-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(10, 25, 45, 0.7);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
-  border-radius: 8px;
+/* =========================================
+   1. STATS (DESKTOP GRID vs MOBILE COMPACT HUD STRIP)
+========================================= */
+.desktopStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
   flex-shrink: 0;
-  clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
-  padding: 15px 25px;
 }
 
-.titleWrapper {
+.thirdMetricCard {
+  /* Override if needed */
+}
+
+/* Ẩn thanh Mobile Summary Strip trên Desktop */
+.mobileStatsCard {
+  display: none;
+}
+
+/* =========================================
+   2. TOOLBAR (SEARCH & FILTER SELECT CÙNG 1 DÒNG)
+========================================= */
+.toolbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+
+.filtersWrapper {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: nowrap;
+  width: 100%;
+  max-width: 680px;
 }
 
-.titleIcon {
-  color: var(--sao-primary-hex);
-  filter: drop-shadow(0 0 8px rgba(var(--sao-primary-rgb), 0.6));
+.searchInput {
+  flex: 1;
+  min-width: 320px;
 }
 
-.title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #fff;
-  letter-spacing: 2px;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+.filterSelect {
+  width: 175px !important;
+  min-width: 175px !important;
+  max-width: 175px !important;
+  flex: 0 0 175px !important;
 }
 
-.progressSection {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.progressText {
-  color: #a0c4ff;
-  font-size: 0.9rem;
-  font-weight: bold;
-}
-
-.progressBarWrapper {
-  width: 200px;
-  height: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
-  border-radius: 5px;
-  overflow: hidden;
-  position: relative;
-}
-
-.progressBarFill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--sao-primary-hex), #ffcc00);
-  box-shadow: 0 0 10px var(--sao-primary-hex);
-  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
+/* =========================================
+   3. QUEST LIST & EMPTY STATE
+========================================= */
 .taskList {
   flex: 1;
+  width: 100%;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-right: 10px;
-  padding-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  padding-right: 8px;
+  padding-bottom: 85px;
+  align-content: start;
 }
 
-.taskCard {
+.taskList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.taskList::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.taskList::-webkit-scrollbar-thumb {
+  background: rgba(var(--sao-primary-rgb), 0.3);
+  border-radius: 3px;
+}
+
+.taskList::-webkit-scrollbar-thumb:hover {
+  background: var(--sao-primary-hex);
+}
+
+.emptyState {
+  grid-column: 1 / -1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  background: rgba(10, 25, 45, 0.6);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.2);
-  padding: 15px 25px;
-  gap: 20px;
-  transition: all 0.2s;
-  clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 14px;
+  background: rgba(8, 22, 42, 0.35);
+  border: 1px dashed rgba(var(--sao-primary-rgb), 0.3);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  backdrop-filter: blur(8px);
+}
+
+.emptyIconBox {
+  color: var(--sao-primary-hex);
+  opacity: 0.6;
+  filter: drop-shadow(0 0 8px rgba(var(--sao-primary-rgb), 0.5));
+}
+
+.emptyTitle {
+  font-size: 0.95rem;
+  color: #a0c4ff;
+  text-align: center;
+  font-family: var(--font-tauri, sans-serif);
+  margin: 0;
+}
+
+/* =========================================
+   4. SAO CYBER QUEST CARD (TRANSLUCENT NỀN TRONG)
+========================================= */
+.taskCard {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 20px;
+  background: rgba(8, 20, 38, 0.6);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.25);
+  box-shadow: inset 0 0 15px rgba(var(--sao-primary-rgb), 0.05);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
+  cursor: pointer;
+  color: var(--sao-primary-hex);
 }
 
 .taskCard:hover {
-  background: rgba(15, 35, 60, 0.8);
-  border-color: rgba(var(--sao-primary-rgb), 0.5);
+  background: rgba(12, 28, 52, 0.75);
+  border-color: var(--sao-primary-hex);
+  box-shadow: 0 0 16px rgba(var(--sao-primary-rgb), 0.25), inset 0 0 20px rgba(var(--sao-primary-rgb), 0.1);
+  transform: translateY(-2px);
 }
 
 .taskCard.completed {
-  background: rgba(5, 15, 25, 0.4);
-  border-color: rgba(var(--sao-primary-rgb), 0.2);
+  opacity: 0.65;
+  background: rgba(5, 18, 14, 0.45);
+  border-color: rgba(0, 255, 170, 0.3);
+  box-shadow: inset 0 0 15px rgba(0, 255, 170, 0.05);
+  color: #00ffaa;
 }
 
-.checkboxContainer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 2;
+.taskCard.completed:hover {
+  opacity: 0.88;
+  background: rgba(8, 26, 20, 0.6);
+  border-color: #00ffaa;
+  box-shadow: 0 0 16px rgba(0, 255, 170, 0.25), inset 0 0 20px rgba(0, 255, 170, 0.1);
 }
 
-.checkbox {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid var(--sao-primary-hex);
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.taskCard:hover .checkbox {
-  border-color: var(--sao-primary-hex);
-  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
-}
-
-.taskCard.completed .checkbox {
-  background: rgba(var(--sao-primary-rgb), 0.2);
-  border-color: var(--sao-primary-hex);
-  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.5);
-}
-
-.checkIcon {
-  color: var(--sao-primary-hex);
-  opacity: 0;
-  transform: scale(0.5);
-  transition: all 0.2s;
-}
-
-.taskCard.completed .checkIcon {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.taskContent {
-  flex: 1;
-}
-
-.taskName {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #fff;
-  transition: all 0.2s;
-  margin-bottom: 4px;
-}
-
-.taskCard.completed .taskName {
-  color: #6c8caf;
-  text-decoration: line-through;
-}
-
-.taskDesc {
-  font-size: 0.9rem;
-  color: #a0c4ff;
-}
-
-.taskCard.completed .taskDesc {
-  color: #4a6a8a;
-}
-
-
-.addButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: rgba(var(--sao-primary-rgb), 0.1);
-  border: 1px dashed rgba(var(--sao-primary-rgb), 0.5);
-  color: var(--sao-primary-hex);
-  padding: 15px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-  font-size: 1.1rem;
-  font-weight: bold;
-  letter-spacing: 1px;
-  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-}
-
-.addButton:hover {
-  background: rgba(var(--sao-primary-rgb), 0.2);
-  border-style: solid;
-  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.3);
-}
-
-.failedCheckbox {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.5);
-}
-
-/* FORM ELEMENTS FOR MODAL CONTENT */
-.formGroup {
-  margin-bottom: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.formGroup label {
-  font-size: 0.9rem;
-  color: #a0c4ff;
-  font-weight: 500;
-}
-
-.input, .textarea {
-  width: 100%;
-  box-sizing: border-box;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
-  border-radius: 4px;
-  padding: 10px 15px;
-  color: #fff;
-  font-family: inherit;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-
-.input:focus, .textarea:focus {
-  outline: none;
-  border-color: var(--sao-primary-hex);
-  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.2);
-}
-
-.textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-
-.modalFooter {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(var(--sao-primary-rgb), 0.3);
-}
-
-.btn {
-  padding: 10px 20px;
-  border-radius: 4px;
-  font-family: inherit;
-  font-weight: bold;
-  font-size: 0.95rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
-}
-
-.cancelBtn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-.cancelBtn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.saveBtn {
-  background: rgba(var(--sao-primary-rgb), 0.15);
-  border: 1px solid var(--sao-primary-hex);
-  color: var(--sao-primary-hex);
-}
-
-.saveBtn:hover {
-  background: rgba(var(--sao-primary-rgb), 0.3);
-  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.4);
-}
-
-/* Confirm Delete Modal text */
-.confirmText {
-  color: #fff;
-  font-size: 1.1rem;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.deleteBtnConfirm {
-  background: rgba(255, 68, 68, 0.15);
-  border: 1px solid #ff4444;
+.taskCard.overdueCard {
+  background: rgba(35, 10, 16, 0.55);
+  border-color: rgba(255, 68, 68, 0.35);
+  box-shadow: inset 0 0 15px rgba(255, 68, 68, 0.08);
   color: #ff4444;
 }
 
-.deleteBtnConfirm:hover {
+.taskCard.overdueCard:hover {
+  background: rgba(48, 12, 20, 0.75);
+  border-color: #ff4444;
+  box-shadow: 0 0 16px rgba(255, 68, 68, 0.3), inset 0 0 20px rgba(255, 68, 68, 0.12);
+}
+
+/* =========================================
+   HỌA TIẾT SAO (CORNER CHASSIS BRACKETS)
+========================================= */
+.cardCornerTL {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+}
+
+.cardDiamondTL {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  width: 5px;
+  height: 5px;
+  background: currentColor;
+  box-shadow: 0 0 5px currentColor;
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+.cardLineTL {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  width: 26px;
+  height: 1.5px;
+  background: linear-gradient(90deg, currentColor, transparent);
+}
+
+.cardCornerBR {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+}
+
+.cardDiamondBR {
+  position: absolute;
+  bottom: 9px;
+  right: 9px;
+  width: 5px;
+  height: 5px;
+  background: currentColor;
+  box-shadow: 0 0 5px currentColor;
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+.cardLineBR {
+  position: absolute;
+  bottom: 0;
+  right: 14px;
+  width: 26px;
+  height: 1.5px;
+  background: linear-gradient(270deg, currentColor, transparent);
+}
+
+/* =========================================
+   HÀNG 1: HEADER (CHECKBOX + RANK + ACTIONS)
+========================================= */
+.cardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.cardHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* CHECKBOX DIAMOND NODE */
+.checkbox {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  border: 1.5px solid currentColor;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  transform: rotate(45deg);
+  padding: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.taskCard:hover .checkbox {
+  border-color: #fff;
+  box-shadow: 0 0 10px #fff;
+  transform: rotate(45deg) scale(1.08);
+}
+
+.checkboxCompleted {
+  background: rgba(0, 255, 170, 0.3);
+  border-color: #00ffaa;
+  box-shadow: 0 0 8px rgba(0, 255, 170, 0.5);
+}
+
+.checkboxOverdue {
   background: rgba(255, 68, 68, 0.3);
-  box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+  border-color: #ff4444;
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+}
+
+.checkIcon {
+  color: #00ffaa;
+  transform: rotate(-45deg);
+  filter: drop-shadow(0 0 4px #00ffaa);
+}
+
+.overdueIcon {
+  color: #ff4444;
+  transform: rotate(-45deg);
+  filter: drop-shadow(0 0 4px #ff4444);
+}
+
+/* RANK BADGES */
+.rankBadge {
+  font-size: 0.72rem;
+  font-family: var(--font-tauri, sans-serif);
+  font-weight: bold;
+  letter-spacing: 0.8px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.rank_S {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+  text-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+}
+
+.rank_A {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid #a855f7;
+  color: #a855f7;
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.25);
+}
+
+.rank_B {
+  background: rgba(0, 240, 255, 0.15);
+  border: 1px solid #00f0ff;
+  color: #00f0ff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.25);
+}
+
+.rank_C {
+  background: rgba(0, 255, 170, 0.15);
+  border: 1px solid #00ffaa;
+  color: #00ffaa;
+  text-shadow: 0 0 6px rgba(0, 255, 170, 0.5);
+  box-shadow: 0 0 8px rgba(0, 255, 170, 0.25);
+}
+
+.rank_D {
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid #94a3b8;
+  color: #94a3b8;
+}
+
+.expChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-family: var(--font-tauri, sans-serif);
+  font-weight: bold;
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.1);
+  border: 1px solid rgba(255, 170, 0, 0.35);
+  border-radius: 2px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+
+.taskTitle {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+  font-family: var(--font-tauri, sans-serif);
+  word-break: break-word;
+  margin: 0;
+}
+
+.completedText {
+  text-decoration: line-through;
+  color: #728ca8;
+}
+
+.overdueText {
+  color: #ff9999;
+}
+
+.taskDesc {
+  font-size: 0.84rem;
+  color: #8da4c4;
+  line-height: 1.4;
+  margin: 0;
+  word-break: break-word;
+}
+
+.completedDesc {
+  color: #4a6280;
+}
+
+/* =========================================
+   HÀNG 3: FOOTER (TELEMETRY + EXP REWARD)
+========================================= */
+.cardFooterRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 2px;
+  width: 100%;
+}
+
+.dueBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-family: var(--font-tauri, sans-serif);
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 2px;
+  letter-spacing: 0.4px;
+}
+
+.due_critical {
+  background: rgba(255, 68, 68, 0.15);
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  animation: pulseWarning 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseWarning {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 6px rgba(255, 68, 68, 0.4);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: none;
+  }
+}
+
+.due_warning {
+  background: rgba(255, 170, 0, 0.12);
+  border: 1px solid #ffaa00;
+  color: #ffaa00;
+}
+
+.due_overdue {
+  background: rgba(255, 68, 68, 0.12);
+  border: 1px solid rgba(255, 68, 68, 0.4);
+  color: #ff7777;
+}
+
+.due_near {
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  color: #00f0ff;
+}
+
+.due_normal {
+  background: rgba(160, 196, 255, 0.08);
+  border: 1px solid rgba(160, 196, 255, 0.2);
+  color: #a0c4ff;
+}
+
+.due_completed {
+  background: rgba(0, 255, 170, 0.08);
+  border: 1px solid rgba(0, 255, 170, 0.2);
+  color: #00ffaa;
 }
 
 /* TASK ACTIONS */
 .taskActions {
   display: flex;
-  gap: 8px;
-  opacity: 0;
-  transform: translateX(10px);
-  transition: all 0.2s;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
 }
 
 .taskCard:hover .taskActions {
   opacity: 1;
-  transform: translateX(0);
 }
 
 .actionBtn {
-  background: transparent;
-  border: none;
-  color: #a0c4ff;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.actionBtn:hover {
-  color: var(--sao-primary-hex);
-  filter: drop-shadow(0 0 5px var(--sao-primary-hex));
-}
-
-.actionBtn.deleteBtn:hover {
-  color: #ff4444;
-  filter: drop-shadow(0 0 5px #ff4444);
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 3px !important;
 }
 
 /* =========================================
-   MOBILE RESPONSIVE (MAX-WIDTH: 768px)
+   5. FLOATING ACTION BUTTON (FAB BÊN DƯỚI)
+========================================= */
+.tasksFab {
+  border-radius: 50% !important;
+  width: 50px !important;
+  height: 50px !important;
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  z-index: 100;
+  box-shadow: 0 0 20px rgba(var(--sao-primary-rgb), 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tasksFab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 28px rgba(var(--sao-primary-rgb), 0.75);
+}
+
+/* =========================================
+   6. MODAL FORM ELEMENTS
+========================================= */
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 0.8rem;
+  color: #a0c4ff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-family: var(--font-tauri, sans-serif);
+}
+
+.dateTimeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.timeSelectorBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeSelectHalf {
+  flex: 1;
+}
+
+.timeColon {
+  color: #a0c4ff;
+  font-weight: bold;
+  font-family: var(--font-tauri, sans-serif);
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(var(--sao-primary-rgb), 0.2);
+}
+
+/* CONFIRM DELETE */
+.confirmBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 15px 0;
+  gap: 12px;
+}
+
+.confirmIcon {
+  color: #ff4444;
+  filter: drop-shadow(0 0 8px rgba(255, 68, 68, 0.5));
+}
+
+.confirmText {
+  color: #e0e8f5;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* =========================================
+   7. MOBILE RESPONSIVE (MAX-WIDTH: 768px)
 ========================================= */
 @media (max-width: 768px) {
-  .header {
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 15px;
-    clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
-  }
-  
-  .titleIcon {
-    width: 20px !important;
-    height: 20px !important;
-  }
-
-  .title {
-    font-size: 1.1rem;
-    letter-spacing: 1px;
-  }
-
-  .progressSection {
+  .tasksContainer {
+    gap: 12px;
     width: 100%;
-    justify-content: space-between;
   }
 
-  .progressBarWrapper {
+  .desktopStats {
+    display: none !important;
+  }
+
+  /* =========================================
+     KHUNG TỔNG HỢP 3 TRONG 1 COMPACT HUD (MOBILE)
+  ========================================= */
+  .mobileStatsCard {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 8px;
+    background: rgba(8, 20, 38, 0.55);
+    border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+    box-shadow: inset 0 0 15px rgba(var(--sao-primary-rgb), 0.06);
+    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+    backdrop-filter: blur(12px);
+    position: relative;
+    flex-shrink: 0;
+    color: var(--sao-primary-hex);
+  }
+
+  .mobileStatCol {
     flex: 1;
-    margin-left: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4px 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    user-select: none;
+  }
+
+  .mobileStatCol:active {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .colActivePending {
+    background: rgba(0, 240, 255, 0.08);
+  }
+
+  .colActiveCompleted {
+    background: rgba(0, 255, 170, 0.08);
+  }
+
+  .colActiveOverdue {
+    background: rgba(255, 68, 68, 0.08);
+  }
+
+  .colActivePrimary {
+    background: rgba(var(--sao-primary-rgb), 0.08);
+  }
+
+  .mobileStatHeader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: var(--font-tauri, sans-serif);
+  }
+
+  .headerPending {
+    color: #a0c4ff;
+  }
+
+  .headerCompleted {
+    color: #00ffaa;
+  }
+
+  .headerOverdue {
+    color: #ff5555;
+  }
+
+  .headerPrimary {
+    color: var(--sao-primary-hex);
+  }
+
+  .mobileStatBody {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px;
+    margin: 2px 0;
+    line-height: 1.1;
+  }
+
+  .mobileStatVal {
+    font-size: 1.35rem;
+    font-weight: 800;
+    font-family: var(--font-tauri, sans-serif);
+    color: #ffffff;
+  }
+
+  .valCompleted {
+    color: #00ffaa;
+    text-shadow: 0 0 8px rgba(0, 255, 170, 0.4);
+  }
+
+  .valOverdue {
+    color: #ff4444;
+    text-shadow: 0 0 8px rgba(255, 68, 68, 0.4);
+  }
+
+  .mobileStatUnit {
+    font-size: 0.72rem;
+    color: #8da4c4;
+    font-family: var(--font-tauri, sans-serif);
+    font-weight: 600;
+  }
+
+  .mobileStatSubPending {
+    font-size: 0.65rem;
+    color: #ffaa00;
+    font-weight: 700;
+    font-family: var(--font-tauri, sans-serif);
+    white-space: nowrap;
+  }
+
+  .mobileStatSubCompleted {
+    font-size: 0.65rem;
+    color: #00ffaa;
+    font-weight: 700;
+    font-family: var(--font-tauri, sans-serif);
+    white-space: nowrap;
+  }
+
+  .mobileStatSubOverdue {
+    font-size: 0.65rem;
+    color: #ff6666;
+    font-weight: 700;
+    font-family: var(--font-tauri, sans-serif);
+    white-space: nowrap;
+  }
+
+  .mobileStatSubPrimary {
+    font-size: 0.65rem;
+    color: #a0c4ff;
+    font-weight: 500;
+    font-family: var(--font-tauri, sans-serif);
+    white-space: nowrap;
+  }
+
+  .mobileStatDivider {
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(var(--sao-primary-rgb), 0.3), transparent);
+    margin: 4px 1px;
+    flex-shrink: 0;
+  }
+
+  .toolbar {
+    width: 100%;
+  }
+
+  .filtersWrapper {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    max-width: 100%;
+  }
+
+  .searchInput {
+    flex: 1.5;
+    min-width: 0;
+    max-width: none;
+    width: auto;
+  }
+
+  .filterSelect {
+    width: auto !important;
+    min-width: 125px !important;
+    max-width: 145px !important;
+    flex: 0 0 auto !important;
   }
 
   .taskList {
-    padding-right: 5px;
-    padding-bottom: 70px;
+    grid-template-columns: 1fr;
+    padding-right: 4px;
+    padding-bottom: 95px; /* Space above FAB and bottom dock */
+    gap: 10px;
+    width: 100%;
   }
 
   .taskCard {
-    padding: 12px 15px;
-    gap: 12px;
-    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    padding: 14px 16px;
+    gap: 8px;
+    min-height: auto;
   }
 
-  .checkbox {
-    width: 32px;
-    height: 32px;
-  }
-
-  .taskName {
-    font-size: 1.05rem;
-  }
-
-  .taskDesc {
-    font-size: 0.85rem;
-  }
-
-  /* Hiển thị luôn nút sửa/xóa vì Mobile không có hover */
+  /* Always show action buttons on mobile (no hover state) */
   .taskActions {
     opacity: 1;
     transform: none;
   }
 
-  .actionBtn {
-    padding: 8px; /* Tăng vùng bấm (Touch target) */
+  .tasksFab {
+    bottom: 12px;
+    left: 12px;
+    right: auto;
+    width: 46px !important;
+    height: 46px !important;
   }
 
-  .addButton {
-    padding: 12px;
-    font-size: 1rem;
-    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  .dateTimeGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
-  /* Responsive cho Modal bên trong */
   .modalFooter {
-    flex-direction: column-reverse; /* Đưa nút Save lên trên, Cancel xuống dưới */
-    gap: 10px;
-  }
-
-  .btn {
-    width: 100%;
-    justify-content: center;
-    padding: 12px;
+    flex-direction: column-reverse;
   }
 }

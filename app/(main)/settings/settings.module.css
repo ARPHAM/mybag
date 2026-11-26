@@ -1,180 +1,123 @@
 .settingsContainer {
-  padding: 20px;
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding: 4px 12px 16px 12px;
 }
 
 .scrollArea {
   flex: 1;
   overflow-y: auto;
-  padding-right: 10px;
+  padding-right: 8px;
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.header {
+.scrollArea::-webkit-scrollbar {
+  width: 5px;
+}
+
+.scrollArea::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  border-radius: 2px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb:hover {
+  background: var(--sao-primary-hex, #00f0ff);
+}
+
+/* Section Panel */
+.sectionPanel {
+  width: 100%;
+}
+
+.sectionDesc {
+  font-size: 0.82rem;
+  color: #a0c4ff;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+/* Language Grid */
+.languageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+/* Theme Grid */
+.themeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+/* Account Box */
+.accountBox {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(10, 25, 45, 0.7);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
-  border-radius: 8px;
-  clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
-  padding: 15px 25px;
-  margin-bottom: 30px;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+
+.accountInfo {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.accountTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shieldIcon {
+  color: #ff4444;
+}
+
+.accountTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.accountDesc {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.accountAction {
   flex-shrink: 0;
 }
 
-.titleWrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.titleIcon {
-  color: var(--sao-primary-hex);
-  filter: drop-shadow(0 0 10px rgba(var(--sao-primary-rgb), 0.5));
-}
-
-.title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  text-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
-  margin: 0;
-}
-
-.section {
-  background: rgba(10, 25, 45, 0.6);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.2);
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 25px;
-  clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
-  animation: fadeIn 0.5s ease-out;
-}
-
-.sectionTitle {
-  font-size: 1.2rem;
-  color: #fff;
-  font-weight: bold;
-  margin-bottom: 15px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.languageGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 15px;
-}
-
-.languageCard {
-  background: rgba(0, 0, 0, 0.4);
-  border: 2px solid transparent;
-  border-radius: 8px;
-  padding: 16px 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  transition: all 0.3s;
-}
-
-.languageCard:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.languageCard.active {
-  background: rgba(var(--sao-primary-rgb), 0.12);
-  border-color: var(--sao-primary-hex);
-  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.25);
-}
-
-.languageInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.languageTitle {
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.05rem;
-}
-
-.languageSub {
-  color: #a0c4ff;
-  font-size: 0.8rem;
-}
-
-.themeGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-}
-
-.themeCard {
-  background: rgba(0, 0, 0, 0.4);
-  border: 2px solid transparent;
-  border-radius: 8px;
-  padding: 15px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-
-.themeCard:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.themeCard.active {
-  background: rgba(var(--sao-primary-rgb), 0.1);
-  border-color: var(--sao-primary-hex);
-  box-shadow: 0 0 20px rgba(var(--sao-primary-rgb), 0.3);
-}
-
-.colorPreview {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  box-shadow: 0 0 15px currentColor;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.themeName {
-  color: #fff;
-  font-weight: bold;
-  font-size: 1.05rem;
-  text-align: center;
-}
-
-.themeDesc {
-  color: #a0c4ff;
-  font-size: 0.82rem;
-  text-align: center;
-}
-
 @media (max-width: 768px) {
-  .settingsContainer {
-    padding: 8px;
+  .header {
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+
+  .title {
+    font-size: 1.15rem;
   }
 
   .scrollArea {
     padding-right: 4px;
-    padding-bottom: 70px;
+    gap: 16px;
+    padding-bottom: 80px;
   }
 
   .themeGrid {
@@ -185,5 +128,19 @@
   .languageGrid {
     grid-template-columns: 1fr;
     gap: 10px;
+  }
+
+  .accountBox {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .accountAction {
+    width: 100%;
+  }
+
+  .accountAction button {
+    width: 100%;
+    justify-content: center;
   }
 }

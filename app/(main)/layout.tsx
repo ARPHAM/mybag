@@ -28,8 +28,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const [user, setUser] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [mobileMorePathname, setMobileMorePathname] = useState<string | null>(null);
-  const mobileMoreOpen = mobileMorePathname === pathname;
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMoreOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     fetchUser();
@@ -101,6 +104,34 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       document.documentElement.style.setProperty(key, value);
     }
   }, [themeColor]);
+
+  // Wallpaper and ambient HUD background management
+  useEffect(() => {
+    const applyWallpaper = () => {
+      const savedBg = localStorage.getItem('sao-custom-bg');
+      if (savedBg) {
+        document.documentElement.style.setProperty('--sao-custom-bg', `url("${savedBg}")`);
+      } else {
+        document.documentElement.style.removeProperty('--sao-custom-bg');
+      }
+
+      const savedOverlay = localStorage.getItem('sao-bg-overlay');
+      if (savedOverlay) {
+        document.documentElement.style.setProperty('--sao-bg-overlay', `rgba(0, 15, 30, ${savedOverlay})`);
+      } else {
+        document.documentElement.style.removeProperty('--sao-bg-overlay');
+      }
+    };
+
+    applyWallpaper();
+
+    const handleWallpaperChange = () => {
+      applyWallpaper();
+    };
+
+    window.addEventListener('sao-wallpaper-changed', handleWallpaperChange);
+    return () => window.removeEventListener('sao-wallpaper-changed', handleWallpaperChange);
+  }, []);
 
   if (isInitializing) {
     return (
@@ -206,15 +237,19 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <>
             <div
               className={styles.mobileDrawerBackdrop}
-              onClick={() => setMobileMorePathname(null)}
+              onClick={() => setMobileMoreOpen(false)}
             />
             <div className={styles.mobileMoreDrawer}>
               <div className={styles.mobileMoreHeader}>
-                <span>{t('nav.more')}</span>
+                <div className={styles.mobileMoreHeaderTitle}>
+                  <LayoutGrid size={15} />
+                  <span>{t('nav.more')}</span>
+                </div>
                 <button
                   type="button"
                   className={styles.mobileMoreClose}
-                  onClick={() => setMobileMorePathname(null)}
+                  onClick={() => setMobileMoreOpen(false)}
+                  aria-label="Đóng bảng chức năng"
                 >
                   <X size={16} />
                 </button>
@@ -227,10 +262,13 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                       key={item.id}
                       href={item.path}
                       className={`${styles.mobileMoreItem} ${active ? styles.mobileMoreItemActive : ''}`}
-                      onClick={() => setMobileMorePathname(null)}
+                      onClick={() => setMobileMoreOpen(false)}
                     >
-                      <item.icon size={20} strokeWidth={2.2} />
-                      <span>{item.label}</span>
+                      <div className={styles.mobileMoreItemIcon}>
+                        <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
+                      </div>
+                      <span className={styles.mobileMoreItemLabel}>{item.label}</span>
+                      {active && <span className={styles.mobileMoreItemActiveDot} />}
                     </Link>
                   );
                 })}
@@ -240,6 +278,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         )}
 
         <nav className={styles.mobileBottomNav} aria-label="Điều hướng chính">
+          <div className={styles.mobileBottomNavLaserRail} aria-hidden="true" />
           {mobilePrimaryItems.map((item) => {
             const active = isItemActive(item);
             return (
@@ -250,13 +289,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               >
                 <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
                 <span>{item.label}</span>
+                {active && <span className={styles.mobileNavActiveIndicator} aria-hidden="true" />}
               </Link>
             );
           })}
           <button
             type="button"
             className={`${styles.mobileNavItem} ${(mobileMoreOpen || isMobileSecondaryActive) ? styles.mobileNavItemActive : ''}`}
-            onClick={() => setMobileMorePathname((prev) => (prev === pathname ? null : pathname))}
+            onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
             aria-expanded={mobileMoreOpen}
             aria-label="Mở thêm chức năng"
           >
@@ -265,6 +305,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               {isMobileSecondaryActive && !mobileMoreOpen && <span className={styles.mobileMoreDot} />}
             </div>
             <span>{t('nav.more')}</span>
+            {(mobileMoreOpen || isMobileSecondaryActive) && (
+              <span className={styles.mobileNavActiveIndicator} aria-hidden="true" />
+            )}
           </button>
         </nav>
       </div>

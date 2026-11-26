@@ -194,40 +194,6 @@
 }
 
 /* FINANCE CHARTS STYLES */
-.chartsCard {
-  grid-column: 1 / -1;
-  background: rgba(10, 25, 45, 0.65);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
-  padding: 20px;
-  clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
-  box-shadow: inset 0 0 20px rgba(var(--sao-primary-rgb), 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.chartsHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  border-bottom: 1px solid rgba(var(--sao-primary-rgb), 0.2);
-  padding-bottom: 12px;
-}
-
-.chartsTitle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 1.15rem;
-  font-weight: bold;
-  color: #fff;
-  letter-spacing: 1px;
-}
-
 .chartsControls {
   display: flex;
   align-items: center;
@@ -239,6 +205,12 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.chartControlBtn {
+  padding: 4px 10px !important;
+  font-size: 0.8rem !important;
+  white-space: nowrap;
 }
 
 .chartsDivider {
@@ -272,43 +244,178 @@
   width: 100%;
 }
 
+/* Khối tóm tắt danh mục chi tiêu chuẩn SAO HUD */
+.categoryBreakdownCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.05) 0%,
+    rgba(6, 18, 35, 0.3) 100%
+  );
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22);
+  box-shadow: inset 0 0 15px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03);
+  backdrop-filter: blur(8px);
+  padding: 16px 18px;
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
+  overflow: hidden;
+}
+
+/* Đường viền neon liền mạch góc vát trên - trái */
+.categoryBreakdownBevelTL {
+  position: absolute;
+  top: 5px;
+  left: -3px;
+  width: 22px;
+  height: 2px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 5px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+/* Chốt tinh thể thoi neon góc trên - trái */
+.categoryBreakdownDiamondTL {
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  width: 5px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* Đường viền neon liền mạch góc vát dưới - phải */
+.categoryBreakdownBevelBR {
+  position: absolute;
+  bottom: 5px;
+  right: -3px;
+  width: 22px;
+  height: 2px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 5px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+/* Chốt tinh thể thoi neon góc dưới - phải */
+.categoryBreakdownDiamondBR {
+  position: absolute;
+  bottom: 13px;
+  right: 13px;
+  width: 5px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* Header tóm tắt tổng chi */
+.categoryBreakdownHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+  margin-bottom: 4px;
+}
+
+.categoryTotalExpenseValue {
+  color: #ff4444;
+  font-weight: 800;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.95rem;
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.4);
+}
+
+/* Dòng từng danh mục trong danh sách */
 .categoryItemRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.85rem;
-  padding: 5px 8px;
-  border-radius: 4px;
-  border: 1px solid transparent;
+  font-size: 0.88rem;
+  padding: 7px 12px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.1);
+  clip-path: polygon(
+    6px 0,
+    100% 0,
+    calc(100% - 6px) 100%,
+    0 100%
+  );
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
 }
 
 .categoryItemRow:hover {
-  background: rgba(0, 240, 255, 0.12);
-  border-color: rgba(0, 240, 255, 0.35);
-  transform: translateX(2px);
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.16);
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+  box-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  transform: translateX(4px);
+}
+
+/* Tinh thể thoi màu RPG thay cho chấm tròn đơn điệu */
+.categoryColorPip {
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  border-radius: 1px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.categoryItemRow:hover .categoryColorPip {
+  transform: rotate(45deg) scale(1.2);
+}
+
+.categoryItemName {
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.categoryItemAmount {
+  color: #a0c4ff;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.85rem;
+}
+
+.categoryItemPercent {
+  font-weight: 800;
+  font-family: 'Tauri', sans-serif;
+  min-width: 36px;
+  text-align: right;
+  font-size: 0.9rem;
 }
 
 .categoryChevron {
-  color: #a0c4ff;
+  color: #8ab4f8;
   opacity: 0.6;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .categoryItemRow:hover .categoryChevron {
   opacity: 1;
-  color: #00f0ff;
-  transform: translateX(2px);
-}
-
-.categoryChartHint {
-  font-size: 0.72rem;
-  color: #a0c4ff;
-  font-style: italic;
-  margin-top: 6px;
-  text-align: center;
+  color: var(--sao-primary-hex, #00f0ff);
+  transform: translateX(3px);
+  filter: drop-shadow(0 0 5px var(--sao-primary-hex, #00f0ff));
 }
 
 .overviewFab {
@@ -406,9 +513,16 @@
 
 /* BUDGETS TAB STYLES */
 .budgetsGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .budgetsGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 
 .budgetCard {
@@ -628,6 +742,105 @@
 .historyAmount.expense { color: #ff4444; text-shadow: 0 0 5px rgba(255, 68, 68, 0.3); }
 .historyAmount.transfer { color: var(--sao-primary-hex); text-shadow: 0 0 5px rgba(var(--sao-primary-rgb), 0.3); }
 
+.historyContainer {
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.historyToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.historySearchWrapper {
+  flex: 1;
+  min-width: 200px;
+}
+
+.historyFilterWrapper {
+  width: 150px;
+  min-width: 130px;
+  flex-shrink: 0;
+}
+
+.historyDateWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.historyDatePickerItem {
+  width: 145px;
+}
+
+.historyDateSeparator {
+  color: rgba(var(--sao-primary-rgb), 0.6);
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.historyResetBtn {
+  height: 40px;
+  padding: 0 10px;
+  background: rgba(6, 18, 35, 0.65);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.28);
+  color: #a0c4ff;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.historyResetBtn:hover {
+  border-color: var(--sao-primary-hex);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
+}
+
+@media (max-width: 860px) {
+  .historyToolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .historyFilterWrapper {
+    width: 100%;
+  }
+  .historyDateWrapper {
+    width: 100%;
+  }
+  .historyDatePickerItem {
+    flex: 1;
+    width: auto;
+  }
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.historyGroupList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .historyDateGroup {
   color: var(--sao-primary-hex);
   font-weight: bold;
@@ -640,10 +853,27 @@
 }
 
 /* DEBTS TAB STYLES */
+.debtsContainer {
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .debtsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .debtsGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 
 .debtCard {
@@ -1015,19 +1245,30 @@
 /* Tab specific form fixes */
 .formRadioGroup {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .formRadioLabel {
   flex: 1;
   text-align: center;
-  background: rgba(10, 25, 45, 0.6);
-  border: 1px solid rgba(160, 196, 255, 0.2);
+  background: rgba(6, 18, 35, 0.65);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.28);
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 0;
   cursor: pointer;
   transition: all 0.2s;
-  color: #a0c4ff;
+  color: #93b8e8;
+  font-family: 'Tauri', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+.formRadioLabel:hover {
+  background: rgba(var(--sao-primary-rgb), 0.15);
+  border-color: rgba(var(--sao-primary-rgb), 0.6);
+  color: #ffffff;
 }
 
 .formRadioLabel input {
@@ -1035,10 +1276,11 @@
 }
 
 .formRadioLabel:has(input:checked) {
-  background: rgba(var(--sao-primary-rgb), 0.2);
+  background: rgba(var(--sao-primary-rgb), 0.28);
   border-color: var(--sao-primary-hex);
-  color: var(--sao-primary-hex);
-  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.2);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(var(--sao-primary-rgb), 0.35), inset 0 0 10px rgba(var(--sao-primary-rgb), 0.2);
+  text-shadow: 0 0 8px rgba(var(--sao-primary-rgb), 0.85);
 }
 
 /* NEW DEBT UX STYLES */
@@ -1271,28 +1513,27 @@
     line-height: 1.25;
   }
 
-  .chartsCard {
-    padding: 12px;
-    gap: 10px;
-    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
-  }
-
-  .chartsHeader {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    padding-bottom: 10px;
-  }
-
-  .chartsTitle {
-    font-size: 0.95rem;
-    gap: 8px;
-  }
-
   .chartsControls {
     width: 100%;
-    justify-content: space-between;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .chartsControlGroup {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 6px;
+  }
+
+  .chartsControlGroup button,
+  .chartControlBtn {
+    width: 100% !important;
+    padding: 6px 8px !important;
+    font-size: 0.78rem !important;
+    justify-content: center !important;
+    text-align: center !important;
   }
 
   .chartsDivider {

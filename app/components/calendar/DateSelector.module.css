@@ -1,0 +1,271 @@
+/* ========================================================
+   DateSelector.module.css - Thanh điều hướng ngày chuẩn SAO Cyber HUD
+   ======================================================== */
+
+.container {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background-color: transparent;
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 20px 20px, 20px 20px;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.28);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35),
+              inset 0 0 20px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.04);
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-family: var(--font-tauri, monospace);
+  color: var(--sao-primary-hex, #00f0ff);
+  width: 100%;
+}
+
+/* NGÀM CƠ KHÍ GÓC */
+.topLeftBevel {
+  position: absolute;
+  top: 4px;
+  left: -2px;
+  width: 14px;
+  height: 2px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+.bottomRightBevel {
+  position: absolute;
+  bottom: 4px;
+  right: -2px;
+  width: 14px;
+  height: 2px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+/* CỤM ĐIỀU HƯỚNG NHANH */
+.navCluster {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.navArrowBtn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  border-radius: 3px;
+  color: var(--sao-primary-hex, #00f0ff);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.navArrowBtn:hover:not(:disabled) {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+  border-color: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  transform: translateY(-1px);
+}
+
+.navArrowBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.todayBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-family: inherit;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  height: 30px;
+}
+
+.todayActive {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+  color: #ffffff;
+  border: 1px solid var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+}
+
+.todayInactive {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #8da4c4;
+}
+
+.todayInactive:hover {
+  color: #ffffff;
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+}
+
+/* DẢI NGÀY (DATE STRIP) */
+.dateStrip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.dateStrip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.dateStrip::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.dateStrip::-webkit-scrollbar-thumb {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+  border-radius: 2px;
+}
+
+.dateStrip::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.6);
+}
+
+.datePill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 4px 3px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.datePillSelected {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22);
+  border-color: var(--sao-primary-hex, #00f0ff);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.45);
+  transform: scale(1.05);
+  font-weight: bold;
+}
+
+.datePillToday {
+  background: rgba(255, 170, 0, 0.12);
+  border-color: rgba(255, 170, 0, 0.45);
+  color: #ffaa00;
+}
+
+.datePillToday:hover {
+  background: rgba(255, 170, 0, 0.2);
+}
+
+.datePillNormal {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #8da4c4;
+}
+
+.datePillNormal:hover {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.1);
+  color: #ffffff;
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+}
+
+.dayOfWeek {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.dayNumber {
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* NÚT DATE PICKER (LỊCH CỤ THỂ) */
+.pickerBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--sao-primary-hex, #00f0ff);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  height: 32px;
+}
+
+.pickerBtn:hover {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+  border-color: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .navArrowBtn {
+    width: 26px;
+    height: 26px;
+  }
+
+  .todayBtn {
+    height: 26px;
+    padding: 2px 7px;
+    font-size: 0.7rem;
+  }
+
+  .datePill {
+    min-width: 38px;
+    padding: 3px 2px;
+  }
+
+  .pickerBtn {
+    height: 28px;
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+}

@@ -1,0 +1,303 @@
+/* ========================================================
+   InventoryCard.module.css - Thẻ mặt hàng kho chuẩn SAO Cyber HUD
+   Nền trong suốt kính Hologram, vát góc polygon, trục quang học
+   ======================================================== */
+
+.card {
+  position: relative;
+  background-color: transparent;
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 20px 20px, 20px 20px;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35),
+              inset 0 0 15px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03);
+  padding: 14px 16px 14px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  clip-path: polygon(
+    12px 0,
+    100% 0,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    0 100%,
+    0 12px
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease,
+              box-shadow 0.2s ease,
+              background-color 0.2s ease;
+  font-family: var(--font-tauri, monospace);
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--stock-color, var(--sao-primary-hex, #00f0ff));
+  background-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.04);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45),
+              0 0 14px var(--stock-color, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25)),
+              inset 0 0 18px var(--stock-color, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.05));
+}
+
+/* Trục quang học SAO cạnh trái */
+.leftAccentBar {
+  position: absolute;
+  top: 10px;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--stock-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 8px var(--stock-color, var(--sao-primary-hex, #00f0ff));
+  pointer-events: none;
+  z-index: 2;
+  transition: width 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover .leftAccentBar {
+  width: 4px;
+  box-shadow: 0 0 12px var(--stock-color, var(--sao-primary-hex, #00f0ff));
+}
+
+/* Ngàm vát neon góc trên - trái */
+.bevelTL {
+  position: absolute;
+  top: 4px;
+  left: -2px;
+  width: 16px;
+  height: 2px;
+  background: var(--stock-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 6px var(--stock-color, var(--sao-primary-hex, #00f0ff));
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+/* Nút chỉnh sửa */
+.editBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.06);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  color: #a0c4ff;
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+
+.editBtn:hover {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22);
+  color: #00f0ff;
+  border-color: #00f0ff;
+  transform: scale(1.08);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 32px;
+}
+
+.categoryIcon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemName {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+  line-height: 1.3;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.categoryTag {
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.walletInfo {
+  color: #00f0ff;
+  font-size: 0.76rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.statusIndicator {
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.valueRow {
+  font-size: 0.8rem;
+  color: #fff;
+  margin-top: 2px;
+}
+
+.unitValue {
+  color: #a0c4ff;
+  font-size: 0.76rem;
+}
+
+.warningBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.08);
+  border: 1px solid rgba(255, 170, 0, 0.25);
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-top: 4px;
+  width: fit-content;
+}
+
+/* Thao tác segment gia vị */
+.spiceStatusGroup {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  background: rgba(10, 25, 45, 0.4);
+  padding: 3px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+  margin-top: 4px;
+}
+
+.spiceStatusBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 5px 4px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  text-align: center;
+}
+
+.spiceStatusBtn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.spiceStatusBtnStableActive {
+  background: rgba(0, 255, 170, 0.18);
+  border-color: #00ffaa;
+  color: #00ffaa;
+  box-shadow: 0 0 8px rgba(0, 255, 170, 0.3);
+}
+
+.spiceStatusBtnLowActive {
+  background: rgba(255, 170, 0, 0.18);
+  border-color: #ffaa00;
+  color: #ffaa00;
+  box-shadow: 0 0 8px rgba(255, 170, 0, 0.3);
+}
+
+.spiceStatusBtnOutActive {
+  background: rgba(255, 68, 68, 0.18);
+  border-color: #ff4444;
+  color: #ff4444;
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.3);
+}
+
+/* Thao tác +/- số lượng cho đồ chính */
+.actionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+}
+
+.qtyBox {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.qtyNumber {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+}
+
+.qtyUnit {
+  font-size: 0.8rem;
+  color: #a0c4ff;
+}
+
+.stepperGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stepperBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.28);
+  color: #00f0ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stepperBtn:hover:not(:disabled) {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  border-color: #00f0ff;
+  box-shadow: 0 0 8px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+  transform: scale(1.06);
+}
+
+.stepperBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

@@ -1,63 +1,542 @@
+/* SaoTabs.module.css - Segmented SAO HUD Console Strip */
+
 .tabsContainer {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 25px;
-  border-bottom: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
-  padding-bottom: 10px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 8px;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 22, 42, 0.85) 0%,
+    rgba(5, 14, 28, 0.92) 100%
+  );
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.32);
+  box-shadow: 0 0 20px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.1),
+              inset 0 0 15px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(14px);
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   flex-shrink: 0;
+  max-width: 100%;
 }
 
-.tabBtn {
-  padding: 8px 15px;
-  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.05);
-  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
-  color: #a0c4ff;
-  font-weight: bold;
-  border-radius: 0;
-  cursor: pointer;
-  transition: all 0.3s;
-  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+.tabsContainer::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* ========================================================
+   PHỤ KIỆN HUD CƠ KHÍ HAI ĐẦU CONSOLE CHASSIS
+   ======================================================== */
+.consoleLeftAccent {
   display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 2px;
+  pointer-events: none;
+}
+
+.consoleLeftDiamond {
+  width: 5px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+}
+
+.consoleLeftLine {
+  width: 14px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.consoleRightAccent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 2px;
+  pointer-events: none;
+}
+
+.consoleStripes {
+  width: 14px;
+  height: 8px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--sao-primary-hex, #00f0ff) 0px,
+    var(--sao-primary-hex, #00f0ff) 1.5px,
+    transparent 1.5px,
+    transparent 4px
+  );
+  opacity: 0.85;
+}
+
+.consoleRightDiamond {
+  width: 5px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+}
+
+/* Đường ray laser đáy console */
+.bottomRail {
+  position: absolute;
+  bottom: 0;
+  left: 14px;
+  right: 14px;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--sao-primary-hex, #00f0ff) 50%,
+    transparent 100%
+  );
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+  pointer-events: none;
+}
+
+/* ========================================================
+   DANH SÁCH TAB BUTTONS ĐỒNG BỘ HÌNH HỌC (UNIFORM PARALLEL SLANT)
+   ======================================================== */
+.tabList {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+/* TẤT CẢ các tab đều có chung hình khối parallelogram vát nghiêng 10px,
+   loại bỏ hoàn toàn lỗi "cái thẳng cái nghiêng" */
+.tabBtn {
+  position: relative;
+  padding: 10px 22px;
+  background: rgba(8, 20, 38, 0.65);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+  color: #8ab4f8;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   white-space: nowrap;
+  user-select: none;
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    calc(100% - 10px) 100%,
+    0 100%
+  );
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Hover: sáng mượt mà và nâng nhẹ */
 .tabBtn:hover {
-  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
-  color: #fff;
+  color: #ffffff;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.16);
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+  text-shadow: 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.7);
+  transform: translateY(-1px);
 }
 
+/* Click nhấn xuống tạo phản hồi cơ học */
+.tabBtn:active {
+  transform: scale(0.97) translateY(0);
+}
+
+/* ========================================================
+   TRẠNG THÁI ACTIVE VỚI HIỆU ỨNG CHUYỂN TAB VÀ QUANG HỌC
+   ======================================================== */
 .tabBtn.active {
-  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
-  color: var(--sao-primary-hex, #00f0ff);
+  color: #ffffff;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.38) 0%,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.12) 100%
+  );
   border-color: var(--sao-primary-hex, #00f0ff);
-  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
-  text-shadow: 0 0 8px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+  box-shadow: 0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35),
+              inset 0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+  text-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.9);
+}
+
+/* Vạch laser đỉnh mở rộng từ tâm khi kích hoạt tab */
+.activeTopLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+  transform-origin: center;
+  animation: saoTabLineExpand 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes saoTabLineExpand {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+/* Chốt tinh thể kim cương đáy tab nhấp nháy quang học */
+.activeBottomDiamond {
+  position: absolute;
+  bottom: -3px;
+  left: calc(50% - 3.5px);
+  width: 7px;
+  height: 7px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* Luồng sóng ánh sáng quét qua tab khi vừa chuyển tab */
+.activeSweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: saoTabSweep 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes saoTabSweep {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 .iconWrapper {
   display: flex;
   align-items: center;
   justify-content: center;
+  filter: drop-shadow(0 0 5px currentColor);
+  flex-shrink: 0;
 }
 
+.tabLabel {
+  display: inline-block;
+}
+
+/* ========================================================
+   SAO MOBILE HUD SELECTOR (MẶC ĐỊNH ẨN TRÊN DESKTOP)
+   ======================================================== */
+.mobileSelectorWrapper {
+  display: none;
+  position: relative;
+  width: 100%;
+}
+
+/* ========================================================
+   RESPONSIVE
+   ======================================================== */
 @media (max-width: 768px) {
+  /* Ẩn hoàn toàn thanh Console Desktop dài trên màn hình Mobile */
   .tabsContainer {
-    gap: 6px;
-    margin-bottom: 15px;
-    padding-bottom: 6px;
-  }
-  
-  .tabBtn {
-    padding: 6px 10px;
-    font-size: 0.85rem;
-    gap: 5px;
+    display: none !important;
   }
 
-  .tabBtn svg {
-    width: 14px !important;
-    height: 14px !important;
+  /* Hiện thanh HUD Selector hiện đại */
+  .mobileSelectorWrapper {
+    display: block;
+    width: 100%;
+    z-index: 50;
+  }
+
+  .mobileSelectorBtn {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: linear-gradient(
+      180deg,
+      rgba(10, 26, 48, 0.9) 0%,
+      rgba(6, 16, 32, 0.95) 100%
+    );
+    border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+    backdrop-filter: blur(14px);
+    clip-path: polygon(
+      10px 0,
+      100% 0,
+      100% calc(100% - 10px),
+      calc(100% - 10px) 100%,
+      0 100%,
+      0 10px
+    );
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35),
+                inset 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.1);
+    transition: all 0.25s ease;
+  }
+
+  .mobileSelectorBtn:hover,
+  .mobileSelectorOpen {
+    border-color: var(--sao-primary-hex, #00f0ff);
+    box-shadow: 0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25),
+                inset 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+  }
+
+  .mobileSelectorLeft {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .mobileActiveIcon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+    border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+    clip-path: polygon(
+      4px 0,
+      100% 0,
+      100% calc(100% - 4px),
+      calc(100% - 4px) 100%,
+      0 100%,
+      0 4px
+    );
+    color: var(--sao-primary-hex, #00f0ff);
+    filter: drop-shadow(0 0 6px var(--sao-primary-hex, #00f0ff));
+    flex-shrink: 0;
+  }
+
+  .mobileActiveInfo {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .mobileActiveLabel {
+    font-family: 'Tauri', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobileActiveSub {
+    font-family: 'Tauri', monospace;
+    font-size: 0.65rem;
+    color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.7);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+
+  .mobileSelectorRight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .mobileSelectorTag {
+    font-size: 0.68rem;
+    font-family: 'Tauri', sans-serif;
+    color: #8ab4f8;
+    background: rgba(8, 20, 38, 0.7);
+    padding: 3px 8px;
+    border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+    border-radius: 2px;
+    letter-spacing: 0.5px;
+  }
+
+  .mobileChevron {
+    color: var(--sao-primary-hex, #00f0ff);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .chevronRotated {
+    transform: rotate(180deg);
+  }
+
+  .mobileBottomGlowLine {
+    position: absolute;
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    height: 1.5px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--sao-primary-hex, #00f0ff) 50%,
+      transparent 100%
+    );
+    box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+    pointer-events: none;
+  }
+
+  /* DROPDOWN MENU HOLOGRAPHIC */
+  .mobileDropdownMenu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 999999;
+    background: #061426 !important;
+    background-color: #061426 !important;
+    border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.6);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.98),
+                0 0 20px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+    clip-path: polygon(
+      8px 0,
+      100% 0,
+      100% calc(100% - 8px),
+      calc(100% - 8px) 100%,
+      0 100%,
+      0 8px
+    );
+    animation: dropdownSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    padding: 6px;
+  }
+
+  @keyframes dropdownSlideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .mobileDropdownHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px 8px;
+    font-family: 'Tauri', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.7);
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .mobileDropdownList {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mobileDropdownItem {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #081a32 !important;
+    background-color: #081a32 !important;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+  }
+
+  .mobileDropdownItem:hover {
+    background: #0d2847 !important;
+    background-color: #0d2847 !important;
+    border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+  }
+
+  .dropdownItemActive {
+    background: #0d2847 !important;
+    background-color: #0d2847 !important;
+    border-color: var(--sao-primary-hex, #00f0ff);
+    box-shadow: inset 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+  }
+
+  .itemLeft {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .itemIconWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sao-primary-hex, #00f0ff);
+    filter: drop-shadow(0 0 4px currentColor);
+    flex-shrink: 0;
+  }
+
+  .itemLabel {
+    font-family: 'Tauri', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 0.4px;
+  }
+
+  .activeCheckBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Tauri', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--sao-primary-hex, #00f0ff);
+    background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+    padding: 3px 8px;
+    border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+    border-radius: 2px;
+  }
+
+  .itemIndex {
+    font-family: 'Tauri', monospace;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 1px;
   }
 }

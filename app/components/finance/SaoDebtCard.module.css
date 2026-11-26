@@ -1,0 +1,494 @@
+/* SaoDebtCard.module.css - Thẻ quản lý nợ chuẩn SAO Cyber HUD */
+
+.card {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(8, 22, 42, 0.92) 0%,
+    rgba(5, 14, 28, 0.96) 50%,
+    rgba(9, 24, 46, 0.88) 100%
+  );
+  /* Lưới ma trận HUD Hologram */
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(var(--accent-rgb, 0, 240, 255), 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45),
+              inset 0 0 25px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03);
+  padding: 16px 20px;
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  user-select: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Biến thể loại nợ */
+.card.lent {
+  --accent-color: #00ffaa;
+  --accent-rgb: 0, 255, 170;
+}
+
+.card.borrowed {
+  --accent-color: #ffaa00;
+  --accent-rgb: 255, 170, 0;
+}
+
+.card.paid {
+  opacity: 0.75;
+  --accent-color: #38bdf8;
+  --accent-rgb: 56, 189, 248;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.55);
+  background: linear-gradient(
+    135deg,
+    rgba(12, 30, 56, 0.95) 0%,
+    rgba(7, 18, 36, 0.98) 100%
+  );
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55),
+              0 0 16px rgba(var(--accent-rgb), 0.2),
+              inset 0 0 30px rgba(var(--accent-rgb), 0.05);
+  transform: translateY(-2px);
+}
+
+.card:active {
+  transform: scale(0.99) translateY(0);
+}
+
+/* Trục quang học mép trái phản chiếu loại nợ */
+.leftAccentBar {
+  position: absolute;
+  top: 14px;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--accent-color);
+  box-shadow: 0 0 10px var(--accent-color);
+  pointer-events: none;
+}
+
+/* Con dấu Hologram đã xong */
+.clearedStamp {
+  position: absolute;
+  top: 16px;
+  right: 56px;
+  border: 1.5px dashed rgba(0, 255, 170, 0.6);
+  padding: 2px 8px;
+  border-radius: 3px;
+  transform: rotate(-10deg);
+  pointer-events: none;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.72rem;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  color: #00ffaa;
+  text-shadow: 0 0 8px rgba(0, 255, 170, 0.6);
+  box-shadow: 0 0 8px rgba(0, 255, 170, 0.15);
+  z-index: 2;
+}
+
+/* ========================================================
+   HEADER: DANH TÍNH NGƯỜI NỢ & BADGE TRẠNG THÁI
+   ======================================================== */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.identityGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.avatarBadge {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 26, 48, 0.6);
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
+  clip-path: polygon(
+    6px 0,
+    100% 0,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    0 100%,
+    0 6px
+  );
+  color: var(--accent-color);
+  transition: all 0.2s ease;
+}
+
+.card:hover .avatarBadge {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.3);
+}
+
+.nameBlock {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.personName {
+  font-family: 'Tauri', sans-serif;
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.5px;
+}
+
+.debtTypeLabel {
+  font-size: 0.8rem;
+  color: var(--accent-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.statusBadge {
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.72rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 0;
+}
+
+.statusBadge.unpaid {
+  background: rgba(255, 68, 68, 0.12);
+  color: #ff4444;
+  border: 1px solid rgba(255, 68, 68, 0.4);
+}
+
+.statusBadge.partial {
+  background: rgba(255, 170, 0, 0.12);
+  color: #ffaa00;
+  border: 1px solid rgba(255, 170, 0, 0.4);
+}
+
+.statusBadge.paid {
+  background: rgba(0, 255, 170, 0.12);
+  color: #00ffaa;
+  border: 1px solid rgba(0, 255, 170, 0.4);
+}
+
+.editBtn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #a0c4ff;
+  border-color: transparent;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.editBtn:hover {
+  color: #fff;
+  border-color: rgba(var(--sao-primary-rgb), 0.4);
+  background: rgba(var(--sao-primary-rgb), 0.15);
+}
+
+/* ========================================================
+   KHỐI TIẾN ĐỘ & SỐ TIỀN THANH TOÁN (HP GAUGE)
+   ======================================================== */
+.amountSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.amountStatsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #a0c4ff;
+}
+
+.paidStats strong {
+  color: #fff;
+}
+
+.totalStats strong {
+  color: #fff;
+}
+
+.progressTrack {
+  position: relative;
+  width: 100%;
+  height: 7px;
+  background: rgba(6, 18, 35, 0.85);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+  clip-path: polygon(
+    4px 0,
+    100% 0,
+    100% calc(100% - 4px),
+    calc(100% - 4px) 100%,
+    0 100%,
+    0 4px
+  );
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.7), var(--accent-color));
+  box-shadow: 0 0 8px var(--accent-color);
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.remainingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dueDateBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  color: #a0c4ff;
+}
+
+.completedText {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #00ffaa;
+  font-weight: 500;
+}
+
+.remainingAmountBlock {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.remainingLabel {
+  font-size: 0.85rem;
+  color: #a0c4ff;
+}
+
+.remainingValue {
+  font-family: 'Tauri', sans-serif;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--accent-color);
+  text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.35);
+}
+
+.remainingUnit {
+  font-size: 0.82rem;
+  color: #a0c4ff;
+}
+
+/* ========================================================
+   LỊCH SỬ GIAO DỊCH (ACCORDION HUD)
+   ======================================================== */
+.historySection {
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+}
+
+.historyToggleBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  color: #a0c4ff;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.2s ease;
+}
+
+.historyToggleBtn:hover {
+  color: #fff;
+}
+
+.historyToggleTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.historyChevron {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: rgba(var(--sao-primary-rgb), 0.7);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  background: rgba(6, 18, 35, 0.4);
+  padding: 8px 10px;
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.12);
+  border-radius: 0;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.historyRecord {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 8px;
+}
+
+.historyRecord:last-child {
+  border-bottom: none;
+}
+
+.recordLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a0c4ff;
+  min-width: 0;
+  flex: 1;
+}
+
+.recordDate {
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: 'Tauri', monospace;
+  font-size: 0.78rem;
+}
+
+.recordWallet {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+}
+
+.recordWallet svg {
+  flex-shrink: 0;
+  color: rgba(var(--sao-primary-rgb), 0.85);
+}
+
+.recordNote {
+  font-style: italic;
+  color: #7b9cc4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  font-size: 0.75rem;
+}
+
+.recordAmount {
+  font-family: 'Tauri', sans-serif;
+  font-weight: bold;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 8px;
+  font-size: 0.85rem;
+}
+
+.recordAmount.pay_back {
+  color: #00ffaa;
+}
+
+.recordAmount.borrow_more {
+  color: #ffaa00;
+}
+
+/* ========================================================
+   CỤM NÚT HÀNH ĐỘNG NHANH
+   ======================================================== */
+.actionButtonsRow {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.actionBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: 14px 16px;
+  }
+  .actionButtonsRow {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .remainingRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .remainingAmountBlock {
+    margin-left: 0;
+  }
+}

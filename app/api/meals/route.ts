@@ -57,7 +57,55 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
     }
 
-    const meals = await MealLog.find({ user_id: decoded.userId }).populate('recipe_id').sort({ consumed_at: -1 });
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get('search')?.trim();
+    const daysParam = searchParams.get('days');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+
+    const query: any = { user_id: decoded.userId };
+
+    // Tìm kiếm từ khóa theo tên món, nguyên liệu, ghi chú AI, hoặc ghi chú chỉnh sửa
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escaped, 'i');
+      query.$or = [
+        { food_name: { $regex: searchRegex } },
+        { ingredients_text: { $regex: searchRegex } },
+        { ai_description: { $regex: searchRegex } },
+        { edit_note: { $regex: searchRegex } },
+        { 'ingredients_used.name': { $regex: searchRegex } }
+      ];
+    }
+
+    // Lọc theo khoảng ngày hoặc số ngày (Mặc định 7 ngày gần nhất để tối ưu query)
+    if (startDate || endDate) {
+      const dateCond: any = {};
+      if (startDate) {
+        dateCond.$gte = new Date(`${startDate}T00:00:00+07:00`);
+      }
+      if (endDate) {
+        dateCond.$lte = new Date(`${endDate}T23:59:59.999+07:00`);
+      }
+      query.consumed_at = dateCond;
+    } else if (daysParam !== 'all') {
+      const numDays = daysParam ? parseInt(daysParam, 10) : 7;
+      const validDays = isNaN(numDays) || numDays <= 0 ? 7 : numDays;
+
+      // Tính mốc 00:00:00 của (validDays - 1) ngày trước theo giờ Việt Nam (UTC+7)
+      const now = new Date();
+      const vnDateStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(now);
+      const [y, m, d] = vnDateStr.split('-').map(Number);
+      const startVn = new Date(Date.UTC(y, m - 1, d - (validDays - 1), -7, 0, 0, 0));
+      query.consumed_at = { $gte: startVn };
+    }
+
+    const meals = await MealLog.find(query).populate('recipe_id').sort({ consumed_at: -1 });
     return NextResponse.json(meals, {
       headers: {
         'Cache-Control': 'private, no-cache, no-store, must-revalidate',

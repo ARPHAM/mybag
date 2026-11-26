@@ -22,37 +22,62 @@ export async function GET(req: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const type = searchParams.get('type');
+    const search = searchParams.get('search')?.trim();
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : undefined;
     const sort = searchParams.get('sort');
 
-    const query: any = { user_id: decoded.userId };
+    const andConditions: any[] = [{ user_id: decoded.userId }];
 
     if (category) {
       if (category === 'other') {
-        query.$or = [
-          { category: 'other' },
-          { category: null },
-          { category: '' },
-          { category: { $exists: false } }
-        ];
+        andConditions.push({
+          $or: [
+            { category: 'other' },
+            { category: null },
+            { category: '' },
+            { category: { $exists: false } }
+          ]
+        });
       } else {
-        query.category = { $regex: new RegExp(`^${category}$`, 'i') };
+        andConditions.push({ category: { $regex: new RegExp(`^${category}$`, 'i') } });
       }
     }
 
-    if (type) {
-      query.type = type;
+    if (type && type !== 'all') {
+      andConditions.push({ type });
     }
 
     if (startDate || endDate) {
-      query.date = {};
+      const dateCond: any = {};
       if (startDate) {
-        query.date.$gte = new Date(`${startDate}T00:00:00.000Z`);
+        dateCond.$gte = new Date(`${startDate}T00:00:00.000Z`);
       }
       if (endDate) {
-        query.date.$lte = new Date(`${endDate}T23:59:59.999Z`);
+        dateCond.$lte = new Date(`${endDate}T23:59:59.999Z`);
       }
+      andConditions.push({ date: dateCond });
     }
+
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escaped, 'i');
+      const searchOr: any[] = [
+        { description: { $regex: searchRegex } },
+        { walletName: { $regex: searchRegex } },
+        { category: { $regex: searchRegex } }
+      ];
+
+      // Hỗ trợ tìm kiếm theo số tiền nếu nhập số
+      const cleanNumeric = search.replace(/[,.đ\sVNDvnd]/g, '');
+      const num = Number(cleanNumeric);
+      if (!isNaN(num) && num > 0) {
+        searchOr.push({ amount: num });
+      }
+
+      andConditions.push({ $or: searchOr });
+    }
+
+    const query = andConditions.length === 1 ? andConditions[0] : { $and: andConditions };
 
     const sortOption: any = sort === 'amount'
       ? { amount: -1, date: -1 }

@@ -1,0 +1,507 @@
+/* ========================================================
+   SaoTaskCard.module.css - Thẻ nhiệm vụ SAO MMORPG Cyber Quest HUD
+   Tương đồng kiến trúc và họa tiết chuẩn mực với SaoWalletCard
+   ======================================================== */
+
+.card {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(8, 22, 42, 0.92) 0%,
+    rgba(5, 14, 28, 0.96) 50%,
+    rgba(9, 24, 46, 0.88) 100%
+  );
+  /* Lưới ma trận HUD Hologram */
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.28);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45),
+              inset 0 0 25px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.04);
+  padding: 16px 20px 16px 22px;
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 112px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  user-select: none;
+  width: 100%;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--task-color, var(--sao-primary-hex, #00f0ff));
+  background: linear-gradient(
+    135deg,
+    rgba(12, 30, 56, 0.95) 0%,
+    rgba(7, 18, 36, 0.98) 100%
+  );
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6),
+              0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22),
+              inset 0 0 30px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+  transform: translateY(-2px);
+}
+
+.card:active {
+  transform: scale(0.985) translateY(0);
+}
+
+/* VARIANTS (TRANSLUCENT SAO GLASS) */
+.card.completed {
+  opacity: 0.72;
+  border-color: rgba(0, 255, 170, 0.3);
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(0, 255, 170, 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(0, 255, 170, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 170, 0.03) 1px, transparent 1px);
+}
+
+.card.completed:hover {
+  opacity: 0.95;
+  border-color: #00ffaa;
+  background: linear-gradient(
+    135deg,
+    rgba(8, 34, 24, 0.92) 0%,
+    rgba(4, 20, 14, 0.96) 100%
+  );
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6),
+              0 0 16px rgba(0, 255, 170, 0.25),
+              inset 0 0 30px rgba(0, 255, 170, 0.08);
+}
+
+.card.overdueCard {
+  border-color: rgba(255, 68, 68, 0.35);
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(255, 68, 68, 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(255, 68, 68, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 68, 68, 0.03) 1px, transparent 1px);
+}
+
+.card.overdueCard:hover {
+  border-color: #ff4444;
+  background: linear-gradient(
+    135deg,
+    rgba(42, 12, 20, 0.92) 0%,
+    rgba(24, 6, 12, 0.96) 100%
+  );
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6),
+              0 0 16px rgba(255, 68, 68, 0.3),
+              inset 0 0 30px rgba(255, 68, 68, 0.1);
+}
+
+/* ========================================================
+   TRỤC NĂNG LƯỢNG QUANG HỌC MÉP TRÁI (LEFT ACCENT SPINE)
+   ======================================================== */
+.leftAccentBar {
+  position: absolute;
+  top: 14px;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--task-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 10px var(--task-color, var(--sao-primary-hex, #00f0ff));
+  pointer-events: none;
+  z-index: 2;
+  transition: all 0.25s ease;
+}
+
+.card:hover .leftAccentBar {
+  width: 5px;
+  box-shadow: 0 0 14px var(--task-color, var(--sao-primary-hex, #00f0ff)),
+              0 0 4px #ffffff;
+}
+
+/* ========================================================
+   CỤM NGÀM CƠ KHÍ GÓC TRÊN - TRÁI
+   ======================================================== */
+.cornerBracketTopLeft {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50px;
+  height: 50px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.topLeftBevelLine {
+  position: absolute;
+  top: 5px;
+  left: -3px;
+  width: 21px;
+  height: 2px;
+  background: var(--task-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 6px var(--task-color, var(--sao-primary-hex, #00f0ff));
+  transform: rotate(-45deg);
+}
+
+.bracketStripes {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 10px;
+  height: 7px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--task-color, var(--sao-primary-hex, #00f0ff)) 0px,
+    var(--task-color, var(--sao-primary-hex, #00f0ff)) 1.2px,
+    transparent 1.2px,
+    transparent 3px
+  );
+  opacity: 0.8;
+}
+
+.bracketDiamond {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 5px;
+  height: 5px;
+  background: var(--task-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 6px var(--task-color, var(--sao-primary-hex, #00f0ff));
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* ========================================================
+   CỤM NGÀM CƠ KHÍ GÓC DƯỚI - PHẢI
+   ======================================================== */
+.cornerBracketBottomRight {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.bottomRightBevelLine {
+  position: absolute;
+  bottom: 5px;
+  right: -3px;
+  width: 21px;
+  height: 2px;
+  background: var(--task-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 6px var(--task-color, var(--sao-primary-hex, #00f0ff));
+  transform: rotate(-45deg);
+}
+
+.bottomRightDiamond {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  width: 5px;
+  height: 5px;
+  background: var(--task-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 6px var(--task-color, var(--sao-primary-hex, #00f0ff));
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* ========================================================
+   HÀNG 1: HEADER (CHECKBOX + RANK + ACTIONS)
+   ======================================================== */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.headerIdentity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* CHECKBOX DIAMOND NODE */
+.checkbox {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  border: 1.5px solid var(--task-color, var(--sao-primary-hex, #00f0ff));
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  transform: rotate(45deg);
+  padding: 0;
+  box-shadow: 0 0 6px var(--task-color, rgba(var(--sao-primary-rgb), 0.3));
+}
+
+.card:hover .checkbox {
+  border-color: #fff;
+  box-shadow: 0 0 10px #fff;
+  transform: rotate(45deg) scale(1.08);
+}
+
+.checkboxCompleted {
+  background: rgba(0, 255, 170, 0.3);
+  border-color: #00ffaa;
+  box-shadow: 0 0 8px rgba(0, 255, 170, 0.5);
+}
+
+.checkboxOverdue {
+  background: rgba(255, 68, 68, 0.3);
+  border-color: #ff4444;
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+}
+
+.checkIcon {
+  color: #00ffaa;
+  transform: rotate(-45deg);
+  filter: drop-shadow(0 0 4px #00ffaa);
+}
+
+.overdueIcon {
+  color: #ff4444;
+  transform: rotate(-45deg);
+  filter: drop-shadow(0 0 4px #ff4444);
+}
+
+/* RANK BADGES */
+.rankBadge {
+  font-size: 0.72rem;
+  font-family: var(--font-tauri, sans-serif);
+  font-weight: bold;
+  letter-spacing: 0.8px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.rank_S {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+  text-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+}
+
+.rank_A {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid #a855f7;
+  color: #a855f7;
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.25);
+}
+
+.rank_B {
+  background: rgba(0, 240, 255, 0.15);
+  border: 1px solid #00f0ff;
+  color: #00f0ff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.25);
+}
+
+.rank_C {
+  background: rgba(0, 255, 170, 0.15);
+  border: 1px solid #00ffaa;
+  color: #00ffaa;
+  text-shadow: 0 0 6px rgba(0, 255, 170, 0.5);
+  box-shadow: 0 0 8px rgba(0, 255, 170, 0.25);
+}
+
+.rank_D {
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid #94a3b8;
+  color: #94a3b8;
+}
+
+/* ACTIONS */
+.taskActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
+.card:hover .taskActions {
+  opacity: 1;
+}
+
+.actionBtn {
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 3px !important;
+}
+
+/* ========================================================
+   HÀNG 2: TIÊU ĐỀ & MÔ TẢ (100% WIDTH)
+   ======================================================== */
+.taskBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.taskTitle {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+  font-family: var(--font-tauri, sans-serif);
+  word-break: break-word;
+  margin: 0;
+}
+
+.completedText {
+  text-decoration: line-through;
+  color: #728ca8;
+}
+
+.overdueText {
+  color: #ff9999;
+}
+
+.taskDesc {
+  font-size: 0.84rem;
+  color: #8da4c4;
+  line-height: 1.4;
+  margin: 0;
+  word-break: break-word;
+}
+
+.completedDesc {
+  color: #4a6280;
+}
+
+/* ========================================================
+   HÀNG 3: FOOTER (TELEMETRY + EXP REWARD)
+   ======================================================== */
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 2px;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.dueBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-family: var(--font-tauri, sans-serif);
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 2px;
+  letter-spacing: 0.4px;
+}
+
+.due_critical {
+  background: rgba(255, 68, 68, 0.15);
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  animation: pulseWarning 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseWarning {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 6px rgba(255, 68, 68, 0.4);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: none;
+  }
+}
+
+.due_warning {
+  background: rgba(255, 170, 0, 0.12);
+  border: 1px solid #ffaa00;
+  color: #ffaa00;
+}
+
+.due_overdue {
+  background: rgba(255, 68, 68, 0.12);
+  border: 1px solid rgba(255, 68, 68, 0.4);
+  color: #ff7777;
+}
+
+.due_near {
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  color: #00f0ff;
+}
+
+.due_normal {
+  background: rgba(160, 196, 255, 0.08);
+  border: 1px solid rgba(160, 196, 255, 0.2);
+  color: #a0c4ff;
+}
+
+.due_completed {
+  background: rgba(0, 255, 170, 0.08);
+  border: 1px solid rgba(0, 255, 170, 0.2);
+  color: #00ffaa;
+}
+
+.expChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-family: var(--font-tauri, sans-serif);
+  font-weight: bold;
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.1);
+  border: 1px solid rgba(255, 170, 0, 0.35);
+  border-radius: 2px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+
+/* ========================================================
+   RESPONSIVE (MOBILE)
+   ======================================================== */
+@media (max-width: 768px) {
+  .card {
+    padding: 14px 16px 14px 18px;
+    gap: 8px;
+    min-height: auto;
+  }
+
+  /* Luôn hiện cụm nút trên mobile */
+  .taskActions {
+    opacity: 1;
+  }
+}

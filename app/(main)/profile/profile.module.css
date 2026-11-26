@@ -2,9 +2,9 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   overflow: hidden;
-  animation: fadeIn 0.5s ease-out;
+  animation: fadeIn 0.4s ease-out;
   position: relative;
 }
 
@@ -13,149 +13,467 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(10, 25, 45, 0.7);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
-  border-radius: 8px;
-  flex-shrink: 0;
-  clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px);
-  padding: 15px 25px;
-}
-
-.titleWrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.titleIcon {
-  color: var(--sao-primary-hex);
-  filter: drop-shadow(0 0 8px rgba(var(--sao-primary-rgb), 0.6));
-}
-
-.title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #fff;
-  letter-spacing: 2px;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-  margin: 0;
-}
-
 .scrollContent {
   flex: 1;
   overflow-y: auto;
-  padding-right: 10px;
-  padding-bottom: 20px;
-}
-
-.loadingState {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 50vh;
-  color: var(--sao-primary-hex);
+  padding-right: 8px;
+  padding-bottom: 24px;
 }
 
 .profileForm {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 24px;
 }
 
-.formSection {
-  background: linear-gradient(135deg, rgba(var(--sao-primary-rgb), 0.1), rgba(0, 100, 255, 0.05));
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
-  border-radius: 8px;
-  padding: 30px;
-  box-shadow: inset 0 0 20px rgba(var(--sao-primary-rgb), 0.05);
-  backdrop-filter: blur(5px);
-  clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+/* Lưới 2 cột cân xứng: Cột trái Player Card, Cột phải Form */
+.profileGrid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+  align-items: start;
 }
 
-.sectionHeader {
-  font-family: 'Tauri', sans-serif;
-  font-size: 1.1rem;
-  color: #fff;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  padding-bottom: 10px;
-  margin-bottom: 20px;
-  letter-spacing: 1px;
-}
-
-.avatarRow {
+/* =========================================
+   CỘT TRÁI: THẺ NHÂN VẬT (PLAYER CARD)
+========================================= */
+.playerColumn {
   display: flex;
-  align-items: center;
-  gap: 30px;
+  flex-direction: column;
 }
 
-.avatarPreview {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background-color: rgba(0,0,0,0.5);
-  border: 2px solid var(--sao-primary-hex);
-  box-shadow: 0 0 15px rgba(var(--sao-primary-rgb), 0.4);
-  background-size: cover;
-  background-position: center;
+.playerCardBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+  text-align: center;
+}
+
+/* KHUNG GIÁP AVATAR MMORPG CÁCH ĐIỆU LỒNG LỘN */
+.gameAvatarChassis {
+  position: relative;
+  width: 146px;
+  height: 146px;
+  margin: 8px auto 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  color: var(--sao-primary-hex);
 }
 
-.uploadControls {
+/* 4 ngàm quang học góc (Tech Corner Reticles) */
+.cornerReticle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--sao-primary-hex, #00f0ff);
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 4px var(--sao-primary-hex, #00f0ff));
+}
+
+.reticleTL {
+  top: -4px;
+  left: -4px;
+  border-top: 2px solid var(--sao-primary-hex, #00f0ff);
+  border-left: 2px solid var(--sao-primary-hex, #00f0ff);
+}
+
+.reticleTR {
+  top: -4px;
+  right: -4px;
+  border-top: 2px solid var(--sao-primary-hex, #00f0ff);
+  border-right: 2px solid var(--sao-primary-hex, #00f0ff);
+}
+
+.reticleBL {
+  bottom: -4px;
+  left: -4px;
+  border-bottom: 2px solid var(--sao-primary-hex, #00f0ff);
+  border-left: 2px solid var(--sao-primary-hex, #00f0ff);
+}
+
+.reticleBR {
+  bottom: -4px;
+  right: -4px;
+  border-bottom: 2px solid var(--sao-primary-hex, #00f0ff);
+  border-right: 2px solid var(--sao-primary-hex, #00f0ff);
+}
+
+/* Khung giáp bát giác MMORPG bọc kín (Armor Bezel) */
+.avatarBezel {
+  position: relative;
+  width: 134px;
+  height: 134px;
+  padding: 3px;
+  background: linear-gradient(
+    135deg,
+    var(--sao-primary-hex, #00f0ff) 0%,
+    rgba(255, 170, 0, 0.9) 50%,
+    var(--sao-primary-hex, #00f0ff) 100%
+  );
+  clip-path: polygon(
+    16px 0,
+    calc(100% - 16px) 0,
+    100% 16px,
+    100% calc(100% - 16px),
+    calc(100% - 16px) 100%,
+    16px 100%,
+    0 calc(100% - 16px),
+    0 16px
+  );
+  box-shadow: 0 0 25px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.45),
+              inset 0 0 15px rgba(0, 0, 0, 0.8);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.avatarPhoto {
+  width: 100%;
+  height: 100%;
+  background-color: rgba(6, 18, 36, 0.95);
+  background-size: cover;
+  background-position: center;
+  clip-path: polygon(
+    14px 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    14px 100%,
+    0 calc(100% - 14px),
+    0 14px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  color: var(--sao-primary-hex, #00f0ff);
+}
+
+.avatarPlaceholder {
+  opacity: 0.5;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.avatarScanline {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25) 50%,
+    transparent 100%
+  );
+  animation: scanline 2.8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.holoGridOverlay {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(0, 240, 255, 0.06) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0, 240, 255, 0.06) 1px, transparent 1px);
+  background-size: 8px 8px;
+  pointer-events: none;
+}
+
+/* HUY HIỆU CẤP ĐỘ CÁCH ĐIỆU PHONG CÁCH GAME (MMORPG RANK CREST) */
+.rankCrest {
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 26, 48, 0.98) 0%,
+    rgba(4, 12, 24, 0.99) 100%
+  );
+  border: 1.5px solid var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 14px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.7),
+              inset 0 0 8px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  clip-path: polygon(
+    8px 0,
+    calc(100% - 8px) 0,
+    100% 50%,
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0 50%
+  );
+  user-select: none;
+  white-space: nowrap;
+}
+
+.crestWingLeft,
+.crestWingRight {
+  font-size: 0.72rem;
+  color: var(--sao-primary-hex, #00f0ff);
+  opacity: 0.9;
+  text-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+}
+
+.crestDiamond {
+  font-size: 0.58rem;
+  color: #ffaa00;
+  text-shadow: 0 0 6px #ffaa00;
+}
+
+.crestText {
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+}
+
+/* Khối thanh đo chỉ số HP, MP & EXP */
+.statsBlock {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: 12px 14px;
+  background: rgba(6, 18, 36, 0.5);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.18);
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%,
+    0 8px
+  );
 }
 
-.uploadControls p {
-  font-size: 0.85rem;
-  color: #aaa;
-  margin: 0;
+.statRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statLabelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.74rem;
+  font-family: 'Tauri', sans-serif;
+}
+
+.statTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.hpIcon {
+  color: #00ffaa;
+}
+
+.mpIcon {
+  color: #00b4ff;
+}
+
+.expIcon {
+  color: #ffaa00;
+}
+
+.statValue {
+  font-family: 'Tauri', monospace;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.gaugeTrack {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.gaugeFill {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.gaugeHp {
+  background: linear-gradient(90deg, #00ffaa, #00f0ff);
+  box-shadow: 0 0 6px #00ffaa;
+}
+
+.gaugeMp {
+  background: linear-gradient(90deg, #00b4ff, #a855f7);
+  box-shadow: 0 0 6px #00b4ff;
+}
+
+.gaugeExp {
+  background: linear-gradient(90deg, #ffaa00, #ffdd00);
+  box-shadow: 0 0 6px #ffaa00;
+}
+
+.joinDateRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: #8ab4f8;
+  font-family: 'Tauri', sans-serif;
+  letter-spacing: 0.3px;
+}
+
+.uploadBox {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+}
+
+.uploadBox > div {
+  align-items: center !important;
+}
+
+/* =========================================
+   CỘT PHẢI: FORM THÔNG TIN & BẢO MẬT
+========================================= */
+.formColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.panelFormContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .formGroup {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 20px;
 }
 
-.formGroup:last-child {
-  margin-bottom: 0;
-}
-
-.formGroup label {
+.fieldLabel {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9rem;
-  color: #ccc;
-  font-weight: 500;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #d0e4ff;
+  font-family: 'Tauri', sans-serif;
+  letter-spacing: 0.3px;
+}
+
+/* HIỆU ỨNG KHÓA INPUT EMAIL KHÔNG THỂ SỬA */
+.lockedFieldWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.lockedEmailInput {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(8, 20, 38, 0.85),
+    rgba(8, 20, 38, 0.85) 8px,
+    rgba(var(--sao-primary-rgb), 0.04) 8px,
+    rgba(var(--sao-primary-rgb), 0.04) 16px
+  ) !important;
+  border: 1px dashed rgba(var(--sao-primary-rgb), 0.35) !important;
+  color: #8ab4f8 !important;
+  cursor: not-allowed !important;
+  padding-right: 130px !important;
+  opacity: 0.85;
+}
+
+.lockedBadge {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: rgba(var(--sao-primary-rgb), 0.85);
+  background: rgba(4, 12, 24, 0.8);
+  padding: 3px 8px;
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.passwordExpansion {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(var(--sao-primary-rgb), 0.2);
+  animation: fadeIn 0.25s ease-out;
 }
 
 .formActions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 10px;
+  margin-top: 6px;
+}
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  font-size: 0.92rem;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+@media (max-width: 900px) {
+  .profileGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
 }
 
 @media (max-width: 768px) {
   .profileContainer {
-    padding: 15px;
-    padding-bottom: 100px;
+    gap: 14px;
   }
-  
-  .avatarRow {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
+
+  .scrollContent {
+    padding-right: 0;
+    padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .formActions {
+    width: 100%;
+  }
+
+  .saveBtn {
+    width: 100%;
+    justify-content: center;
   }
 }

@@ -8,71 +8,70 @@
   vertical-align: middle;
 }
 
-/* Default Trigger Button */
-.defaultTrigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 14px;
-  background: rgba(10, 25, 47, 0.7);
-  border: 1px solid rgba(0, 240, 255, 0.4);
-  border-radius: 6px;
-  color: #00f0ff;
-  font-size: 0.88rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
-  user-select: none;
-}
-
-.defaultTrigger:hover:not(:disabled) {
-  background: rgba(0, 240, 255, 0.15);
-  border-color: #00f0ff;
-  color: #fff;
-  box-shadow: 0 0 18px rgba(0, 240, 255, 0.35);
-}
-
-.defaultTrigger:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #94a3b8;
-  box-shadow: none;
+/* SAO Trigger Button */
+.triggerBtn {
+  font-family: 'Tauri', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase !important;
+  position: relative;
 }
 
 .triggerActive {
-  background: rgba(0, 240, 255, 0.2) !important;
-  border-color: #00f0ff !important;
-  box-shadow: 0 0 18px rgba(0, 240, 255, 0.45) !important;
+  box-shadow: 0 0 22px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.65),
+              inset 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35) !important;
+  border-color: var(--sao-primary-hex, #00f0ff) !important;
+}
+
+.cameraIcon {
+  filter: drop-shadow(0 0 4px currentColor);
+  transition: transform 0.22s ease;
+}
+
+.triggerBtn:hover .cameraIcon {
+  transform: scale(1.14);
 }
 
 .chevron {
-  transition: transform 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 0 3px currentColor);
 }
 
 .chevronOpen {
   transform: rotate(180deg);
 }
 
-/* Dropdown Menu (Portal) */
-.menuDropdown {
+/* Portal positioning wrapper */
+.portalWrapper {
   position: fixed;
   z-index: 10040;
-  min-width: 230px;
-  max-width: 320px;
-  background: rgba(10, 22, 42, 0.96);
-  border: 1px solid rgba(0, 240, 255, 0.4);
-  border-radius: 10px;
-  padding: 6px;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 240, 255, 0.25);
-  animation: menuAppear 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+/* Dropdown Menu (Portal) - Chuẩn SAO Cyber Hologram */
+.menuDropdown {
+  pointer-events: auto;
+  min-width: 240px;
+  max-width: 330px;
+  background: #061426 !important;
+  background-color: #061426 !important;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.6);
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
+  padding: 8px 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.98),
+              0 0 25px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  animation: menuAppear 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+  position: relative;
 }
 
 @keyframes menuAppear {
@@ -86,15 +85,56 @@
   }
 }
 
+/* Ngàm quang học góc trên-trái và dưới-phải của Dropdown */
+.menuReticle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+  z-index: 5;
+  filter: drop-shadow(0 0 4px var(--sao-primary-hex, #00f0ff));
+}
+
+.reticleTL {
+  top: 0;
+  left: 0;
+  border-top: 2px solid var(--sao-primary-hex, #00f0ff);
+  border-left: 2px solid var(--sao-primary-hex, #00f0ff);
+}
+
+.reticleBR {
+  bottom: 0;
+  right: 0;
+  border-bottom: 2px solid var(--sao-primary-hex, #00f0ff);
+  border-right: 2px solid var(--sao-primary-hex, #00f0ff);
+}
+
 .menuHeader {
-  padding: 6px 10px 4px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: rgba(0, 240, 255, 0.75);
-  border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+  font-family: 'Tauri', sans-serif;
+  padding: 6px 10px 6px;
+  border-bottom: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22);
   margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.menuHeaderTitle {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--sao-primary-hex, #00f0ff);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-shadow: 0 0 8px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.6);
+}
+
+.menuHeaderTag {
+  color: #ffaa00;
+  font-size: 0.68rem;
+  filter: drop-shadow(0 0 4px #ffaa00);
 }
 
 .menuItem {
@@ -103,21 +143,34 @@
   gap: 10px;
   width: 100%;
   padding: 8px 10px;
-  border-radius: 6px;
   background: transparent;
   border: 1px solid transparent;
+  border-left: 2px solid transparent;
+  clip-path: polygon(
+    6px 0,
+    100% 0,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    0 100%,
+    0 6px
+  );
   color: #e2e8f0;
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s ease;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
+  font-family: 'Tauri', sans-serif;
+  position: relative;
 }
 
 .menuItem:hover:not(:disabled) {
-  background: rgba(0, 240, 255, 0.12);
-  border-color: rgba(0, 240, 255, 0.35);
-  color: #00f0ff;
-  transform: translateX(2px);
+  background: #0d2847 !important;
+  background-color: #0d2847 !important;
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+  border-left: 2px solid var(--sao-primary-hex, #00f0ff);
+  color: #ffffff;
+  transform: translateX(3px);
+  box-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
 }
 
 .menuItem:disabled {
@@ -126,9 +179,10 @@
 }
 
 .menuItemDanger:hover:not(:disabled) {
-  background: rgba(255, 68, 68, 0.15);
-  border-color: rgba(255, 68, 68, 0.4);
-  color: #ff6666;
+  background: rgba(255, 68, 68, 0.16);
+  border-color: rgba(255, 68, 68, 0.45);
+  border-left-color: #ff4444;
+  color: #ff8888;
 }
 
 .menuItemIcon {
@@ -137,24 +191,27 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 6px;
-  background: rgba(0, 240, 255, 0.08);
-  color: #00f0ff;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.1);
+  color: var(--sao-primary-hex, #00f0ff);
   flex-shrink: 0;
-  border: 1px solid rgba(0, 240, 255, 0.2);
-  transition: all 0.15s ease;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+  transition: all 0.18s ease;
+  filter: drop-shadow(0 0 4px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3));
 }
 
 .menuItem:hover:not(:disabled) .menuItemIcon {
-  background: rgba(0, 240, 255, 0.22);
-  border-color: #00f0ff;
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  border-color: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+  color: #ffffff;
+  transform: scale(1.05);
 }
 
 .menuItemDanger .menuItemIcon {
-  background: rgba(255, 68, 68, 0.1);
+  background: rgba(255, 68, 68, 0.12);
   color: #ff6666;
-  border-color: rgba(255, 68, 68, 0.25);
+  border-color: rgba(255, 68, 68, 0.3);
 }
 
 .menuItemContent {
@@ -166,8 +223,10 @@
 }
 
 .menuItemLabel {
-  font-size: 0.86rem;
-  font-weight: 500;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -178,43 +237,62 @@
 
 .menuItemDesc {
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: rgba(255, 255, 255, 0.65);
+  font-family: 'Tauri', sans-serif;
+  letter-spacing: 0.2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.menuItemArrow {
+  margin-left: auto;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--sao-primary-hex, #00f0ff);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 0.18s ease;
+}
+
+.menuItem:hover:not(:disabled) .menuItemArrow {
+  opacity: 1;
+  transform: translateX(0);
+  text-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+}
+
 .menuBadge {
   font-size: 0.65rem;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: rgba(0, 240, 255, 0.2);
-  color: #00f0ff;
-  font-weight: 600;
+  padding: 1px 6px;
+  clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  color: var(--sao-primary-hex, #00f0ff);
+  font-weight: 700;
   text-transform: uppercase;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
 }
 
 .menuDivider {
   height: 1px;
-  background: rgba(0, 240, 255, 0.15);
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
   margin: 4px 6px;
 }
 
 /* =========================================================
-   LIVE WEBCAM / CAMERA VIEWFINDER MODAL
+   LIVE WEBCAM / CAMERA VIEWFINDER MODAL - SAO CYBER VISOR
    ========================================================= */
 .cameraModalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(3, 8, 20, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(2, 6, 16, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   z-index: 10060;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  animation: fadeIn 0.2s ease-out;
+  padding: 24px;
+  animation: fadeIn 0.22s ease-out;
 }
 
 @keyframes fadeIn {
@@ -222,43 +300,242 @@
   to { opacity: 1; }
 }
 
+/* KHUNG GIÁP BỌC NGOÀI SAO (ARMOR CHASSIS) */
+.cameraArmorChassis {
+  position: relative;
+  width: 92vw;
+  max-width: 900px;
+  padding: 3px;
+  background: linear-gradient(
+    135deg,
+    var(--sao-primary-hex, #00f0ff) 0%,
+    rgba(255, 170, 0, 0.85) 50%,
+    var(--sao-primary-hex, #00f0ff) 100%
+  );
+  clip-path: polygon(
+    22px 0,
+    calc(100% - 22px) 0,
+    100% 22px,
+    100% calc(100% - 22px),
+    calc(100% - 22px) 100%,
+    22px 100%,
+    0 calc(100% - 22px),
+    0 22px
+  );
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.95),
+              0 0 35px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.45);
+  display: flex;
+  flex-direction: column;
+}
+
+/* NỘI DUNG RUỘT MODAL */
 .cameraModalContent {
   width: 100%;
-  max-width: 480px;
-  background: rgba(10, 22, 42, 0.96);
-  border: 1px solid rgba(0, 240, 255, 0.45);
-  box-shadow: 0 0 30px rgba(0, 240, 255, 0.3), inset 0 0 20px rgba(0, 240, 255, 0.05);
-  border-radius: 12px;
+  background: rgba(6, 16, 32, 0.98);
+  clip-path: polygon(
+    20px 0,
+    calc(100% - 20px) 0,
+    100% 20px,
+    100% calc(100% - 20px),
+    calc(100% - 20px) 100%,
+    20px 100%,
+    0 calc(100% - 20px),
+    0 20px
+  );
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* =========================================================
+   CỤM NGÀM CƠ KHÍ & LASER 4 GÓC CHUẨN SAO HUD
+   ========================================================= */
+.cornerChassis {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  pointer-events: none;
+  z-index: 25;
+}
+
+.chassisTL { top: 0; left: 0; }
+.chassisTR { top: 0; right: 0; transform: scaleX(-1); }
+.chassisBL { bottom: 0; left: 0; transform: scaleY(-1); }
+.chassisBR { bottom: 0; right: 0; transform: scale(-1); }
+
+.bevelLine {
+  position: absolute;
+  top: 9px;
+  left: -5px;
+  width: 32px;
+  height: 2.5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+}
+
+.bracketStripes {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 14px;
+  height: 10px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--sao-primary-hex, #00f0ff) 0px,
+    var(--sao-primary-hex, #00f0ff) 1.5px,
+    transparent 1.5px,
+    transparent 4px
+  );
+  opacity: 0.9;
+}
+
+.bracketDiamond {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  width: 7px;
+  height: 7px;
+  background: #ffaa00;
+  box-shadow: 0 0 8px #ffaa00;
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+.bracketRailH {
+  position: absolute;
+  top: 0;
+  left: 24px;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.bracketRailH::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 3px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
+}
+
+.bracketRailV {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  width: 2px;
+  height: 50px;
+  background: linear-gradient(180deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.bracketRailV::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 5px;
+  height: 3px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
 }
 
 .cameraModalHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: rgba(0, 0, 0, 0.45);
-  border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+  padding: 14px 24px;
+  background: rgba(4, 12, 26, 0.94);
+  border-bottom: 1.5px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  font-family: 'Tauri', sans-serif;
+  z-index: 10;
 }
 
 .cameraModalTitle {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  gap: 12px;
+}
+
+.cameraTitleIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.16);
+  border: 1.5px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+  color: var(--sao-primary-hex, #00f0ff);
+  clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+  filter: drop-shadow(0 0 8px var(--sao-primary-hex, #00f0ff));
+}
+
+.titleMain {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
   color: #fff;
+  text-shadow: 0 0 10px var(--sao-primary-hex, #00f0ff);
+  text-transform: uppercase;
+}
+
+/* Thanh dữ liệu viễn trắc HUD (Header Telemetry) */
+.cameraHeaderTelemetry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+  padding: 5px 14px;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  font-family: 'Tauri', monospace;
+  letter-spacing: 0.8px;
+}
+
+.recDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3344;
+  box-shadow: 0 0 10px #ff3344;
+  animation: recBlink 1.4s infinite ease-in-out;
+}
+
+@keyframes recBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.recText {
+  color: #ff5566;
+  font-weight: 800;
+}
+
+.telemetryDivider {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.telemetrySpec {
+  color: var(--sao-primary-hex, #00f0ff);
+  font-weight: 700;
+}
+
+.telemetryMode {
+  color: #ffaa00;
+  font-weight: 800;
 }
 
 .closeCameraBtn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #a0aec0;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 7px;
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -267,13 +544,18 @@
 
 .closeCameraBtn:hover {
   color: #ff4444;
-  background: rgba(255, 68, 68, 0.15);
+  background: rgba(255, 68, 68, 0.25);
+  border-color: #ff4444;
+  box-shadow: 0 0 12px rgba(255, 68, 68, 0.5);
+  transform: scale(1.08);
 }
 
+/* Khung ngắm Viewfinder: Mở rộng 16:9 Cinematic trên Desktop */
 .cameraViewfinder {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
+  max-height: 65vh;
   background: #000;
   overflow: hidden;
   display: flex;
@@ -291,19 +573,20 @@
   transform: scaleX(-1);
 }
 
-/* SAO HUD Reticle */
+/* Cụm ngắm quang học SAO HUD Reticle */
 .hudReticle {
   position: absolute;
-  inset: 20px;
+  inset: 24px;
   pointer-events: none;
+  z-index: 5;
 }
 
 .reticleCornerTL, .reticleCornerTR, .reticleCornerBL, .reticleCornerBR {
   position: absolute;
-  width: 20px;
-  height: 20px;
-  border-color: rgba(0, 240, 255, 0.7);
-  box-shadow: 0 0 6px rgba(0, 240, 255, 0.4);
+  width: 28px;
+  height: 28px;
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.85);
+  filter: drop-shadow(0 0 6px var(--sao-primary-hex, #00f0ff));
 }
 
 .reticleCornerTL { top: 0; left: 0; border-top: 2px solid; border-left: 2px solid; }
@@ -311,6 +594,7 @@
 .reticleCornerBL { bottom: 0; left: 0; border-bottom: 2px solid; border-left: 2px solid; }
 .reticleCornerBR { bottom: 0; right: 0; border-bottom: 2px solid; border-right: 2px solid; }
 
+/* Tâm ngắm chữ thập thanh mảnh ở giữa */
 .reticleCross {
   position: absolute;
   top: 50%;
@@ -318,25 +602,28 @@
   width: 16px;
   height: 16px;
   transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0.75;
 }
 
 .reticleCross::before, .reticleCross::after {
   content: '';
   position: absolute;
-  background: rgba(0, 240, 255, 0.5);
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
 }
 
 .reticleCross::before {
   top: 7px;
   left: 0;
   width: 16px;
-  height: 2px;
+  height: 1.5px;
 }
 
 .reticleCross::after {
   top: 0;
   left: 7px;
-  width: 2px;
+  width: 1.5px;
   height: 16px;
 }
 
@@ -345,11 +632,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   color: #a0c4ff;
-  font-size: 0.9rem;
-  padding: 20px;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.95rem;
+  padding: 24px;
   text-align: center;
+  z-index: 6;
 }
 
 .cameraErrorState {
@@ -357,18 +646,20 @@
 }
 
 .cameraErrorText {
-  max-width: 320px;
-  line-height: 1.4;
-  font-size: 0.85rem;
+  max-width: 360px;
+  line-height: 1.5;
+  font-size: 0.88rem;
 }
 
 .cameraRetryBtn, .cameraFileBtn {
-  background: rgba(0, 240, 255, 0.15);
-  border: 1px solid #00f0ff;
-  color: #00f0ff;
-  padding: 6px 12px;
-  border-radius: 6px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.16);
+  border: 1px solid var(--sao-primary-hex, #00f0ff);
+  color: var(--sao-primary-hex, #00f0ff);
+  padding: 7px 14px;
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+  font-family: 'Tauri', sans-serif;
   font-size: 0.82rem;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -377,70 +668,185 @@
 }
 
 .cameraRetryBtn:hover, .cameraFileBtn:hover {
-  background: rgba(0, 240, 255, 0.3);
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.32);
+  box-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
 }
 
+/* Thanh điều khiển buồng lái (Cockpit Camera Controls) */
 .cameraControls {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 16px 20px;
-  background: rgba(0, 0, 0, 0.5);
-  border-top: 1px solid rgba(0, 240, 255, 0.15);
+  padding: 18px 32px;
+  background: rgba(4, 12, 26, 0.96);
+  border-top: 1.5px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+  z-index: 10;
 }
 
 .camToolBtn {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  color: #d0e4ff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .camToolBtn:hover:not(:disabled) {
-  background: rgba(0, 240, 255, 0.2);
-  border-color: #00f0ff;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.28);
+  border-color: var(--sao-primary-hex, #00f0ff);
   color: #fff;
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+  transform: scale(1.1);
+  box-shadow: 0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.55);
 }
 
+/* Cụm cò súng kích hoạt chụp ảnh SAO Shutter Trigger */
+.shutterDeckWrapper {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.shutterWingLeft,
+.shutterWingRight {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--sao-primary-hex, #00f0ff);
+  text-shadow: 0 0 10px var(--sao-primary-hex, #00f0ff);
+  user-select: none;
+  opacity: 0.9;
+  animation: wingPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes wingPulse {
+  from { opacity: 0.6; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1.1); }
+}
+
+/* Nút chụp Shutter SAO HUD */
 .camShutterBtn {
-  width: 60px;
-  height: 60px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: transparent;
-  border: 3px solid #00f0ff;
-  padding: 4px;
+  border: none;
+  padding: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
-  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.camShutterBtn:hover:not(:disabled) {
-  transform: scale(1.05);
-  box-shadow: 0 0 22px rgba(0, 240, 255, 0.7);
+.shutterRing {
+  position: absolute;
+  inset: 0;
+  border: 3.5px solid var(--sao-primary-hex, #00f0ff);
+  border-radius: 50%;
+  box-shadow: 0 0 24px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.7), inset 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  animation: shutterPulse 2.5s ease-in-out infinite;
 }
 
-.camShutterBtn:active:not(:disabled) {
-  transform: scale(0.95);
+@keyframes shutterPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.08); opacity: 1; box-shadow: 0 0 32px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.95); }
 }
 
 .shutterInner {
-  width: 100%;
-  height: 100%;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: #00f0ff;
-  transition: all 0.15s;
+  background: linear-gradient(135deg, #00f0ff 0%, #0088ff 100%);
+  box-shadow: 0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.8);
+  transition: all 0.15s ease;
+}
+
+.camShutterBtn:hover:not(:disabled) .shutterInner {
+  transform: scale(0.92);
+  background: #ffffff;
+  box-shadow: 0 0 25px #ffffff;
+}
+
+.camShutterBtn:active:not(:disabled) .shutterInner {
+  transform: scale(0.82);
+}
+
+/* =========================================================
+   RESPONSIVE: MOBILE FULLSCREEN NATIVE CAMERA FEEL
+   ========================================================= */
+@media (max-width: 768px) {
+  .cameraModalOverlay {
+    padding: 0;
+    background: #000;
+  }
+
+  .cameraArmorChassis {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    padding: 0;
+    clip-path: none;
+    box-shadow: none;
+    background: #000;
+  }
+
+  .cornerChassis {
+    display: none;
+  }
+
+  .cameraModalContent {
+    width: 100%;
+    height: 100%;
+    clip-path: none;
+    background: #000;
+    justify-content: space-between;
+  }
+
+  .cameraModalHeader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.75) 0%, transparent 100%);
+    border-bottom: none;
+    padding: 16px 20px;
+  }
+
+  .cameraHeaderTelemetry,
+  .shutterWingLeft,
+  .shutterWingRight {
+    display: none;
+  }
+
+  .cameraViewfinder {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    max-height: none;
+    flex: 1;
+  }
+
+  .hudReticle {
+    inset: 16px;
+  }
+
+  .cameraControls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.85) 0%, transparent 100%);
+    border-top: none;
+    padding: 20px 24px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .camShutterBtn:hover .shutterInner {

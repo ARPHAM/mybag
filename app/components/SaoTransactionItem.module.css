@@ -1,0 +1,330 @@
+/* =========================================================
+   SAO TRANSACTION / HISTORY ITEM (LAYER 5 REUSABLE ROW)
+   ========================================================= */
+
+.itemRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px 10px 16px;
+  min-height: 48px;
+  flex-shrink: 0;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.035);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.14);
+  border-radius: 0;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.itemRow:hover {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.09);
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.45);
+  box-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.16);
+  transform: translateX(4px);
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:active {
+  transform: translateX(2px) scale(0.99);
+  transition: transform 0.08s ease;
+}
+
+/* Vạch quang học chỉ báo thẳng đứng mép trái */
+.leftAccentBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  transition: all 0.2s ease;
+}
+
+.itemRow:hover .leftAccentBar {
+  width: 4px;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.barRed {
+  background: #ff4444;
+  color: #ff4444;
+}
+
+.barGreen {
+  background: #00ffaa;
+  color: #00ffaa;
+}
+
+.barGold {
+  background: #ffd700;
+  color: #ffd700;
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.4);
+}
+
+.barCyan {
+  background: var(--sao-primary-hex, #00f0ff);
+  color: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 6px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+}
+
+/* Cụm thông tin bên trái */
+.leftContent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Icon chỉ báo loại giao dịch */
+.iconBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  background: transparent;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.iconBadge.income {
+  color: #00ffaa;
+  border-color: rgba(0, 255, 170, 0.4);
+  box-shadow: 0 0 6px rgba(0, 255, 170, 0.2);
+}
+
+.iconBadge.expense {
+  color: #ff4444;
+  border-color: rgba(255, 68, 68, 0.4);
+  box-shadow: 0 0 6px rgba(255, 68, 68, 0.2);
+}
+
+.iconBadge.transfer {
+  color: var(--sao-primary-hex, #00f0ff);
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+  box-shadow: 0 0 6px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+}
+
+/* Huy hiệu thứ bậc Rank */
+.rankBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 4px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  border-radius: 0;
+  color: var(--sao-primary-hex, #00f0ff);
+  font-size: 0.7rem;
+  font-weight: 800;
+  font-family: 'Tauri', sans-serif;
+  flex-shrink: 0;
+}
+
+.rankBadge1 {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: rgba(255, 215, 0, 0.6);
+  color: #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+.infoCol {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.titleText {
+  font-size: 0.88rem;
+  color: #f8fafc;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.74rem;
+  color: #94a3b8;
+}
+
+.dateText {
+  font-family: 'Tauri', sans-serif;
+  color: #64748b;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.walletBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22);
+  border-radius: 0;
+  color: var(--sao-primary-hex, #00f0ff);
+  font-size: 0.68rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.walletIcon {
+  color: var(--sao-primary-hex, #00f0ff);
+  flex-shrink: 0;
+}
+
+/* Cụm bên phải */
+.rightContent {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.amountCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.amountText {
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.amountExpense {
+  color: #ff4444;
+  text-shadow: 0 0 6px rgba(255, 68, 68, 0.3);
+}
+
+.amountIncome {
+  color: #00ffaa;
+  text-shadow: 0 0 6px rgba(0, 255, 170, 0.3);
+}
+
+.amountTransfer {
+  color: var(--sao-primary-hex, #00f0ff);
+  text-shadow: 0 0 6px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+}
+
+.actionBtns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.rowActionBtn {
+  padding: 4px !important;
+  opacity: 0.6;
+  transition: all 0.2s ease !important;
+}
+
+.itemRow:hover .rowActionBtn {
+  opacity: 1;
+}
+
+.currencyText {
+  font-size: 0.72rem;
+  font-weight: normal;
+  color: #94a3b8;
+}
+
+/* Huy hiệu % chi tiêu HUD gọn gàng */
+.percentageBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--sao-primary-hex, #00f0ff);
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.1);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  padding: 1px 6px;
+  border-radius: 0;
+}
+
+.percentGold {
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.12);
+  border-color: rgba(255, 215, 0, 0.35);
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.2);
+}
+
+.percentageDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 4px currentColor;
+}
+
+/* =========================================================
+   RESPONSIVE (MOBILE)
+   ========================================================= */
+@media (max-width: 640px) {
+  .itemRow {
+    padding: 8px 10px 8px 12px;
+    min-height: 52px;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .leftContent {
+    gap: 8px;
+  }
+
+  .rankBadge {
+    margin-top: 2px;
+  }
+
+  .titleText {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    line-height: 1.25;
+    font-size: 0.82rem;
+  }
+
+  .metaRow {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .rightContent {
+    margin-top: 2px;
+  }
+
+  .amountText {
+    font-size: 0.85rem;
+  }
+}

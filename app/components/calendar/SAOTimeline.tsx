@@ -1,20 +1,23 @@
 "use client";
 
-import React from 'react';
-import { ICalendarEvent } from '@/models/CalendarEvent';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
+import { RotateCcw } from 'lucide-react';
+import styles from './SAOTimeline.module.css';
 
 interface SAOTimelineProps {
-  events: any[]; // using any for now or cast to frontend type
+  events: any[];
+  selectedDate?: Date;
   onEventClick?: (event: any) => void;
 }
 
-export default function SAOTimeline({ events, onEventClick }: SAOTimelineProps) {
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+export default function SAOTimeline({ events, selectedDate, onEventClick }: SAOTimelineProps) {
+  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
+  // Auto-scroll to earliest event or 07:00
+  useEffect(() => {
     if (!scrollContainerRef.current) return;
-    let targetHour = 7; // Default scroll to 07:00
+    let targetHour = 7;
     if (events && events.length > 0) {
       const earliestHour = Math.min(
         ...events.map((ev) => new Date(ev.start_time).getHours())
@@ -24,29 +27,53 @@ export default function SAOTimeline({ events, onEventClick }: SAOTimelineProps) 
     scrollContainerRef.current.scrollTop = targetHour * 60;
   }, [events]);
 
-  // Process events for overlapping
-  const processedEvents = React.useMemo(() => {
+  // Live current time calculation
+  const [currentMinutes, setCurrentMinutes] = useState(() => {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const d = new Date();
+      setCurrentMinutes(d.getHours() * 60 + d.getMinutes());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const isToday = useMemo(() => {
+    if (!selectedDate) {
+      return true; // Default show if not passed
+    }
+    const today = new Date();
+    return (
+      selectedDate.getFullYear() === today.getFullYear() &&
+      selectedDate.getMonth() === today.getMonth() &&
+      selectedDate.getDate() === today.getDate()
+    );
+  }, [selectedDate]);
+
+  // Process events for overlapping columns
+  const processedEvents = useMemo(() => {
     if (!events || events.length === 0) return [];
-    
-    // Sort
+
     const sorted = [...events].sort((a, b) => {
       const startA = new Date(a.start_time).getTime();
       const startB = new Date(b.start_time).getTime();
       if (startA !== startB) return startA - startB;
       const endA = new Date(a.end_time).getTime();
       const endB = new Date(b.end_time).getTime();
-      return endB - endA; // Longest first if same start
+      return endB - endA;
     });
 
     const clusters: any[][] = [];
     let currentCluster: any[] = [];
     let clusterEnd = 0;
 
-    // 1. Group into clusters
     sorted.forEach((ev) => {
       const start = new Date(ev.start_time).getTime();
       const end = new Date(ev.end_time).getTime();
-      
+
       if (currentCluster.length === 0) {
         currentCluster.push(ev);
         clusterEnd = end;
@@ -63,18 +90,17 @@ export default function SAOTimeline({ events, onEventClick }: SAOTimelineProps) 
       clusters.push(currentCluster);
     }
 
-    // 2. Assign columns
     const result: any[] = [];
-    clusters.forEach(cluster => {
+    clusters.forEach((cluster) => {
       const columns: any[][] = [];
-      cluster.forEach(ev => {
+      cluster.forEach((ev) => {
         let placed = false;
         for (let i = 0; i < columns.length; i++) {
           const col = columns[i];
           const lastEventInCol = col[col.length - 1];
           const lastEnd = new Date(lastEventInCol.end_time).getTime();
           const start = new Date(ev.start_time).getTime();
-          
+
           if (start >= lastEnd) {
             col.push(ev);
             placed = true;
@@ -86,10 +112,9 @@ export default function SAOTimeline({ events, onEventClick }: SAOTimelineProps) 
         }
       });
 
-      // 3. Calculate dimensions for each event
       const numCols = columns.length;
       columns.forEach((col, colIdx) => {
-        col.forEach(ev => {
+        col.forEach((ev) => {
           result.push({
             ...ev,
             _colIdx: colIdx,
@@ -102,97 +127,118 @@ export default function SAOTimeline({ events, onEventClick }: SAOTimelineProps) 
     return result;
   }, [events]);
 
-  // Helper to calculate top and height based on start and end times
-  const getEventStyle = (start: string, end: string) => {
+  const getEventPosition = (start: string, end: string) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
-    
+
     const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
     const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
-    
-    const top = (startMinutes / 60) * 60; // 60px per hour
-    const height = ((endMinutes - startMinutes) / 60) * 60;
 
-    return { top: `${top}px`, height: `${height}px` };
+    const top = (startMinutes / 60) * 60; // 60px/hour = 1px/min
+    const height = Math.max(26, ((endMinutes - startMinutes) / 60) * 60);
+
+    return { top, height, startStr: formatTime(startDate), endStr: formatTime(endDate) };
+  };
+
+  const formatTime = (date: Date) => {
+    const h = date.getHours().toString().padStart(2, '0');
+    const m = date.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
   };
 
   return (
-    <div className="relative bg-zinc-900/90 border border-zinc-700 rounded-sm font-mono text-zinc-300 shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col h-full min-h-[380px] lg:min-h-0">
-      {/* Grid container with vertical scroll */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto relative custom-scrollbar min-h-0">
-        {/* Render hour lines */}
+    <div className={styles.timelineContainer}>
+      {/* Chassis Corner Accents */}
+      <div className={styles.bevelTL} aria-hidden="true" />
+      <div className={styles.diamondTL} aria-hidden="true" />
+      <div className={styles.bevelBR} aria-hidden="true" />
+      <div className={styles.diamondBR} aria-hidden="true" />
+
+      {/* 24-hour Scroll Area */}
+      <div ref={scrollContainerRef} className={styles.scrollArea}>
+        {/* Hour Grid Lines */}
         {hours.map((hour) => (
-          <div key={hour} className="flex border-b border-zinc-800/50 h-[60px] relative group">
-            <div className="hour-label w-16 flex-shrink-0 text-right pr-4 py-2 text-xs text-zinc-500 transition-colors">
+          <div key={hour} className={styles.hourRow}>
+            <div className={styles.hourLabel}>
               {hour.toString().padStart(2, '0')}:00
             </div>
-            <div className="flex-1 border-l border-zinc-800/50 relative"></div>
+            <div className={styles.hourGridLine} />
           </div>
         ))}
 
-        {/* Render events */}
-        <div className="absolute top-0 left-16 right-0 bottom-0 pointer-events-none">
+        {/* Live Current Time Beam (if viewing today) */}
+        {isToday && (
+          <div
+            className={styles.currentTimeBeam}
+            style={{ top: `${currentMinutes}px` }}
+          >
+            <div className={styles.currentTimeDot} />
+          </div>
+        )}
+
+        {/* Hologram Event Cards Layer */}
+        <div className={styles.eventsLayer}>
           {processedEvents.map((ev, idx) => {
-            const style = getEventStyle(ev.start_time, ev.end_time);
-            const actualColor = (ev.color_code && ev.color_code !== '#f97316') ? ev.color_code : null;
-            
-            // Calculate width and left based on cols
+            const { top, height, startStr, endStr } = getEventPosition(ev.start_time, ev.end_time);
             const widthPct = 100 / ev._numCols;
             const leftPct = ev._colIdx * widthPct;
-            
+
+            // Resolve color: use custom color if available or default to SAO theme primary
+            const baseColor = ev.color_code || 'var(--sao-primary-hex, #00f0ff)';
+            const isHex = baseColor.startsWith('#');
+            const bgGlow = isHex ? `${baseColor}26` : 'rgba(var(--sao-primary-rgb, 0, 240, 255), 0.18)';
+            const borderGlow = isHex ? `${baseColor}66` : 'rgba(var(--sao-primary-rgb, 0, 240, 255), 0.45)';
+            const shadowGlow = isHex ? `${baseColor}40` : 'rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25)';
+
             return (
-              <div 
+              <div
                 key={ev._id || idx}
                 onClick={() => onEventClick && onEventClick(ev)}
-                className="absolute rounded-sm border-l-4 p-2 pointer-events-auto shadow-md backdrop-blur-md transition-transform hover:scale-[1.01] hover:z-10 cursor-pointer overflow-hidden group"
+                className={styles.eventCard}
                 style={{
-                  top: style.top,
-                  height: style.height,
-                  left: `calc(${leftPct}% + 10px)`,
-                  width: `calc(${widthPct}% - 14px)`,
-                  backgroundColor: actualColor ? `${actualColor}20` : 'rgba(var(--sao-primary-rgb), 0.2)',
-                  borderColor: actualColor || 'var(--sao-primary-hex)',
+                  top: `${top}px`,
+                  height: `${height}px`,
+                  left: `calc(${leftPct}% + 8px)`,
+                  width: `calc(${widthPct}% - 12px)`,
+                  background: `linear-gradient(135deg, ${bgGlow} 0%, rgba(6, 18, 35, 0.88) 55%, ${bgGlow} 100%)`,
+                  border: `1px solid ${borderGlow}`,
+                  borderLeft: `3.5px solid ${baseColor}`,
+                  boxShadow: `inset 0 0 16px ${bgGlow}, 0 2px 10px rgba(0, 0, 0, 0.45), 0 0 8px ${shadowGlow}`,
                 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent -translate-y-full group-hover:animate-scanline pointer-events-none"></div>
-                
-                <div className="text-sm font-bold truncate text-white drop-shadow-md">
-                  {ev.title}
+                {/* Scanline hover reflection */}
+                <div className={styles.scanline} aria-hidden="true" />
+
+                <div className={styles.eventHeader}>
+                  <span
+                    className={styles.timeChip}
+                    style={{
+                      background: bgGlow,
+                      color: baseColor,
+                      borderColor: borderGlow,
+                    }}
+                  >
+                    {startStr} - {endStr}
+                  </span>
+
+                  {ev.is_recurring && (
+                    <span className={styles.repeatBadge}>
+                      <RotateCcw size={10} />
+                      <span>Lặp</span>
+                    </span>
+                  )}
                 </div>
-                {ev.description && (
-                  <div className="text-xs opacity-80 whitespace-pre-wrap line-clamp-2 mt-1 leading-tight">
-                    {ev.description}
-                  </div>
+
+                <div className={styles.eventTitle}>{ev.title}</div>
+
+                {ev.description && height >= 58 && (
+                  <div className={styles.eventDesc}>{ev.description}</div>
                 )}
               </div>
             );
           })}
         </div>
-        
-        {/* Current Time Indicator (mocked for now, can make it dynamic later) */}
-        {/* <div className="absolute left-16 right-0 border-t-2 border-red-500 shadow-[0_0_10px_red] z-20 pointer-events-none" style={{ top: '240px' }}>
-          <div className="absolute -left-2 -top-1.5 w-3 h-3 bg-red-500 rounded-full"></div>
-        </div> */}
       </div>
-
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(24, 24, 27, 0.8);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(var(--sao-primary-rgb), 0.5);
-          border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(var(--sao-primary-rgb), 0.8);
-        }
-        .group:hover .hour-label {
-          color: var(--sao-primary-hex);
-        }
-      `}</style>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { compressImageFile } from "@/lib/imageClient";
 import { useI18n } from "@/lib/i18n";
+import SaoButton, { ButtonVariant, ButtonShape } from "./SaoButton";
 import styles from "./SaoMediaPickerButton.module.css";
 
 export interface MediaPickerCustomOption {
@@ -76,6 +77,10 @@ export interface SaoMediaPickerButtonProps {
   galleryLabel?: string;
   galleryDescription?: string;
 
+  /** SAO Button styling customization */
+  variant?: ButtonVariant;
+  shape?: ButtonShape;
+
   /** File constraints */
   accept?: string;
   maxSizeBytes?: number;
@@ -94,6 +99,8 @@ export default function SaoMediaPickerButton({
   disabled = false,
   placement = "auto",
   align = "left",
+  variant = "primary",
+  shape = "cyber",
   extraOptions = [],
   enableClipboardOption = false,
   hideCamera = false,
@@ -161,7 +168,7 @@ export default function SaoMediaPickerButton({
   useEffect(() => {
     if (isCameraModalOpen && cameraStream && videoRef.current) {
       videoRef.current.srcObject = cameraStream;
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
     }
   }, [isCameraModalOpen, cameraStream]);
 
@@ -180,15 +187,21 @@ export default function SaoMediaPickerButton({
     let top = effPlacement === "top" ? rect.top - 8 : rect.bottom + 8;
     let left = rect.left;
 
+    const estimatedWidth = 240;
+    const halfWidth = estimatedWidth / 2;
+
     if (align === "right") {
       left = rect.right;
+      if (left < estimatedWidth + 10) left = estimatedWidth + 10;
+      if (left > windowWidth - 10) left = windowWidth - 10;
     } else if (align === "center") {
       left = rect.left + rect.width / 2;
+      if (left < halfWidth + 10) left = halfWidth + 10;
+      if (left > windowWidth - halfWidth - 10) left = windowWidth - halfWidth - 10;
+    } else {
+      if (left < 10) left = 10;
+      if (left > windowWidth - estimatedWidth - 10) left = Math.max(10, windowWidth - estimatedWidth - 10);
     }
-
-    // Horizontal edge guard
-    if (left < 10) left = 10;
-    if (left > windowWidth - 250) left = Math.max(10, windowWidth - 250);
 
     setMenuPosition({
       top,
@@ -353,7 +366,7 @@ export default function SaoMediaPickerButton({
       setFacingMode(mode);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
       }
     } catch (err: any) {
       console.error("Camera stream error:", err);
@@ -498,9 +511,11 @@ export default function SaoMediaPickerButton({
           status: uploadStatus
         })
       ) : (
-        <button
+        <SaoButton
           type="button"
-          className={`${styles.defaultTrigger} ${isMenuOpen ? styles.triggerActive : ""}`}
+          variant={variant}
+          shape={shape}
+          className={`${styles.triggerBtn} ${isMenuOpen ? styles.triggerActive : ""} ${className}`}
           onClick={toggleMenu}
           disabled={disabled || isUploading}
           title={effTitle}
@@ -513,18 +528,17 @@ export default function SaoMediaPickerButton({
           ) : uploadStatus === "error" ? (
             <AlertTriangle size={16} color="#ff4444" />
           ) : (
-            icon || <Camera size={16} />
+            icon || <Camera size={16} className={styles.cameraIcon} />
           )}
           <span>{isUploading ? t("media.uploading") : effLabel}</span>
           <ChevronDown size={14} className={`${styles.chevron} ${isMenuOpen ? styles.chevronOpen : ""}`} />
-        </button>
+        </SaoButton>
       )}
 
       {/* POPUP MENU VIA PORTAL */}
       {mounted && isMenuOpen && menuPosition && createPortal(
         <div
-          ref={menuRef}
-          className={styles.menuDropdown}
+          className={styles.portalWrapper}
           style={{
             top: `${menuPosition.top}px`,
             left: `${menuPosition.left}px`,
@@ -532,87 +546,117 @@ export default function SaoMediaPickerButton({
               menuPosition.placement === "top"
                 ? `translateY(-100%) ${menuPosition.align === "right" ? "translateX(-100%)" : menuPosition.align === "center" ? "translateX(-50%)" : ""}`
                 : menuPosition.align === "right"
-                ? "translateX(-100%)"
-                : menuPosition.align === "center"
-                ? "translateX(-50%)"
-                : "none"
+                  ? "translateX(-100%)"
+                  : menuPosition.align === "center"
+                    ? "translateX(-50%)"
+                    : "none"
           }}
-          onClick={(e) => e.stopPropagation()}
         >
-          <div className={styles.menuHeader}>{t("media.uploadOptions")}</div>
+          <div
+            ref={menuRef}
+            className={styles.menuDropdown}
+            style={{
+              transformOrigin:
+                menuPosition.placement === "top"
+                  ? menuPosition.align === "right"
+                    ? "bottom right"
+                    : menuPosition.align === "center"
+                      ? "bottom center"
+                      : "bottom left"
+                  : menuPosition.align === "right"
+                    ? "top right"
+                    : menuPosition.align === "center"
+                      ? "top center"
+                      : "top left"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 2 Ngàm cơ khí góc trên-trái và dưới-phải (Corner Reticles) */}
+            <span className={`${styles.menuReticle} ${styles.reticleTL}`} aria-hidden="true" />
+            <span className={`${styles.menuReticle} ${styles.reticleBR}`} aria-hidden="true" />
 
-          {/* Option 1: Camera */}
-          {!hideCamera && (
-            <button
-              type="button"
-              className={styles.menuItem}
-              onClick={handleCameraOptionClick}
-            >
-              <div className={styles.menuItemIcon}>
-                <Camera size={18} />
-              </div>
-              <div className={styles.menuItemContent}>
-                <div className={styles.menuItemLabel}>
-                  {effCameraLabel}
+            <div className={styles.menuHeader}>
+              <span className={styles.menuHeaderTitle}>
+                <span className={styles.menuHeaderTag}>◈</span> {t("media.uploadOptions")}
+              </span>
+            </div>
+
+            {/* Option 1: Camera */}
+            {!hideCamera && (
+              <button
+                type="button"
+                className={styles.menuItem}
+                onClick={handleCameraOptionClick}
+              >
+                <div className={styles.menuItemIcon}>
+                  <Camera size={18} />
                 </div>
-                {effCameraDescription && (
-                  <div className={styles.menuItemDesc}>{effCameraDescription}</div>
-                )}
-              </div>
-            </button>
-          )}
-
-          {/* Option 2: Gallery */}
-          {!hideGallery && (
-            <button
-              type="button"
-              className={styles.menuItem}
-              onClick={handleGalleryOptionClick}
-            >
-              <div className={styles.menuItemIcon}>
-                <ImagePlus size={18} />
-              </div>
-              <div className={styles.menuItemContent}>
-                <div className={styles.menuItemLabel}>
-                  {effGalleryLabel}
+                <div className={styles.menuItemContent}>
+                  <div className={styles.menuItemLabel}>
+                    {effCameraLabel}
+                  </div>
+                  {effCameraDescription && (
+                    <div className={styles.menuItemDesc}>{effCameraDescription}</div>
+                  )}
                 </div>
-                {effGalleryDescription && (
-                  <div className={styles.menuItemDesc}>{effGalleryDescription}</div>
-                )}
-              </div>
-            </button>
-          )}
+                <span className={styles.menuItemArrow} aria-hidden="true">›</span>
+              </button>
+            )}
 
-          {/* Option 3, 4, ... (Custom extra options) */}
-          {allCustomOptions.length > 0 && (!hideCamera || !hideGallery) && (
-            <div className={styles.menuDivider} />
-          )}
-
-          {allCustomOptions.map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              disabled={opt.disabled}
-              className={`${styles.menuItem} ${opt.danger ? styles.menuItemDanger : ""}`}
-              onClick={async () => {
-                setIsMenuOpen(false);
-                await opt.onClick();
-              }}
-            >
-              {opt.icon && (
-                <div className={styles.menuItemIcon}>{opt.icon}</div>
-              )}
-              <div className={styles.menuItemContent}>
-                <div className={styles.menuItemLabel}>
-                  <span>{opt.label}</span>
-                  {opt.badge && <span className={styles.menuBadge}>{opt.badge}</span>}
+            {/* Option 2: Gallery */}
+            {!hideGallery && (
+              <button
+                type="button"
+                className={styles.menuItem}
+                onClick={handleGalleryOptionClick}
+              >
+                <div className={styles.menuItemIcon}>
+                  <ImagePlus size={18} />
                 </div>
-                {opt.description && (
-                  <div className={styles.menuItemDesc}>{opt.description}</div>
+                <div className={styles.menuItemContent}>
+                  <div className={styles.menuItemLabel}>
+                    {effGalleryLabel}
+                  </div>
+                  {effGalleryDescription && (
+                    <div className={styles.menuItemDesc}>{effGalleryDescription}</div>
+                  )}
+                </div>
+                <span className={styles.menuItemArrow} aria-hidden="true">›</span>
+              </button>
+            )}
+
+            {/* Option 3, 4, ... (Custom extra options) */}
+            {allCustomOptions.length > 0 && (!hideCamera || !hideGallery) && (
+              <div className={styles.menuDivider} />
+            )}
+
+            {allCustomOptions.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                disabled={opt.disabled}
+                className={`${styles.menuItem} ${opt.danger ? styles.menuItemDanger : ""}`}
+                onClick={async () => {
+                  setIsMenuOpen(false);
+                  await opt.onClick();
+                }}
+              >
+                {opt.icon && (
+                  <div className={styles.menuItemIcon}>{opt.icon}</div>
                 )}
-              </div>
-            </button>
-          ))}
+                <div className={styles.menuItemContent}>
+                  <div className={styles.menuItemLabel}>
+                    <span>{opt.label}</span>
+                    {opt.badge && <span className={styles.menuBadge}>{opt.badge}</span>}
+                  </div>
+                  {opt.description && (
+                    <div className={styles.menuItemDesc}>{opt.description}</div>
+                  )}
+                </div>
+                <span className={styles.menuItemArrow} aria-hidden="true">›</span>
+              </button>
+            ))}
+          </div>
         </div>,
         document.body
       )}
@@ -620,116 +664,169 @@ export default function SaoMediaPickerButton({
       {/* WEBRTC LIVE CAMERA VIEWFINDER MODAL VIA PORTAL */}
       {mounted && isCameraModalOpen && createPortal(
         <div className={styles.cameraModalOverlay} onClick={closeCameraModal}>
-          <div className={styles.cameraModalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.cameraModalHeader}>
-              <div className={styles.cameraModalTitle}>
-                <Camera size={18} color="#00f0ff" />
-                <span>{t("media.cameraTitle")}</span>
+            <div className={styles.cameraArmorChassis} onClick={(e) => e.stopPropagation()}>
+              {/* Cụm ngàm cơ khí & laser 4 góc chuẩn SAO HUD (Desktop) */}
+              <div className={`${styles.cornerChassis} ${styles.chassisTL}`} aria-hidden="true">
+                <span className={styles.bevelLine} />
+                <span className={styles.bracketStripes} />
+                <span className={styles.bracketDiamond} />
+                <span className={styles.bracketRailH} />
+                <span className={styles.bracketRailV} />
               </div>
-              <button
-                type="button"
-                className={styles.closeCameraBtn}
-                onClick={closeCameraModal}
-                title={t("media.closeCamera")}
-                aria-label={t("media.closeCamera")}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className={styles.cameraViewfinder}>
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className={`${styles.cameraVideo} ${facingMode === "user" ? styles.mirrorVideo : ""}`}
-              />
-
-              {/* SAO HUD Reticle */}
-              <div className={styles.hudReticle}>
-                <div className={styles.reticleCornerTL} />
-                <div className={styles.reticleCornerTR} />
-                <div className={styles.reticleCornerBL} />
-                <div className={styles.reticleCornerBR} />
-                <div className={styles.reticleCross} />
+              <div className={`${styles.cornerChassis} ${styles.chassisTR}`} aria-hidden="true">
+                <span className={styles.bevelLine} />
+                <span className={styles.bracketStripes} />
+                <span className={styles.bracketDiamond} />
+                <span className={styles.bracketRailH} />
+                <span className={styles.bracketRailV} />
+              </div>
+              <div className={`${styles.cornerChassis} ${styles.chassisBL}`} aria-hidden="true">
+                <span className={styles.bevelLine} />
+                <span className={styles.bracketStripes} />
+                <span className={styles.bracketDiamond} />
+                <span className={styles.bracketRailH} />
+                <span className={styles.bracketRailV} />
+              </div>
+              <div className={`${styles.cornerChassis} ${styles.chassisBR}`} aria-hidden="true">
+                <span className={styles.bevelLine} />
+                <span className={styles.bracketStripes} />
+                <span className={styles.bracketDiamond} />
+                <span className={styles.bracketRailH} />
+                <span className={styles.bracketRailV} />
               </div>
 
-              {/* Loading State */}
-              {isCameraLoading && (
-                <div className={styles.cameraLoadingState}>
-                  <RefreshCw size={24} className={styles.spin} />
-                  <span>{t("media.connectingCamera")}</span>
-                </div>
-              )}
+                    <div className={styles.cameraModalContent}>
+                      <div className={styles.cameraModalHeader}>
+                        <div className={styles.cameraModalTitle}>
+                          <div className={styles.cameraTitleIcon}>
+                            <Camera size={18} />
+                          </div>
+                          <span className={styles.titleMain}>{t("media.cameraTitle")}</span>
+                        </div>
 
-              {/* Error State */}
-              {cameraError && !isCameraLoading && (
-                <div className={styles.cameraErrorState}>
-                  <div className={styles.cameraErrorText}>{cameraError}</div>
-                  <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-                    <button
-                      type="button"
-                      className={styles.cameraRetryBtn}
-                      onClick={() => startCameraStream(facingMode)}
-                    >
-                      <RefreshCw size={14} /> {t("media.retry")}
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.cameraFileBtn}
-                      onClick={() => {
-                        closeCameraModal();
-                        cameraInputRef.current?.click();
-                      }}
-                    >
-                      <Camera size={14} /> {t("media.useSystemCamera")}
-                    </button>
+                      {/* Desktop HUD Telemetry Status */}
+                      <div className={styles.cameraHeaderTelemetry}>
+                        <span className={styles.recDot} aria-hidden="true" />
+                        <span className={styles.recText}>LIVE</span>
+                        <span className={styles.telemetryDivider}>|</span>
+                        <span className={styles.telemetrySpec}>FHD 1080P</span>
+                        <span className={styles.telemetryDivider}>|</span>
+                        <span className={styles.telemetryMode}>{facingMode === "user" ? "CAM.FRONT" : "CAM.REAR"}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className={styles.closeCameraBtn}
+                        onClick={closeCameraModal}
+                        title={t("media.closeCamera")}
+                        aria-label={t("media.closeCamera")}
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    <div className={styles.cameraViewfinder}>
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className={`${styles.cameraVideo} ${facingMode === "user" ? styles.mirrorVideo : ""}`}
+                      />
+
+                      {/* SAO HUD Reticle */}
+                      <div className={styles.hudReticle}>
+                        <div className={styles.reticleCornerTL} />
+                        <div className={styles.reticleCornerTR} />
+                        <div className={styles.reticleCornerBL} />
+                        <div className={styles.reticleCornerBR} />
+
+                        {/* Tâm ngắm chữ thập thanh mảnh (Fine Center Crosshair) */}
+                        <div className={styles.reticleCross} />
+                      </div>
+
+                      {/* Loading State */}
+                      {isCameraLoading && (
+                        <div className={styles.cameraLoadingState}>
+                          <RefreshCw size={24} className={styles.spin} />
+                          <span>{t("media.connectingCamera")}</span>
+                        </div>
+                      )}
+
+                      {/* Error State */}
+                      {cameraError && !isCameraLoading && (
+                        <div className={styles.cameraErrorState}>
+                          <div className={styles.cameraErrorText}>{cameraError}</div>
+                          <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                            <button
+                              type="button"
+                              className={styles.cameraRetryBtn}
+                              onClick={() => startCameraStream(facingMode)}
+                            >
+                              <RefreshCw size={14} /> {t("media.retry")}
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.cameraFileBtn}
+                              onClick={() => {
+                                closeCameraModal();
+                                cameraInputRef.current?.click();
+                              }}
+                            >
+                              <Camera size={14} /> {t("media.useSystemCamera")}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={styles.cameraControls}>
+                      <button
+                        type="button"
+                        className={styles.camToolBtn}
+                        onClick={toggleCameraFacing}
+                        disabled={isCameraLoading || !!cameraError}
+                        title={t("media.switchCamera")}
+                        aria-label={t("media.switchCamera")}
+                      >
+                        <SwitchCamera size={20} />
+                      </button>
+
+                      {/* Cụm cò súng kích hoạt chụp ảnh SAO Shutter Trigger */}
+                      <div className={styles.shutterDeckWrapper}>
+                        <span className={styles.shutterWingLeft}>«</span>
+                        <button
+                          type="button"
+                          className={styles.camShutterBtn}
+                          onClick={snapPhoto}
+                          disabled={isCameraLoading || !!cameraError}
+                          title={t("media.snapPhoto")}
+                          aria-label={t("media.snapPhoto")}
+                        >
+                          <div className={styles.shutterRing} aria-hidden="true" />
+                          <div className={styles.shutterInner} />
+                        </button>
+                        <span className={styles.shutterWingRight}>»</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className={styles.camToolBtn}
+                        onClick={() => {
+                          closeCameraModal();
+                          fileInputRef.current?.click();
+                        }}
+                        title={t("media.selectFromFile")}
+                        aria-label={t("media.selectFromFile")}
+                      >
+                        <ImagePlus size={19} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
-
-            <div className={styles.cameraControls}>
-              <button
-                type="button"
-                className={styles.camToolBtn}
-                onClick={toggleCameraFacing}
-                disabled={isCameraLoading || !!cameraError}
-                title={t("media.switchCamera")}
-                aria-label={t("media.switchCamera")}
-              >
-                <SwitchCamera size={20} />
-              </button>
-
-              <button
-                type="button"
-                className={styles.camShutterBtn}
-                onClick={snapPhoto}
-                disabled={isCameraLoading || !!cameraError}
-                title={t("media.snapPhoto")}
-                aria-label={t("media.snapPhoto")}
-              >
-                <div className={styles.shutterInner} />
-              </button>
-
-              <button
-                type="button"
-                className={styles.camToolBtn}
-                onClick={() => {
-                  closeCameraModal();
-                  fileInputRef.current?.click();
-                }}
-                title={t("media.selectFromFile")}
-                aria-label={t("media.selectFromFile")}
-              >
-                <ImagePlus size={19} />
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
+              </div>,
+              document.body
       )}
-    </div>
-  );
+            </div>
+            );
 }

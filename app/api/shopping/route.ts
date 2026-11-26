@@ -21,6 +21,17 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
     }
 
+    // Auto-delete items checked more than 24 hours ago
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await ShoppingItem.deleteMany({
+      user_id: decoded.userId,
+      checked: true,
+      $or: [
+        { checkedAt: { $lte: twentyFourHoursAgo } },
+        { checkedAt: null, updatedAt: { $lte: twentyFourHoursAgo } }
+      ]
+    });
+
     const items = await ShoppingItem.find({ user_id: decoded.userId }).sort({ createdAt: -1 });
     return NextResponse.json(items, {
       headers: {

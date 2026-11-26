@@ -1,0 +1,62 @@
+/* ========================================================
+   SaoFab.module.css - Floating Action Button (FAB) chuẩn SAO
+   Neo cố định/tuyệt đối ở góc màn hình:
+   - Desktop: bottom 30px, right 30px
+   - Mobile: bottom 12px, left 12px (tránh che Yui Assistant)
+   ======================================================== */
+
+.fab {
+  border-radius: 50% !important;
+  width: 50px !important;
+  height: 50px !important;
+  z-index: 100;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 0 20px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5) !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease !important;
+  cursor: pointer;
+  padding: 0 !important;
+}
+
+.fab:hover {
+  transform: scale(1.1) !important;
+  box-shadow: 0 0 28px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.8) !important;
+}
+
+.fab:active {
+  transform: scale(0.95) !important;
+}
+
+/* Định vị tuyệt đối theo container */
+.absolute {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+}
+
+/* Định vị cố định theo viewport */
+.fixed {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+}
+
+/* =========================================
+   RESPONSIVE (MOBILE: MAX-WIDTH 768px)
+   Chuyển sang góc TRÁI dưới để né Yui ở góc phải
+   và không bị thanh điều hướng che
+   ========================================= */
+@media (max-width: 768px) {
+  .fab {
+    width: 46px !important;
+    height: 46px !important;
+  }
+
+  .absolute,
+  .fixed {
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 16px !important;
+    right: auto !important;
+  }
+}

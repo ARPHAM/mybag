@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { TrendingUp, PieChart as PieChartIcon, ChevronRight } from 'lucide-react';
 import SaoButton from '../SaoButton';
+import SaoPanel from '../SaoPanel';
 import styles from '@/app/(main)/finance/finance.module.css';
 import type { Transaction } from '@/lib/types';
 import { FINANCE_CATEGORY_OPTIONS } from '@/lib/constants/finance';
@@ -79,13 +80,11 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
     return { startDate, endDate };
   }, [period]);
 
-  // 1. Process Income vs Expense Comparison Data
   const comparisonData = useMemo(() => {
     if (period === '30days') {
       const daysMap: Record<string, { date: string; income: number; expense: number }> = {};
       const now = new Date();
 
-      // Last 30 days
       for (let i = 29; i >= 0; i--) {
         const d = new Date();
         d.setDate(now.getDate() - i);
@@ -106,7 +105,6 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
 
       return Object.values(daysMap);
     } else {
-      // Last 6 months
       const monthsMap: Record<string, { date: string; income: number; expense: number }> = {};
       const now = new Date();
 
@@ -132,7 +130,6 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
     }
   }, [transactions, period]);
 
-  // 2. Process Category Breakdown Data (Expenses only)
   const categoryData = useMemo(() => {
     const categoryTotals: Record<string, number> = {};
     let totalExpense = 0;
@@ -219,20 +216,16 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
   };
 
   return (
-    <div className={styles.chartsCard}>
-      {/* Chart Header & Controls */}
-      <div className={styles.chartsHeader}>
-        <div className={styles.chartsTitle}>
-          <TrendingUp size={20} color="var(--sao-primary-hex)" />
-          <span>{t('finance.chartTitle')}</span>
-        </div>
-
+    <SaoPanel
+      title={t('finance.chartTitle')}
+      icon={<TrendingUp size={20} color="var(--sao-primary-hex)" />}
+      headerActions={
         <div className={styles.chartsControls}>
           <div className={styles.chartsControlGroup}>
-            {/* View mode toggle */}
             <SaoButton
               variant={viewMode === 'comparison' ? 'primary' : 'ghost'}
-              style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+              active={viewMode === 'comparison'}
+              className={styles.chartControlBtn}
               onClick={() => setViewMode('comparison')}
             >
               <TrendingUp size={13} style={{ marginRight: 4 }} />
@@ -240,7 +233,8 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
             </SaoButton>
             <SaoButton
               variant={viewMode === 'category' ? 'primary' : 'ghost'}
-              style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+              active={viewMode === 'category'}
+              className={styles.chartControlBtn}
               onClick={() => setViewMode('category')}
             >
               <PieChartIcon size={13} style={{ marginRight: 4 }} />
@@ -251,26 +245,27 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
           <span className={styles.chartsDivider}>|</span>
 
           <div className={styles.chartsControlGroup}>
-            {/* Period toggle */}
             <SaoButton
               variant={period === '30days' ? 'primary' : 'ghost'}
-              style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+              active={period === '30days'}
+              className={styles.chartControlBtn}
               onClick={() => setPeriod('30days')}
             >
               {t('finance.filter30Days')}
             </SaoButton>
             <SaoButton
               variant={period === '6months' ? 'primary' : 'ghost'}
-              style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+              active={period === '6months'}
+              className={styles.chartControlBtn}
               onClick={() => setPeriod('6months')}
             >
               {t('finance.filter6Months')}
             </SaoButton>
           </div>
         </div>
-      </div>
+      }
+    >
 
-      {/* Chart Content */}
       {viewMode === 'comparison' ? (
         <div className={styles.comparisonChartBox}>
           <ResponsiveContainer width="100%" height="100%">
@@ -339,18 +334,17 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
                 </ResponsiveContainer>
               </div>
 
-              {/* Legend & Breakdown list */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-                background: 'rgba(5, 15, 25, 0.6)',
-                padding: '14px',
-                borderRadius: '4px',
-                border: '1px solid rgba(var(--sao-primary-rgb), 0.2)'
-              }}>
-                <div style={{ fontSize: '0.85rem', color: '#a0c4ff', textTransform: 'uppercase', marginBottom: '4px' }}>
-                  {t('finance.totalExpense')}: <span style={{ color: '#ff4444', fontWeight: 'bold' }}>{formatMoney(categoryData.totalExpense)} {t('common.currency')}</span>
+              <div className={styles.categoryBreakdownCard}>
+                <span className={styles.categoryBreakdownBevelTL} aria-hidden="true" />
+                <span className={styles.categoryBreakdownDiamondTL} aria-hidden="true" />
+                <span className={styles.categoryBreakdownBevelBR} aria-hidden="true" />
+                <span className={styles.categoryBreakdownDiamondBR} aria-hidden="true" />
+
+                <div className={styles.categoryBreakdownHeader}>
+                  <span>{t('finance.totalExpense')}</span>
+                  <span className={styles.categoryTotalExpenseValue}>
+                    -{formatMoney(categoryData.totalExpense)} {t('common.currency')}
+                  </span>
                 </div>
                 {categoryData.items.map(item => (
                   <div
@@ -361,27 +355,37 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
                     tabIndex={0}
                     title={t('finance.drilldownHint')}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
-                      <span style={{ color: '#fff', fontWeight: 500 }}>{item.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span
+                        className={styles.categoryColorPip}
+                        style={{
+                          backgroundColor: item.color,
+                          boxShadow: `0 0 6px ${item.color}`
+                        }}
+                      />
+                      <span className={styles.categoryItemName}>{item.name}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#a0c4ff' }}>{formatMoney(item.amount)}</span>
-                      <span style={{ color: item.color, fontWeight: 'bold', minWidth: '32px', textAlign: 'right' }}>{item.percentage}%</span>
+                      <span className={styles.categoryItemAmount}>{formatMoney(item.amount)}</span>
+                      <span
+                        className={styles.categoryItemPercent}
+                        style={{
+                          color: item.color,
+                          textShadow: `0 0 8px ${item.color}66`
+                        }}
+                      >
+                        {item.percentage}%
+                      </span>
                       <ChevronRight size={14} className={styles.categoryChevron} />
                     </div>
                   </div>
                 ))}
-                <div className={styles.categoryChartHint}>
-                  {t('finance.drilldownHint')}
-                </div>
               </div>
             </>
           )}
         </div>
       )}
 
-      {/* CATEGORY DRILLDOWN MODAL */}
       {selectedCategory && (
         <CategoryDrilldownModal
           isOpen={!!selectedCategory}
@@ -396,6 +400,6 @@ export default function FinanceCharts({ transactions, formatMoney }: FinanceChar
           fallbackTransactions={transactions}
         />
       )}
-    </div>
+    </SaoPanel>
   );
 }

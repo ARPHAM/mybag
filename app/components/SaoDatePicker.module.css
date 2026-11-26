@@ -12,50 +12,79 @@
 
 .dateInput {
   width: 100%;
-  background: rgba(10, 25, 45, 0.6);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
+  height: 40px;
+  box-sizing: border-box;
+  background: rgba(6, 18, 35, 0.65);
+  border: 1px solid rgba(var(--sao-primary-rgb), 0.28);
   color: #fff;
-  padding: 10px 15px;
-  padding-right: 40px;
-  font-family: inherit;
-  font-size: 0.95rem;
+  padding: 0 34px 0 12px;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.88rem;
+  line-height: 38px;
   outline: none;
-  transition: all 0.3s;
+  transition: all 0.2s;
   cursor: pointer;
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  border-radius: 0;
+  clip-path: none;
+}
+
+.dateInput.clearable {
+  padding-right: 48px;
 }
 
 .dateInput:hover, .dateInput:focus {
-  border-color: rgba(var(--sao-primary-rgb), 0.8);
-  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.2);
-  background: rgba(15, 35, 60, 0.8);
+  border-color: var(--sao-primary-hex);
+  box-shadow: 0 0 14px rgba(var(--sao-primary-rgb), 0.35);
+  background: rgba(8, 24, 46, 0.85);
+}
+
+.clearBtn {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #a0c4ff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  line-height: 1;
+  transition: color 0.15s ease;
+  z-index: 2;
+}
+
+.clearBtn:hover {
+  color: #ff4444;
 }
 
 .calendarIcon {
   position: absolute;
-  right: 12px;
+  right: 10px;
   color: var(--sao-primary-hex);
   pointer-events: none;
 }
 
 .calendarPopover {
-  position: absolute;
-  top: calc(100% + 5px);
-  left: 0;
   width: 280px;
-  background: rgba(10, 25, 45, 0.95);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.5);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(var(--sao-primary-rgb), 0.3);
+  background: #061426 !important;
+  background-color: #061426 !important;
+  border: 1px solid var(--sao-primary-hex);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.98), 0 0 20px rgba(var(--sao-primary-rgb), 0.35);
   padding: 15px;
-  z-index: 100;
-  clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
-  animation: slideDown 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(10px);
+  z-index: 999999;
+  border-radius: 0;
+  clip-path: none;
+  animation: popoverFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  box-sizing: border-box;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes popoverFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .calendarHeader {
@@ -119,7 +148,8 @@
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid transparent;
-  clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+  border-radius: 0;
+  clip-path: none;
 }
 
 .dayCell:hover:not(.empty) {

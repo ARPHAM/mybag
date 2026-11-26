@@ -23,9 +23,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = resolvedParams;
     const body = await req.json();
 
+    const updateData = { ...body };
+    if (typeof body.checked === 'boolean') {
+      updateData.checkedAt = body.checked ? new Date() : null;
+    }
+
     const item = await ShoppingItem.findOneAndUpdate(
       { _id: id, user_id: decoded.userId },
-      { $set: body },
+      { $set: updateData },
       { new: true }
     );
 

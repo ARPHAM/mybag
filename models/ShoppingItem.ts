@@ -7,6 +7,7 @@ export interface IShoppingItem extends mongoose.Document {
   unit: string;
   category: 'food' | 'household' | 'other';
   checked: boolean;
+  checkedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +24,7 @@ const ShoppingItemSchema = new mongoose.Schema<IShoppingItem>({
     default: 'food' 
   },
   checked: { type: Boolean, required: true, default: false },
+  checkedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 export default mongoose.models.ShoppingItem || mongoose.model<IShoppingItem>('ShoppingItem', ShoppingItemSchema);

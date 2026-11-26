@@ -45,19 +45,19 @@ export async function GET(req: Request) {
     const hoursPassed = (now.getTime() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60);
 
     if (hoursPassed > 0) {
-      // HP tụt 50 mỗi giờ
+      // HP tụt 50 mỗi giờ (làm tròn số nguyên không để số lẻ thập phân)
       const hpLoss = hoursPassed * 50;
-      user.current_hp = Math.max(0, user.current_hp - hpLoss);
+      user.current_hp = Math.round(Math.max(0, user.current_hp - hpLoss));
 
       // MP Drain or Regen
       if (overdueCount > 0) {
         // Drain 20 MP / hour for each overdue task
         const mpLoss = hoursPassed * 20 * overdueCount;
-        user.current_mp = Math.max(0, user.current_mp - mpLoss);
+        user.current_mp = Math.round(Math.max(0, user.current_mp - mpLoss));
       } else {
         // Regen 30 MP / hour if no overdue tasks
         const mpRegen = hoursPassed * 30;
-        user.current_mp = Math.min(user.max_mp, user.current_mp + mpRegen);
+        user.current_mp = Math.round(Math.min(user.max_mp, user.current_mp + mpRegen));
       }
     }
 

@@ -1,0 +1,22 @@
+/* NetWorthCard.module.css - Thẻ Tổng quan tài sản chuẩn SAO HUD */
+
+.container {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Hàng Thẻ Tổng thu / Tổng chi */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .summaryRow {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}

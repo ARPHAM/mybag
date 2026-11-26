@@ -1,89 +1,160 @@
+/* =========================================================
+   SAO SELECT DROPDOWN (LAYER 5 REUSABLE ATOM)
+   ========================================================= */
+
 .selectContainer {
   position: relative;
   width: 100%;
+  min-width: 0;
   font-family: inherit;
 }
 
 .selectTrigger {
   width: 100%;
-  background: rgba(10, 25, 45, 0.6);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.3);
-  color: #fff;
-  padding: 10px 15px;
-  border-radius: 8px;
-  font-size: 1rem;
+  min-width: 0;
+  height: 40px;
+  box-sizing: border-box;
+  background: rgba(6, 18, 35, 0.85);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  color: #a0c4ff;
+  padding: 0 12px;
+  border-radius: 0;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.92rem;
+  letter-spacing: 0.2px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s ease;
+  user-select: none;
 }
 
-.selectTrigger:hover, .selectTrigger.isOpen {
-  border-color: var(--sao-primary-hex);
-  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.2);
-  background: rgba(15, 35, 60, 0.8);
+.selectTrigger:hover,
+.selectTrigger.isOpen {
+  border-color: var(--sao-primary-hex, #00f0ff);
+  background: rgba(8, 24, 48, 0.95);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
+  color: #fff;
+}
+
+.hasLeftIcon {
+  padding-left: 10px;
+  gap: 8px;
+}
+
+.leftIcon {
+  display: flex;
+  align-items: center;
+  color: var(--sao-primary-hex, #00f0ff);
+  flex-shrink: 0;
+}
+
+.labelText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.customInput {
+  background: transparent;
+  border: none;
+  color: inherit;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+  font-size: inherit;
+  font-family: inherit;
 }
 
 .arrow {
-  color: var(--sao-primary-hex);
-  transition: transform 0.3s;
+  color: var(--sao-primary-hex, #00f0ff);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  margin-left: 6px;
 }
 
 .arrow.isOpen {
   transform: rotate(180deg);
 }
 
+/* Dropdown Menu */
 .dropdownMenu {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 4px);
   left: 0;
-  width: 100%;
-  max-height: 220px;
-  background: rgba(10, 25, 45, 0.95);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.5);
-  border-radius: 8px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
-  z-index: 100;
+  right: 0;
+  max-height: 240px;
+  background: #061426 !important;
+  background-color: #061426 !important;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.6) !important;
+  border-radius: 0;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.98),
+    0 0 20px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3) !important;
+  z-index: 999999 !important;
   overflow-y: auto;
-  animation: slideDown 0.2s ease-out;
+  animation: selectSlideDown 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes selectSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dropdownMenu::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
+
 .dropdownMenu::-webkit-scrollbar-track {
-  background: rgba(10, 25, 45, 0.5);
-  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
 }
+
 .dropdownMenu::-webkit-scrollbar-thumb {
-  background: rgba(var(--sao-primary-rgb), 0.5);
-  border-radius: 3px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.45);
+  border-radius: 2px;
 }
+
 .dropdownMenu::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--sao-primary-rgb), 0.8);
+  background: var(--sao-primary-hex, #00f0ff);
 }
 
 .option {
-  padding: 12px 15px;
-  color: #a0c4ff;
+  padding: 10px 14px;
+  color: #c0d8ff;
+  font-size: 0.88rem;
+  background: #061426 !important;
+  background-color: #061426 !important;
   cursor: pointer;
-  transition: all 0.2s;
-  border-bottom: 1px solid rgba(var(--sao-primary-rgb), 0.1);
+  transition: all 0.15s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .option:last-child {
   border-bottom: none;
 }
 
-.option:hover, .option.selected {
-  background: rgba(var(--sao-primary-rgb), 0.2);
-  color: #fff;
-  padding-left: 25px; /* SAO slide-in hover effect */
+.option:hover {
+  background: #0d2847 !important;
+  background-color: #0d2847 !important;
+  color: #fff !important;
+  padding-left: 18px; /* Hiệu ứng trượt lề SAO HUD */
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+.option.selected {
+  background: #0d2847 !important;
+  background-color: #0d2847 !important;
+  color: var(--sao-primary-hex, #00f0ff) !important;
+  font-weight: 700;
 }

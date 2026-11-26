@@ -5,4 +5,7 @@ export interface GroceryItem {
   unit: string;
   category: 'food' | 'household' | 'other';
   checked: boolean;
+  checkedAt?: string | Date | null;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }

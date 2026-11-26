@@ -1,233 +1,174 @@
 /* =========================================================
-   SAO CATEGORY DRILLDOWN MODAL
+   SAO CATEGORY DRILLDOWN MODAL (LAYER 4 / 5 SPECIFIC)
    ========================================================= */
 
 .modalContainer {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   color: #e2e8f0;
 }
 
-/* Header Info */
-.headerInfo {
+/* =========================================================
+   1. HEADER HUD INFO BANNER (CHÚ THÍCH THỜI GIAN TINH GỌN)
+   ========================================================= */
+.periodBanner {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
-  background: rgba(10, 25, 47, 0.6);
-  border: 1px solid rgba(0, 240, 255, 0.25);
-  border-radius: 8px;
+  justify-content: flex-start;
+  padding: 8px 14px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.04);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.16);
+  border-radius: 0;
 }
 
-.periodBadge {
+.periodTextGroup {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  color: #a0c4ff;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #94a3b8;
 }
 
-.categoryTag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 4px;
-  border: 1px solid currentColor;
+.calendarIcon {
+  color: var(--sao-primary-hex, #00f0ff);
+  flex-shrink: 0;
 }
 
-/* KPI Summary Cards Grid */
+.periodLabel {
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.periodDivider {
+  color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.4);
+}
+
+.dateRangeText {
+  color: var(--sao-primary-hex, #00f0ff);
+  font-family: 'Tauri', sans-serif;
+  letter-spacing: 0.3px;
+}
+
+/* =========================================================
+   2. 4 THẺ KPI SUMMARY CARDS GRID
+   ========================================================= */
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
 
-@media (max-width: 640px) {
-  .kpiGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.kpiCard {
-  background: rgba(5, 15, 25, 0.75);
-  border: 1px solid rgba(0, 240, 255, 0.2);
-  border-radius: 6px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.kpiLabel {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.kpiValue {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Top Expenses Highlight Box */
+/* =========================================================
+   3. KHỐI TOP EXPENSES HIGHLIGHT
+   ========================================================= */
 .topBox {
-  background: rgba(10, 25, 47, 0.5);
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  border-radius: 8px;
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.04) 0%,
+    rgba(6, 16, 32, 0.45) 100%
+  );
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22);
+  clip-path: polygon(
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
+  );
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.topBoxBevelTL {
+  position: absolute;
+  top: 4px;
+  left: -2px;
+  width: 16px;
+  height: 2px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 5px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+.topBoxBevelBR {
+  position: absolute;
+  bottom: 4px;
+  right: -2px;
+  width: 16px;
+  height: 2px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 5px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+  pointer-events: none;
 }
 
 .topBoxHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #00f0ff;
-  border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+  border-bottom: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
   padding-bottom: 6px;
+  margin-bottom: 2px;
+}
+
+.topBoxTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--sao-primary-hex, #00f0ff);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.topBoxIcon {
+  color: var(--sao-primary-hex, #00f0ff);
+  filter: drop-shadow(0 0 4px var(--sao-primary-hex, #00f0ff));
+}
+
+.topBoxCount {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-family: 'Tauri', sans-serif;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .topList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-.topItem {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 4px;
-}
-
-.topItemMain {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.85rem;
-  gap: 8px;
-}
-
-.topRank {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(0, 240, 255, 0.2);
-  color: #00f0ff;
-  font-size: 0.7rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.topRank1 {
-  background: rgba(255, 215, 0, 0.25);
-  color: #ffd700;
-}
-
-.topDesc {
-  flex: 1;
-  color: #f1f5f9;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.topDate {
-  font-size: 0.72rem;
-  color: #94a3b8;
-  margin-left: 6px;
-}
-
-.topAmount {
-  font-weight: 700;
-  color: #ff5555;
-  white-space: nowrap;
-}
-
-.topPercentBar {
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.topPercentFill {
-  height: 100%;
-  background: linear-gradient(90deg, #00f0ff, #ff5555);
-  border-radius: 2px;
-}
-
-/* Filter Controls Row */
+/* =========================================================
+   4. THANH TÌM KIẾM & BỘ LỌC
+   ========================================================= */
 .filterRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr;
   gap: 8px;
+  align-items: center;
 }
 
-.searchInput {
-  flex: 1;
-  min-width: 160px;
-  background: rgba(5, 15, 25, 0.8);
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: #fff;
-  font-size: 0.82rem;
-  outline: none;
-  transition: all 0.2s;
-}
-
-.searchInput:focus {
-  border-color: #00f0ff;
-  box-shadow: 0 0 8px rgba(0, 240, 255, 0.35);
-}
-
-.selectControl {
-  background: rgba(5, 15, 25, 0.8);
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: #a0c4ff;
-  font-size: 0.82rem;
-  outline: none;
-  cursor: pointer;
-}
-
-.selectControl:focus {
-  border-color: #00f0ff;
-}
-
-/* Detailed Transactions List */
+/* =========================================================
+   5. DANH SÁCH GIAO DỊCH CHI TIẾT
+   ========================================================= */
 .listContainer {
   display: flex;
   flex-direction: column;
   gap: 6px;
   max-height: 280px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
 }
 
@@ -236,79 +177,21 @@
 }
 
 .listContainer::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .listContainer::-webkit-scrollbar-thumb {
-  background: rgba(0, 240, 255, 0.3);
-  border-radius: 2px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  border-radius: 0;
 }
 
-.txRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  background: rgba(5, 15, 25, 0.55);
-  border: 1px solid rgba(0, 240, 255, 0.12);
-  border-radius: 6px;
-  transition: all 0.15s ease;
+.listContainer::-webkit-scrollbar-thumb:hover {
+  background: var(--sao-primary-hex, #00f0ff);
 }
 
-.txRow:hover {
-  background: rgba(0, 240, 255, 0.08);
-  border-color: rgba(0, 240, 255, 0.3);
-}
-
-.txLeft {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.txDesc {
-  font-size: 0.85rem;
-  color: #f8fafc;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.txMeta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.72rem;
-  color: #94a3b8;
-}
-
-.walletBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(0, 240, 255, 0.12);
-  color: #00f0ff;
-  font-size: 0.7rem;
-  border: 1px solid rgba(0, 240, 255, 0.25);
-}
-
-.txRight {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: #ff5555;
-  white-space: nowrap;
-}
-
-/* Loading & Empty States */
+/* =========================================================
+   6. LOADING & EMPTY STATES
+   ========================================================= */
 .stateBox {
   display: flex;
   flex-direction: column;
@@ -321,14 +204,33 @@
   text-align: center;
 }
 
-/* Footer info */
-.modalFooter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.78rem;
-  color: #94a3b8;
-  border-top: 1px solid rgba(0, 240, 255, 0.15);
-  padding-top: 10px;
-  margin-top: 4px;
+/* =========================================================
+   7. RESPONSIVE
+   ========================================================= */
+@media (max-width: 640px) {
+  .periodBanner {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .periodTextGroup {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .dateRangeText {
+    white-space: nowrap;
+    font-size: 0.75rem;
+  }
+
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .filterRow {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
 }

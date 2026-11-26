@@ -1,0 +1,430 @@
+/* SaoPanel.module.css - Khung Panel công nghệ chuẩn SAO HUD với lưới Cyber và ngàm cơ khí đa tầng */
+
+.panel {
+  position: relative;
+  grid-column: 1 / -1;
+  background: linear-gradient(
+    135deg,
+    rgba(8, 22, 42, 0.88) 0%,
+    rgba(5, 14, 28, 0.94) 50%,
+    rgba(9, 24, 46, 0.86) 100%
+  );
+  /* Hoa văn nền: Lưới ma trận HUD Hologram (28px) kết hợp quầng sáng quang học góc trên */
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.1) 0%, transparent 45%),
+    linear-gradient(rgba(var(--sao-primary-rgb, 0, 240, 255), 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.035) 1px, transparent 1px);
+  background-size: 100% 100%, 28px 28px, 28px 28px;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.45),
+              inset 0 0 35px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.06);
+  padding: 24px;
+  clip-path: polygon(
+    22px 0,
+    100% 0,
+    100% calc(100% - 22px),
+    calc(100% - 22px) 100%,
+    0 100%,
+    0 22px
+  );
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.panel.noPadding {
+  padding: 0;
+}
+
+/* ========================================================
+   CỤM NGÀM CƠ KHÍ GÓC TRÊN - TRÁI (TOP-LEFT CHASSIS)
+   ======================================================== */
+.cornerBracketTopLeft {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 90px;
+  height: 90px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Đường viền neon liền mạch theo góc vát 45° 22px */
+.topLeftBevelLine {
+  position: absolute;
+  top: 9px;
+  left: -5px;
+  width: 33px;
+  height: 2.5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+}
+
+/* Cụm 3 vạch telemetry /// */
+.bracketStripes {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 14px;
+  height: 10px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--sao-primary-hex, #00f0ff) 0px,
+    var(--sao-primary-hex, #00f0ff) 1.5px,
+    transparent 1.5px,
+    transparent 4px
+  );
+  opacity: 0.9;
+}
+
+/* Tinh thể thoi neon ◆ */
+.bracketDiamond {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  width: 7px;
+  height: 7px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* Đường ray laser ngang đỉnh kéo dài sang phải kèm chốt chặn */
+.bracketRailH {
+  position: absolute;
+  top: 0;
+  left: 24px;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.bracketRailH::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 3px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
+}
+
+/* Đường ray laser dọc kéo xuống kèm chốt chặn */
+.bracketRailV {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  width: 2px;
+  height: 45px;
+  background: linear-gradient(180deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.bracketRailV::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 5px;
+  height: 3px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
+}
+
+/* ========================================================
+   CỤM CÂN BẰNG GÓC TRÊN - PHẢI (TOP-RIGHT ACCENT)
+   ======================================================== */
+.cornerAccentTopRight {
+  position: absolute;
+  top: 0;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.topRightDiamond {
+  width: 5px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+}
+
+.topRightLine {
+  width: 32px;
+  height: 2px;
+  background: linear-gradient(270deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+/* ========================================================
+   CỤM NGÀM CƠ KHÍ GÓC DƯỚI - PHẢI (BOTTOM-RIGHT CHASSIS)
+   ======================================================== */
+.cornerBracketBottomRight {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 90px;
+  height: 90px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Đường viền neon liền mạch theo góc vát đáy phải 22px */
+.bottomRightBevelLine {
+  position: absolute;
+  bottom: 9px;
+  right: -5px;
+  width: 33px;
+  height: 2.5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+}
+
+.bottomRightStripes {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 14px;
+  height: 10px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--sao-primary-hex, #00f0ff) 0px,
+    var(--sao-primary-hex, #00f0ff) 1.5px,
+    transparent 1.5px,
+    transparent 4px
+  );
+  opacity: 0.9;
+}
+
+.bottomRightDiamond {
+  position: absolute;
+  bottom: 22px;
+  right: 22px;
+  width: 7px;
+  height: 7px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+.bottomRightRailH {
+  position: absolute;
+  bottom: 0;
+  right: 24px;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(270deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.bottomRightRailH::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
+}
+
+.bottomRightRailV {
+  position: absolute;
+  bottom: 24px;
+  right: 0;
+  width: 2px;
+  height: 45px;
+  background: linear-gradient(0deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.bottomRightRailV::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  height: 3px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
+}
+
+/* ========================================================
+   CỤM CÂN BẰNG GÓC DƯỚI - TRÁI (BOTTOM-LEFT ACCENT)
+   ======================================================== */
+.cornerAccentBottomLeft {
+  position: absolute;
+  bottom: 0;
+  left: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.bottomLeftDiamond {
+  width: 5px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+}
+
+.bottomLeftLine {
+  width: 32px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+/* ========================================================
+   TIA LASER ĐÁY PANEL (BOTTOM LASER BEAM)
+   ======================================================== */
+.bottomLaserBeam {
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--sao-primary-hex, #00f0ff), transparent);
+  box-shadow: 0 0 10px var(--sao-primary-hex, #00f0ff);
+  pointer-events: none;
+}
+
+/* ========================================================
+   HEADER & PHÂN ĐOẠN NỘI DUNG PANEL
+   ======================================================== */
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22);
+  position: relative;
+  z-index: 2;
+}
+
+/* Vạch laser neon chỉ báo quang học ở mép ranh giới header */
+.panelHeader::after {
+  content: '';
+  position: absolute;
+  bottom: -1.5px;
+  left: 0;
+  width: 65px;
+  height: 2px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+}
+
+.titleContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 1px;
+  font-family: 'Tauri', sans-serif;
+  text-transform: uppercase;
+}
+
+.titleIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sao-primary-hex, #00f0ff);
+  filter: drop-shadow(0 0 6px var(--sao-primary-hex, #00f0ff));
+}
+
+.titleText {
+  white-space: nowrap;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panelBody {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ========================================================
+   CÁC BIẾN THỂ MÀU SẮC
+   ======================================================== */
+.gold {
+  --sao-primary-hex: #f59e0b;
+  --sao-primary-rgb: 245, 158, 11;
+}
+
+.danger {
+  --sao-primary-hex: #ff4444;
+  --sao-primary-rgb: 255, 68, 68;
+}
+
+.purple {
+  --sao-primary-hex: #a855f7;
+  --sao-primary-rgb: 168, 85, 247;
+}
+
+/* ========================================================
+   RESPONSIVE
+   ======================================================== */
+@media (max-width: 768px) {
+  .panel {
+    padding: 16px 12px 14px;
+    clip-path: polygon(
+      14px 0,
+      100% 0,
+      100% calc(100% - 14px),
+      calc(100% - 14px) 100%,
+      0 100%,
+      0 14px
+    );
+  }
+
+  .panelHeader {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+  }
+
+  .titleContainer {
+    font-size: 0.95rem;
+    gap: 6px;
+  }
+
+  .headerActions {
+    width: auto;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .cornerBracketTopLeft,
+  .cornerBracketBottomRight {
+    width: 60px;
+    height: 60px;
+  }
+}

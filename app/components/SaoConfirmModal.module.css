@@ -1,0 +1,76 @@
+/* ========================================================
+   SaoConfirmModal.module.css - Modal xác nhận cảnh báo SAO HUD
+   ======================================================== */
+
+.confirmBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px 8px;
+  text-align: center;
+}
+
+.iconWrapper {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.25s ease;
+}
+
+.dangerIconWrapper {
+  background: rgba(255, 68, 68, 0.12);
+  border: 1.5px solid rgba(255, 68, 68, 0.5);
+  color: #ff4444;
+  box-shadow: 0 0 20px rgba(255, 68, 68, 0.3), inset 0 0 15px rgba(255, 68, 68, 0.1);
+}
+
+.warningIconWrapper {
+  background: rgba(255, 170, 0, 0.12);
+  border: 1.5px solid rgba(255, 170, 0, 0.5);
+  color: #ffaa00;
+  box-shadow: 0 0 20px rgba(255, 170, 0, 0.3), inset 0 0 15px rgba(255, 170, 0, 0.1);
+}
+
+.confirmMessage {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.5;
+  margin: 0;
+  font-family: var(--font-tauri, sans-serif);
+}
+
+.confirmSubMessage {
+  font-size: 0.85rem;
+  color: #8da4c4;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+}
+
+@media (max-width: 640px) {
+  .modalFooter {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modalFooter button {
+    width: 100%;
+    justify-content: center;
+  }
+}

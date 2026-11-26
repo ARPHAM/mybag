@@ -1,0 +1,395 @@
+/* SaoHeroCard.module.css - Thẻ Hero Metric chuẩn SAO HUD với ngàm cơ khí đa tầng */
+
+.heroCard {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.14) 0%,
+    rgba(7, 20, 38, 0.82) 45%,
+    rgba(10, 26, 48, 0.88) 100%
+  );
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.45);
+  box-shadow: 0 0 25px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15),
+              inset 0 0 35px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+  padding: 30px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  clip-path: polygon(
+    22px 0,
+    100% 0,
+    100% calc(100% - 22px),
+    calc(100% - 22px) 100%,
+    0 100%,
+    0 22px
+  );
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.heroCard.clickable {
+  cursor: pointer;
+}
+
+.heroCard.clickable:hover {
+  border-color: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 30px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25),
+              inset 0 0 45px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.12);
+}
+
+/* ========================================================
+   CỤM NGÀM CÔNG NGHỆ ĐA TẦNG GÓC TRÊN - TRÁI (TOP-LEFT CHASSIS)
+   ======================================================== */
+.cornerBracketTopLeft {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 90px;
+  height: 90px;
+  pointer-events: none;
+}
+
+/* Miếng vát cơ khí ôm trọn góc 45° */
+.bracketBevel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  border-top: 3px solid var(--sao-primary-hex, #00f0ff);
+  border-left: 3px solid var(--sao-primary-hex, #00f0ff);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  filter: drop-shadow(0 0 4px var(--sao-primary-hex, #00f0ff));
+}
+
+/* Cụm 3 vạch telemetry /// theo góc vát */
+.bracketStripes {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 14px;
+  height: 10px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--sao-primary-hex, #00f0ff) 0px,
+    var(--sao-primary-hex, #00f0ff) 1.5px,
+    transparent 1.5px,
+    transparent 4px
+  );
+  opacity: 0.9;
+}
+
+/* Tinh thể thoi neon ◆ nằm tại ngã rẽ góc vát */
+.bracketDiamond {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  width: 7px;
+  height: 7px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* Đường ray laser ngang kéo dài kèm chốt chặn ở đầu */
+.bracketRailH {
+  position: absolute;
+  top: 0;
+  left: 28px;
+  width: 55px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.bracketRailH::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 3px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
+}
+
+/* Đường ray laser dọc kéo xuống kèm chốt chặn ở đáy */
+.bracketRailV {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  width: 2px;
+  height: 42px;
+  background: linear-gradient(180deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.bracketRailV::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 5px;
+  height: 3px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
+}
+
+/* ========================================================
+   CỤM ĐỐI XỨNG GÓC TRÊN - PHẢI (TOP-RIGHT ACCENT)
+   ======================================================== */
+.cornerAccentTopRight {
+  position: absolute;
+  top: 0;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.topRightDiamond {
+  width: 5px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+}
+
+.topRightLine {
+  width: 32px;
+  height: 2px;
+  background: linear-gradient(270deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+/* ========================================================
+   CỤM NGÀM CÔNG NGHỆ ĐA TẦNG GÓC DƯỚI - PHẢI (BOTTOM-RIGHT CHASSIS)
+   ======================================================== */
+.cornerBracketBottomRight {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 90px;
+  height: 90px;
+  pointer-events: none;
+}
+
+/* Đường viền neon liền mạch theo góc vát 45° 22px */
+.bottomRightBevelLine {
+  position: absolute;
+  bottom: 9px;
+  right: -5px;
+  width: 33px;
+  height: 2.5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 6px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+}
+
+/* Cụm 3 vạch telemetry /// theo góc vát */
+.bottomRightStripes {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 14px;
+  height: 10px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--sao-primary-hex, #00f0ff) 0px,
+    var(--sao-primary-hex, #00f0ff) 1.5px,
+    transparent 1.5px,
+    transparent 4px
+  );
+  opacity: 0.9;
+}
+
+/* Tinh thể thoi neon ◆ chốt tại góc dưới phải */
+.bottomRightDiamond {
+  position: absolute;
+  bottom: 22px;
+  right: 22px;
+  width: 7px;
+  height: 7px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* Đường ray laser ngang đáy kéo sang trái kèm chốt chặn */
+.bottomRightRailH {
+  position: absolute;
+  bottom: 0;
+  right: 22px;
+  width: 50px;
+  height: 2px;
+  background: linear-gradient(270deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.bottomRightRailH::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  height: 5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
+}
+
+/* Đường ray laser dọc kéo lên trên kèm chốt chặn */
+.bottomRightRailV {
+  position: absolute;
+  bottom: 22px;
+  right: 0;
+  width: 2px;
+  height: 38px;
+  background: linear-gradient(0deg, var(--sao-primary-hex, #00f0ff), transparent);
+}
+
+.bottomRightRailV::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  height: 3px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 4px var(--sao-primary-hex, #00f0ff);
+}
+
+/* ========================================================
+   TIA LASER ĐÁY CARD (BOTTOM LASER BEAM)
+   ======================================================== */
+.bottomLaserBeam {
+  position: absolute;
+  bottom: 0;
+  left: 18%;
+  right: 18%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--sao-primary-hex, #00f0ff), transparent);
+  box-shadow: 0 0 10px var(--sao-primary-hex, #00f0ff);
+  pointer-events: none;
+}
+
+/* ========================================================
+   NỘI DUNG CARD: TIÊU ĐỀ & SỐ LIỆU
+   ======================================================== */
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #a0c4ff;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+}
+
+.iconBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sao-primary-hex, #00f0ff);
+  filter: drop-shadow(0 0 6px var(--sao-primary-hex, #00f0ff));
+}
+
+.titleText {
+  white-space: nowrap;
+}
+
+.amountRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.amountNumber {
+  font-size: 3.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 25px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.7);
+  font-family: 'Tauri', sans-serif;
+  line-height: 1.1;
+}
+
+.currency {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--sao-primary-hex, #00f0ff);
+  text-shadow: 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
+  font-family: 'Tauri', sans-serif;
+}
+
+.subLabel {
+  font-size: 0.85rem;
+  color: #8ab4f8;
+}
+
+.extraContent {
+  margin-top: 4px;
+}
+
+/* ========================================================
+   CÁC BIẾN THỂ MÀU SẮC (VARIANTS)
+   ======================================================== */
+.gold {
+  --sao-primary-hex: #f59e0b;
+  --sao-primary-rgb: 245, 158, 11;
+}
+
+.danger {
+  --sao-primary-hex: #ff4444;
+  --sao-primary-rgb: 255, 68, 68;
+}
+
+.purple {
+  --sao-primary-hex: #a855f7;
+  --sao-primary-rgb: 168, 85, 247;
+}
+
+/* ========================================================
+   RESPONSIVE
+   ======================================================== */
+@media (max-width: 640px) {
+  .heroCard {
+    padding: 24px 16px 20px;
+    clip-path: polygon(
+      16px 0,
+      100% 0,
+      100% calc(100% - 16px),
+      calc(100% - 16px) 100%,
+      0 100%,
+      0 16px
+    );
+  }
+
+  .titleRow {
+    font-size: 0.9rem;
+    letter-spacing: 1.5px;
+  }
+
+  .amountNumber {
+    font-size: 2.4rem;
+  }
+
+  .currency {
+    font-size: 1.1rem;
+  }
+
+  .cornerBracketTopLeft {
+    width: 60px;
+    height: 60px;
+  }
+
+  .bracketRailH {
+    width: 30px;
+  }
+
+  .bracketRailV {
+    height: 25px;
+  }
+}

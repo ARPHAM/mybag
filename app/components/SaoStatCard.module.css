@@ -1,0 +1,194 @@
+/* =========================================================
+   SAO STAT CARD / KPI TILE (LAYER 5 COMPACT ATOM)
+   ========================================================= */
+
+.statCard {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.05) 0%,
+    rgba(6, 18, 35, 0.5) 100%
+  );
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    100% 100%,
+    0 100%,
+    0 8px
+  );
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.statCard:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(var(--sao-primary-rgb, 0, 240, 255), 0.09) 0%,
+    rgba(8, 24, 48, 0.7) 100%
+  );
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.42);
+  box-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15);
+}
+
+.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.clickable:active {
+  transform: scale(0.97);
+  transition: transform 0.08s ease;
+}
+
+/* Đường viền neon liền mạch góc vát trên - trái (8px chamfer) */
+.bevelTL {
+  position: absolute;
+  top: 3px;
+  left: -2px;
+  width: 13px;
+  height: 1.5px;
+  background: var(--sao-primary-hex, #00f0ff);
+  box-shadow: 0 0 5px var(--sao-primary-hex, #00f0ff);
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+/* Label Row */
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sao-primary-hex, #00f0ff);
+  filter: drop-shadow(0 0 3px var(--sao-primary-hex, #00f0ff));
+  flex-shrink: 0;
+}
+
+.labelText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Value Row */
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.valueText {
+  font-family: 'Tauri', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.3px;
+}
+
+.unitText {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   VARIANTS
+   ========================================================= */
+.red .bevelTL {
+  background: #ff4444;
+  box-shadow: 0 0 5px #ff4444;
+}
+
+.red .iconWrapper {
+  color: #ff4444;
+  filter: drop-shadow(0 0 4px rgba(255, 68, 68, 0.5));
+}
+
+.red .valueText {
+  color: #ff4444;
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.35);
+}
+
+.gold .bevelTL {
+  background: #ffd700;
+  box-shadow: 0 0 5px #ffd700;
+}
+
+.gold .iconWrapper {
+  color: #ffd700;
+  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.5));
+}
+
+.gold .valueText {
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.35);
+}
+
+.cyan .bevelTL {
+  background: #00f0ff;
+  box-shadow: 0 0 5px #00f0ff;
+}
+
+.cyan .iconWrapper {
+  color: #00f0ff;
+}
+
+.cyan .valueText {
+  color: #fff;
+}
+
+.green .bevelTL {
+  background: #00ffaa;
+  box-shadow: 0 0 5px #00ffaa;
+}
+
+.green .iconWrapper {
+  color: #00ffaa;
+}
+
+.green .valueText {
+  color: #00ffaa;
+  text-shadow: 0 0 8px rgba(0, 255, 170, 0.35);
+}
+
+/* =========================================================
+   RESPONSIVE (MOBILE)
+   ========================================================= */
+@media (max-width: 640px) {
+  .statCard {
+    padding: 8px 10px;
+    gap: 3px;
+  }
+
+  .labelRow {
+    font-size: 0.68rem;
+    gap: 4px;
+  }
+
+  .valueText {
+    font-size: 0.95rem;
+  }
+
+  .unitText {
+    font-size: 0.68rem;
+  }
+}

@@ -1,8 +1,8 @@
 .menuContainer {
-  padding: 20px;
   height: 100%;
   display: flex;
   flex-direction: column;
+  gap: 20px;
   overflow: hidden;
   position: relative;
 }
@@ -12,6 +12,13 @@
   overflow-y: auto;
   padding-right: 10px;
   padding-bottom: 80px;
+}
+
+@media (max-width: 768px) {
+  .scrollArea {
+    padding-right: 4px;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .menuFab {
@@ -185,6 +192,26 @@
   color: #000;
 }
 
+/* History Toolbar & Filter */
+.historyToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.historySearchWrapper {
+  flex: 1;
+  min-width: 200px;
+}
+
+.historyFilterWrapper {
+  width: 200px;
+  min-width: 170px;
+  flex-shrink: 0;
+}
+
 /* History Timeline */
 .historyTimeline {
   display: flex;
@@ -209,12 +236,52 @@
   padding-left: 50px;
 }
 
+.timelineDateHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
 .timelineDate {
   font-size: 1.1rem;
   font-weight: bold;
   color: var(--sao-primary-hex);
-  margin-bottom: 15px;
   position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dayCostBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+  padding: 3px 10px;
+  border-radius: 4px;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dayCostLabel {
+  font-size: 0.74rem;
+  color: #a0c4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.dayCostValue {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #00ffaa;
+  text-shadow: 0 0 8px rgba(0, 255, 170, 0.4);
+  font-family: var(--font-tauri, monospace);
 }
 
 .timelineDate::before {
@@ -290,10 +357,25 @@
   font-weight: bold;
 }
 
-.tagBreakfast { background: rgba(255, 200, 0, 0.2); color: #ffc800; }
-.tagLunch { background: rgba(var(--sao-primary-rgb), 0.2); color: var(--sao-primary-hex); }
-.tagDinner { background: rgba(var(--sao-primary-rgb), 0.2); color: #0096ff; }
-.tagSnack { background: rgba(255, 100, 255, 0.2); color: #ff64ff; }
+.tagBreakfast {
+  background: rgba(255, 200, 0, 0.2);
+  color: #ffc800;
+}
+
+.tagLunch {
+  background: rgba(var(--sao-primary-rgb), 0.2);
+  color: var(--sao-primary-hex);
+}
+
+.tagDinner {
+  background: rgba(var(--sao-primary-rgb), 0.2);
+  color: #0096ff;
+}
+
+.tagSnack {
+  background: rgba(255, 100, 255, 0.2);
+  color: #ff64ff;
+}
 
 .mealStats {
   text-align: right;
@@ -370,7 +452,7 @@
   gap: 15px;
 }
 
-.formRow > * {
+.formRow>* {
   flex: 1;
 }
 
@@ -450,7 +532,28 @@
 ========================================= */
 @media (max-width: 768px) {
   .menuContainer {
-    padding: 8px;
+    gap: 12px;
+  }
+
+  .historyToolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .historyFilterWrapper {
+    width: 100%;
+  }
+
+  .timelineDay {
+    padding-left: 36px;
+  }
+
+  .timelineDate::before {
+    left: -26px;
+    width: 10px;
+    height: 10px;
   }
 
   .scrollArea {
@@ -473,7 +576,7 @@
     padding: 10px 15px;
     clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
   }
-  
+
   .titleIcon {
     width: 20px !important;
     height: 20px !important;
@@ -516,38 +619,35 @@
 /* =========================================================
    INVENTORY TAB & SPICES STYLES IN MENU
    ========================================================= */
-.invFilterBar {
+.invToolbar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.filterPill {
-  background: rgba(10, 25, 45, 0.6);
-  border: 1px solid rgba(var(--sao-primary-rgb), 0.25);
-  color: #a0c4ff;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
   align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  width: 100%;
 }
 
-.filterPill:hover {
-  background: rgba(var(--sao-primary-rgb), 0.15);
-  color: #fff;
-  border-color: var(--sao-primary-hex);
+.invSearchWrapper {
+  flex: 1;
+  min-width: 200px;
 }
 
-.filterPillActive {
-  background: rgba(var(--sao-primary-rgb), 0.25);
-  color: #fff;
-  border-color: var(--sao-primary-hex);
-  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb), 0.3);
+.invFilterWrapper {
+  width: 240px;
+  min-width: 180px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .invToolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .invFilterWrapper {
+    width: 100%;
+  }
 }
 
 .inventoryGrid {
@@ -774,7 +874,8 @@
   display: block;
 }
 
-.scanFab, .manualAddFab {
+.scanFab,
+.manualAddFab {
   background: rgba(10, 25, 45, 0.9);
   border: 1px solid var(--sao-primary-hex);
   color: var(--sao-primary-hex);
@@ -784,7 +885,8 @@
   cursor: pointer;
 }
 
-.scanFab:hover, .manualAddFab:hover {
+.scanFab:hover,
+.manualAddFab:hover {
   background: var(--sao-primary-hex);
   color: #000;
   box-shadow: 0 0 15px var(--sao-primary-hex);
@@ -792,10 +894,9 @@
 
 @media (max-width: 768px) {
   .inventoryFabGroup {
-    bottom: 16px;
-    right: 16px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    left: 16px;
+    right: auto;
     gap: 10px;
   }
 }
-
-

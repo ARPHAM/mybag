@@ -45,7 +45,7 @@ const EXP_REWARDS: Record<string, number> = {
   D: 50,
 };
 
-const getExpForNextLevel = (level: number) => level * 500;
+import { getExpForNextLevel, MAX_LEVEL } from '@/lib/gameLevel';
 
 /**
  * Loại bỏ triệt để các từ ngữ chỉ thời gian tương đối khỏi tên món ăn, tiêu đề, mô tả
@@ -2652,11 +2652,14 @@ function normalizeIngredientMatchName(raw: string): string {
     if (user) {
       user.current_exp += rewardExp;
       let requiredExp = getExpForNextLevel(user.level);
-      while (user.current_exp >= requiredExp) {
+      while (user.level < MAX_LEVEL && user.current_exp >= requiredExp) {
         user.current_exp -= requiredExp;
         user.level += 1;
         leveledUp = true;
         requiredExp = getExpForNextLevel(user.level);
+      }
+      if (user.level >= MAX_LEVEL) {
+        user.level = MAX_LEVEL;
       }
 
       const mpReward = Math.floor(Math.random() * 21) + 40;
@@ -4280,13 +4283,16 @@ function normalizeIngredientMatchName(raw: string): string {
 
             let requiredExp = getExpForNextLevel(user.level);
             let leveledUp = false;
-            while (user.current_exp >= requiredExp) {
+            while (user.level < MAX_LEVEL && user.current_exp >= requiredExp) {
               user.current_exp -= requiredExp;
               user.level += 1;
               user.max_hp += 50;
               user.max_mp += 20;
               leveledUp = true;
               requiredExp = getExpForNextLevel(user.level);
+            }
+            if (user.level >= MAX_LEVEL) {
+              user.level = MAX_LEVEL;
             }
 
             if (isNormalBmi) {

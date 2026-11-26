@@ -6,14 +6,16 @@ import {
   DollarSign,
   TrendingUp,
   Receipt,
-  Search,
   ArrowUpDown,
-  Wallet,
   Sparkles,
   Loader2,
   PieChart
 } from 'lucide-react';
 import SaoModal from '../SaoModal';
+import SaoStatCard from '../SaoStatCard';
+import SaoTransactionItem from '../SaoTransactionItem';
+import SaoSearchInput from '../SaoSearchInput';
+import SaoSelect from '../SaoSelect';
 import { getCategoryTransactions } from '@/app/(main)/finance/api';
 import type { Transaction } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
@@ -51,13 +53,11 @@ export default function CategoryDrilldownModal({
   const [selectedWallet, setSelectedWallet] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'amount_desc' | 'date_desc' | 'date_asc'>('amount_desc');
 
-  // Cache to avoid refetching same category/period multiple times
   const cacheRef = useRef<Record<string, Transaction[]>>({});
 
   useEffect(() => {
     if (!isOpen || !categoryKey) return;
 
-    // Reset filters
     setSearchTerm('');
     setSelectedWallet('all');
     setSortBy('amount_desc');
@@ -69,7 +69,6 @@ export default function CategoryDrilldownModal({
       return;
     }
 
-    // 1. Instant fallback from client memory if available
     const localFiltered = fallbackTransactions.filter((tx) => {
       if (tx.type !== 'expense') return false;
       if (startDate && tx.date < startDate) return false;
@@ -84,7 +83,6 @@ export default function CategoryDrilldownModal({
       setTransactions(localFiltered);
     }
 
-    // 2. Fetch fresh granular data on demand from server
     setLoading(true);
     getCategoryTransactions({
       category: categoryKey,
@@ -118,7 +116,6 @@ export default function CategoryDrilldownModal({
       });
   }, [isOpen, categoryKey, startDate, endDate]);
 
-  // Distinct wallets for filter
   const walletOptions = useMemo(() => {
     const set = new Set<string>();
     transactions.forEach((tx) => {
@@ -127,7 +124,17 @@ export default function CategoryDrilldownModal({
     return Array.from(set);
   }, [transactions]);
 
-  // Overall Statistics
+  const walletSelectOptions = useMemo(() => [
+    { value: 'all', label: t('finance.allWallets') },
+    ...walletOptions.map((w) => ({ value: w, label: w }))
+  ], [walletOptions, t]);
+
+  const sortSelectOptions = useMemo(() => [
+    { value: 'amount_desc', label: t('finance.sortAmountDesc') },
+    { value: 'date_desc', label: t('finance.sortDateDesc') },
+    { value: 'date_asc', label: t('finance.sortDateAsc') }
+  ], [t]);
+
   const stats = useMemo(() => {
     const totalAmount = transactions.reduce((sum, tx) => sum + tx.amount, 0);
     const count = transactions.length;
@@ -140,13 +147,10 @@ export default function CategoryDrilldownModal({
     return { totalAmount, count, avgAmount, maxTx };
   }, [transactions]);
 
-  // Top 3 biggest expenses to answer "Why is this category so expensive?"
   const topExpenses = useMemo(() => {
     const sorted = [...transactions].sort((a, b) => b.amount - a.amount);
     return sorted.slice(0, 3);
   }, [transactions]);
-
-  // Filtered & Sorted items
   const displayItems = useMemo(() => {
     return transactions
       .filter((tx) => {
@@ -173,142 +177,114 @@ export default function CategoryDrilldownModal({
     <SaoModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`${t('finance.drilldownTitle')}: ${categoryName}`}
+      title={categoryName}
       icon={<PieChart size={20} color={categoryColor} />}
+      size="lg"
     >
       <div className={styles.modalContainer}>
-        {/* Header Info */}
-        <div className={styles.headerInfo}>
-          <div className={styles.periodBadge}>
-            <Calendar size={14} />
-            <span>
-              {period === '30days' ? t('finance.past30Days') : t('finance.past6Months')} ({startDate} → {endDate})
+        <div className={styles.periodBanner}>
+          <div className={styles.periodTextGroup}>
+            <Calendar size={13} className={styles.calendarIcon} />
+            <span className={styles.periodLabel}>
+              {period === '30days' ? t('finance.past30Days') : t('finance.past6Months')}
             </span>
-          </div>
-          <div
-            className={styles.categoryTag}
-            style={{ color: categoryColor, borderColor: categoryColor }}
-          >
-            <span>{categoryName}</span>
+            <span className={styles.periodDivider}>•</span>
+            <span className={styles.dateRangeText}>{startDate} → {endDate}</span>
           </div>
         </div>
-
-        {/* KPI Cards */}
         <div className={styles.kpiGrid}>
-          <div className={styles.kpiCard}>
-            <div className={styles.kpiLabel}>
-              <DollarSign size={13} color="#00f0ff" /> {t('finance.totalExpense')}
-            </div>
-            <div className={styles.kpiValue} style={{ color: '#ff5555' }}>
-              {formatMoney(stats.totalAmount)} {t('common.vnd')}
-            </div>
-          </div>
-
-          <div className={styles.kpiCard}>
-            <div className={styles.kpiLabel}>
-              <Receipt size={13} color="#00f0ff" /> {t('finance.transactionCount')}
-            </div>
-            <div className={styles.kpiValue}>{stats.count} {t('finance.itemsOf')}</div>
-          </div>
-
-          <div className={styles.kpiCard}>
-            <div className={styles.kpiLabel}>
-              <ArrowUpDown size={13} color="#00f0ff" /> {t('finance.avgPerTx')}
-            </div>
-            <div className={styles.kpiValue}>{formatMoney(stats.avgAmount)} {t('common.vnd')}</div>
-          </div>
-
-          <div className={styles.kpiCard}>
-            <div className={styles.kpiLabel}>
-              <TrendingUp size={13} color="#ffd700" /> {t('finance.largestTx')}
-            </div>
-            <div className={styles.kpiValue} style={{ color: '#ffd700' }}>
-              {stats.maxTx ? `${formatMoney(stats.maxTx.amount)} ${t('common.vnd')}` : `0 ${t('common.vnd')}`}
-            </div>
-          </div>
+          <SaoStatCard
+            label={t('finance.totalExpenseShort')}
+            value={formatMoney(stats.totalAmount)}
+            unit={t('common.vnd')}
+            variant="red"
+            icon={<DollarSign size={12} />}
+          />
+          <SaoStatCard
+            label={t('finance.transactionCountShort')}
+            value={stats.count}
+            unit={t('finance.itemsOf')}
+            variant="cyan"
+            icon={<Receipt size={12} />}
+          />
+          <SaoStatCard
+            label={t('finance.avgPerTxShort')}
+            value={formatMoney(stats.avgAmount)}
+            unit={t('common.vnd')}
+            variant="cyan"
+            icon={<ArrowUpDown size={12} />}
+          />
+          <SaoStatCard
+            label={t('finance.largestTxShort')}
+            value={stats.maxTx ? formatMoney(stats.maxTx.amount) : '0'}
+            unit={t('common.vnd')}
+            variant="gold"
+            icon={<TrendingUp size={12} />}
+          />
         </div>
 
-        {/* Top Expenses Highlights */}
         {topExpenses.length > 0 && stats.totalAmount > 0 && (
           <div className={styles.topBox}>
+            <div className={styles.topBoxBevelTL} />
+            <div className={styles.topBoxBevelBR} />
+
             <div className={styles.topBoxHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Sparkles size={15} color="#00f0ff" />
+              <div className={styles.topBoxTitle}>
+                <Sparkles size={14} className={styles.topBoxIcon} />
                 <span>{t('finance.topExpenseTitle')}</span>
               </div>
-              <span style={{ fontSize: '0.75rem', color: '#a0c4ff' }}>Top {topExpenses.length}</span>
+              <span className={styles.topBoxCount}>Top {topExpenses.length}</span>
             </div>
 
             <div className={styles.topList}>
               {topExpenses.map((item, idx) => {
                 const percent = Math.round((item.amount / stats.totalAmount) * 100);
                 return (
-                  <div key={item.id} className={styles.topItem}>
-                    <div className={styles.topItemMain}>
-                      <span className={`${styles.topRank} ${idx === 0 ? styles.topRank1 : ''}`}>
-                        #{idx + 1}
-                      </span>
-                      <span className={styles.topDesc} title={item.description}>
-                        {item.description}{' '}
-                        <span className={styles.topDate}>({item.date})</span>
-                      </span>
-                      <span className={styles.topAmount}>
-                        {formatMoney(item.amount)} {t('common.vnd')}{' '}
-                        <span style={{ fontSize: '0.72rem', color: '#a0c4ff', fontWeight: 'normal' }}>
-                          ({percent}%)
-                        </span>
-                      </span>
-                    </div>
-                    <div className={styles.topPercentBar}>
-                      <div className={styles.topPercentFill} style={{ width: `${percent}%` }} />
-                    </div>
-                  </div>
+                  <SaoTransactionItem
+                    key={item.id}
+                    title={item.description || t('finance.noDescription')}
+                    date={item.date}
+                    amount={item.amount}
+                    currency={t('common.vnd')}
+                    type="expense"
+                    walletName={item.walletName}
+                    rank={idx + 1}
+                    percentage={percent}
+                    formatMoney={formatMoney}
+                  />
                 );
               })}
             </div>
           </div>
         )}
 
-        {/* Filter & Search Bar */}
         <div className={styles.filterRow}>
-          <input
-            type="text"
-            className={styles.searchInput}
-            placeholder={t('finance.searchTxPlaceholder')}
+          <SaoSearchInput
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={t('finance.searchTxPlaceholder')}
+            onClear={() => setSearchTerm('')}
           />
 
           {walletOptions.length > 1 && (
-            <select
-              className={styles.selectControl}
+            <SaoSelect
               value={selectedWallet}
-              onChange={(e) => setSelectedWallet(e.target.value)}
-            >
-              <option value="all">{t('finance.allWallets')}</option>
-              {walletOptions.map((w) => (
-                <option key={w} value={w}>
-                  {w}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedWallet(val)}
+              options={walletSelectOptions}
+            />
           )}
 
-          <select
-            className={styles.selectControl}
+          <SaoSelect
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-          >
-            <option value="amount_desc">{t('finance.sortAmountDesc')}</option>
-            <option value="date_desc">{t('finance.sortDateDesc')}</option>
-            <option value="date_asc">{t('finance.sortDateAsc')}</option>
-          </select>
+            onChange={(val) => setSortBy(val as any)}
+            options={sortSelectOptions}
+          />
         </div>
 
-        {/* Detailed Transactions List */}
+        {/* Danh sách giao dịch chi tiết */}
         {loading && transactions.length === 0 ? (
           <div className={styles.stateBox}>
-            <Loader2 size={24} className="animate-spin" color="#00f0ff" />
+            <Loader2 size={24} className="animate-spin" color="var(--sao-primary-hex, #00f0ff)" />
             <span>{t('finance.drilldownLoading')}</span>
           </div>
         ) : displayItems.length === 0 ? (
@@ -320,37 +296,19 @@ export default function CategoryDrilldownModal({
         ) : (
           <div className={styles.listContainer}>
             {displayItems.map((tx) => (
-              <div key={tx.id} className={styles.txRow}>
-                <div className={styles.txLeft}>
-                  <div className={styles.txDesc} title={tx.description}>
-                    {tx.description}
-                  </div>
-                  <div className={styles.txMeta}>
-                    <span>{tx.date}</span>
-                    {tx.walletName && (
-                      <span className={styles.walletBadge}>
-                        <Wallet size={11} /> {tx.walletName}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className={styles.txRight}>-{formatMoney(tx.amount)} {t('common.vnd')}</div>
-              </div>
+              <SaoTransactionItem
+                key={tx.id}
+                title={tx.description || t('finance.noDescription')}
+                date={tx.date}
+                amount={tx.amount}
+                currency={t('common.vnd')}
+                type="expense"
+                walletName={tx.walletName}
+                formatMoney={formatMoney}
+              />
             ))}
           </div>
         )}
-
-        {/* Footer */}
-        <div className={styles.modalFooter}>
-          <span>
-            {t('finance.showingTransactions')} <strong>{displayItems.length}</strong> / {transactions.length} {t('finance.itemsOf')}
-          </span>
-          {loading && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#00f0ff' }}>
-              <Loader2 size={12} className="animate-spin" /> {t('common.loading')}
-            </span>
-          )}
-        </div>
       </div>
     </SaoModal>
   );

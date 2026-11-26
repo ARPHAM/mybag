@@ -1,0 +1,334 @@
+/* SaoWalletCard.module.css - Thẻ nguồn tiền / ví chuẩn SAO Cyber HUD */
+
+.card {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(8, 22, 42, 0.92) 0%,
+    rgba(5, 14, 28, 0.96) 50%,
+    rgba(9, 24, 46, 0.88) 100%
+  );
+  /* Lưới ma trận HUD Hologram */
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
+  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.28);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45),
+              inset 0 0 25px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.04);
+  padding: 16px 20px 16px 22px;
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 110px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  user-select: none;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  background: linear-gradient(
+    135deg,
+    rgba(12, 30, 56, 0.95) 0%,
+    rgba(7, 18, 36, 0.98) 100%
+  );
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6),
+              0 0 16px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.22),
+              inset 0 0 30px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.08);
+  transform: translateY(-2px);
+}
+
+.card:active {
+  transform: scale(0.985) translateY(0);
+}
+
+/* ========================================================
+   TRỤC NĂNG LƯỢNG QUANG HỌC MÉP TRÁI (LEFT ACCENT SPINE)
+   ======================================================== */
+.leftAccentBar {
+  position: absolute;
+  top: 14px;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 10px var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  pointer-events: none;
+  z-index: 2;
+  transition: all 0.25s ease;
+}
+
+.card:hover .leftAccentBar {
+  width: 5px;
+  box-shadow: 0 0 14px var(--wallet-color, var(--sao-primary-hex, #00f0ff)),
+              0 0 4px #ffffff;
+}
+
+/* ========================================================
+   HEADER THẺ VÍ
+   ======================================================== */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.walletIdentity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.iconBadge {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff; /* Trắng sáng phát quang */
+  /* Hoàn toàn trong suốt ở trạng thái thường để hòa quyện vào nền kính, không tạo thành vùng tối */
+  background: transparent;
+  border: 1px solid var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 8px var(--wallet-color, rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25));
+  clip-path: polygon(
+    6px 0,
+    100% 0,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    0 100%,
+    0 6px
+  );
+  transition: all 0.25s ease;
+}
+
+.iconBadge svg {
+  filter: drop-shadow(0 0 5px var(--wallet-color, var(--sao-primary-hex, #00f0ff)));
+}
+
+.card:hover .iconBadge {
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.12);
+  background: color-mix(in srgb, var(--wallet-color, var(--sao-primary-hex, #00f0ff)) 20%, rgba(12, 30, 56, 0.6));
+  border-color: var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 14px var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  transform: scale(1.05);
+}
+
+.nameContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.walletName {
+  font-family: 'Tauri', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+}
+
+.walletTypeBadge {
+  display: inline-block;
+  align-self: flex-start;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 2px 8px;
+  border-radius: 0;
+  color: #a0c4ff;
+  background: rgba(160, 196, 255, 0.08);
+  border: 1px solid rgba(160, 196, 255, 0.22);
+}
+
+.editBtn {
+  background: transparent !important;
+  border-color: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.2) !important;
+  padding: 4px !important;
+  color: #8ab4f8 !important;
+  opacity: 0.65;
+  transition: all 0.2s ease !important;
+}
+
+.card:hover .editBtn {
+  opacity: 1;
+  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.15) !important;
+  color: #ffffff !important;
+  border-color: var(--wallet-color, var(--sao-primary-hex, #00f0ff)) !important;
+  box-shadow: 0 0 10px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3) !important;
+}
+
+/* ========================================================
+   BODY THẺ VÍ: SỐ DƯ
+   ======================================================== */
+.balanceSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  z-index: 2;
+}
+
+.balanceAmountWrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.balanceAmount {
+  font-family: 'Tauri', sans-serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 12px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.25);
+  line-height: 1.15;
+}
+
+.currency {
+  font-family: 'Tauri', sans-serif;
+  font-size: 1rem;
+  color: #a0c4ff;
+  font-weight: 400;
+}
+
+/* ========================================================
+   CỤM NGÀM CƠ KHÍ GÓC TRÊN - TRÁI
+   ======================================================== */
+.cornerBracketTopLeft {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50px;
+  height: 50px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.topLeftBevelLine {
+  position: absolute;
+  top: 5px;
+  left: -3px;
+  width: 21px;
+  height: 2px;
+  background: var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 6px var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  transform: rotate(-45deg);
+}
+
+.bracketStripes {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 10px;
+  height: 7px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--wallet-color, var(--sao-primary-hex, #00f0ff)) 0px,
+    var(--wallet-color, var(--sao-primary-hex, #00f0ff)) 1.2px,
+    transparent 1.2px,
+    transparent 3px
+  );
+  opacity: 0.8;
+}
+
+.bracketDiamond {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 5px;
+  height: 5px;
+  background: var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 6px var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* ========================================================
+   CỤM NGÀM CƠ KHÍ GÓC DƯỚI - PHẢI
+   ======================================================== */
+.cornerBracketBottomRight {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.bottomRightBevelLine {
+  position: absolute;
+  bottom: 5px;
+  right: -3px;
+  width: 21px;
+  height: 2px;
+  background: var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 6px var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  transform: rotate(-45deg);
+}
+
+.bottomRightDiamond {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  width: 5px;
+  height: 5px;
+  background: var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  box-shadow: 0 0 6px var(--wallet-color, var(--sao-primary-hex, #00f0ff));
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* ========================================================
+   RESPONSIVE
+   ======================================================== */
+@media (max-width: 768px) {
+  .card {
+    padding: 12px 14px 12px 16px;
+    gap: 10px;
+    min-height: 96px;
+  }
+
+  .iconBadge {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+
+  .walletName {
+    font-size: 0.98rem;
+  }
+
+  .balanceAmount {
+    font-size: 1.5rem;
+  }
+}

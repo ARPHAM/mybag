@@ -2,14 +2,16 @@
 
 import React, { useRef } from 'react';
 import { ChevronLeft, ChevronRight, RotateCcw, Calendar as CalendarIcon } from 'lucide-react';
+import styles from './DateSelector.module.css';
 import { useI18n } from '@/lib/i18n';
 
 interface DateSelectorProps {
   selectedDate: Date;
   onChange: (date: Date) => void;
+  className?: string;
 }
 
-export default function DateSelector({ selectedDate, onChange }: DateSelectorProps) {
+export default function DateSelector({ selectedDate, onChange, className = '' }: DateSelectorProps) {
   const { t, language } = useI18n();
   const dateInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,7 +41,6 @@ export default function DateSelector({ selectedDate, onChange }: DateSelectorPro
       const d = new Date(selectedDate);
       d.setDate(d.getDate() + i);
       d.setHours(0, 0, 0, 0);
-      // Chỉ lấy nếu >= minPastDate
       if (d.getTime() >= minPastDate.getTime()) {
         dates.push(d);
       }
@@ -88,110 +89,113 @@ export default function DateSelector({ selectedDate, onChange }: DateSelectorPro
   const currentDateStr = new Date(selectedDate.getTime() - selectedDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
   return (
-    <div className="flex flex-wrap items-center gap-2 lg:gap-4 bg-zinc-800/80 border p-2 rounded-sm backdrop-blur-sm font-mono" style={{ borderColor: 'rgba(var(--sao-primary-rgb),0.5)', boxShadow: '0 0 10px rgba(var(--sao-primary-rgb),0.2)', color: 'var(--sao-primary-hex)' }}>
-      {/* Navigation & Quick Actions */}
-      <div className="flex items-center gap-1">
+    <div className={`${styles.container} ${className}`}>
+      {/* Vạch ngàm cơ khí trang trí góc */}
+      <div className={styles.topLeftBevel} aria-hidden="true" />
+      <div className={styles.bottomRightBevel} aria-hidden="true" />
+
+      {/* Cụm điều hướng (Lùi ngày, Hôm nay, Chọn lịch) */}
+      <div className={styles.navCluster}>
         <button
+          type="button"
           onClick={handlePrev}
           disabled={isPrevDisabled}
-          className="p-1 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          style={{ color: 'var(--sao-primary-hex)' }}
+          className={styles.navArrowBtn}
           title={isPrevDisabled ? t('calendar.pastLimit') : t('calendar.prevDay')}
-          onMouseOver={(e) => { if (!isPrevDisabled) e.currentTarget.style.backgroundColor = 'rgba(var(--sao-primary-rgb),0.2)'; }}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          aria-label={t('calendar.prevDay')}
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={18} />
         </button>
 
-        {!isViewingToday && (
-          <button
-            onClick={handleToday}
-            className="px-2 py-1 text-xs rounded border border-cyan-500/40 hover:bg-cyan-500/20 transition-all flex items-center gap-1"
-            style={{ color: 'var(--sao-primary-hex)' }}
-            title={t('calendar.today')}
-          >
-            <RotateCcw size={12} /> {t('calendar.today')}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleToday}
+          className={`${styles.todayBtn} ${isViewingToday ? styles.todayActive : styles.todayInactive}`}
+          title={t('calendar.today')}
+        >
+          <RotateCcw size={12} />
+          <span>{t('calendar.today')}</span>
+        </button>
 
-        {/* Quick DatePicker to jump into any future date */}
+        {/* Nút DatePicker nhảy đến ngày bất kỳ */}
         <div className="relative">
-          <button
-            onClick={() => dateInputRef.current?.showPicker ? dateInputRef.current.showPicker() : dateInputRef.current?.click()}
-            className="p-1 rounded transition-colors hover:bg-cyan-500/20"
-            style={{ color: 'var(--sao-primary-hex)' }}
-            title={t('calendar.selectDate')}
-          >
-            <CalendarIcon size={18} />
-          </button>
           <input
             ref={dateInputRef}
             type="date"
             min={minDateStr}
             value={currentDateStr}
             onChange={handlePickerChange}
-            className="absolute opacity-0 pointer-events-none w-0 h-0"
+            className="absolute inset-0 opacity-0 pointer-events-none w-0 h-0"
+            tabIndex={-1}
           />
+          <button
+            type="button"
+            onClick={() => {
+              if (dateInputRef.current) {
+                if ('showPicker' in HTMLInputElement.prototype) {
+                  dateInputRef.current.showPicker();
+                } else {
+                  dateInputRef.current.focus();
+                }
+              }
+            }}
+            className={styles.pickerBtn}
+            title={t('calendar.selectDate')}
+          >
+            <CalendarIcon size={14} />
+            <span className="hidden sm:inline">
+              {selectedDate.toLocaleDateString(language === 'en' ? 'en-US' : 'vi-VN', {
+                month: 'short',
+                day: 'numeric'
+              })}
+            </span>
+          </button>
         </div>
       </div>
-      
-      {/* Date Strip */}
-      <div className="flex-1 flex items-center justify-start overflow-x-auto gap-2 hide-scrollbar py-1">
+
+      {/* Dải ngày cuộn ngang */}
+      <div className={styles.dateStrip}>
         {dates.map((date, idx) => {
           const selected = isSameDay(date, selectedDate);
-          const isToday = isSameDay(date, today);
+          const isCurrentToday = isSameDay(date, today);
+
+          let pillClass = styles.datePillNormal;
+          if (selected) {
+            pillClass = styles.datePillSelected;
+          } else if (isCurrentToday) {
+            pillClass = styles.datePillToday;
+          }
+
+          const dayOfWeekName = date.toLocaleDateString(language === 'en' ? 'en-US' : 'vi-VN', { weekday: 'short' });
+
           return (
             <button
               key={idx}
+              type="button"
               onClick={() => onChange(date)}
-              className={`flex flex-col items-center min-w-[60px] p-2 border-b-2 transition-all ${
-                selected 
-                  ? 'font-bold' 
-                  : isToday 
-                    ? 'border-zinc-500 bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300' 
-                    : 'border-transparent hover:bg-zinc-700/50 text-zinc-400'
-              }`}
-              style={selected ? {
-                borderColor: 'var(--sao-primary-hex)',
-                backgroundColor: 'rgba(var(--sao-primary-rgb),0.2)',
-                color: 'var(--sao-primary-hex)',
-                boxShadow: 'inset 0 0 10px rgba(var(--sao-primary-rgb),0.3)'
-              } : {}}
+              className={`${styles.datePill} ${pillClass}`}
             >
-              <span className="text-xs opacity-70 uppercase">
-                {date.toLocaleDateString(language === 'en' ? 'en-US' : 'vi-VN', { weekday: 'short' })}
+              <span className={styles.dayOfWeek}>
+                {dayOfWeekName}
               </span>
-              <span className="text-lg">
+              <span className={styles.dayNumber}>
                 {date.getDate()}
-              </span>
-              <span className="text-[10px] opacity-60">
-                {language === 'en' ? date.toLocaleDateString('en-US', { month: 'short' }) : `T${date.getMonth() + 1}`}
               </span>
             </button>
           );
         })}
       </div>
 
+      {/* Nút Tiến 1 ngày */}
       <button
+        type="button"
         onClick={handleNext}
-        className="p-1 rounded transition-colors"
-        style={{ color: 'var(--sao-primary-hex)' }}
+        className={styles.navArrowBtn}
         title={t('calendar.nextDay')}
-        onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(var(--sao-primary-rgb),0.2)'}
-        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        aria-label={t('calendar.nextDay')}
       >
-        <ChevronRight size={20} />
+        <ChevronRight size={18} />
       </button>
-
-      <style jsx>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </div>
   );
 }

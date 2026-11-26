@@ -4,6 +4,7 @@ import dbConnect from '@/lib/db';
 import Task from '@/models/Task';
 import User from '@/models/User';
 import { verifyToken } from '@/lib/auth';
+import { getExpForNextLevel, MAX_LEVEL } from '@/lib/gameLevel';
 
 const EXP_REWARDS = {
   S: 1000,
@@ -12,9 +13,6 @@ const EXP_REWARDS = {
   C: 150,
   D: 50,
 };
-
-// Calculate required EXP for next level (simple scaling)
-const getExpForNextLevel = (level: number) => level * 500;
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -56,14 +54,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         let leveledUp = false;
         let requiredExp = getExpForNextLevel(user.level);
 
-        // Level up logic
-        while (user.current_exp >= requiredExp) {
+        // Level up logic (Max level = 10)
+        while (user.level < MAX_LEVEL && user.current_exp >= requiredExp) {
           user.current_exp -= requiredExp;
           user.level += 1;
-          // Loại bỏ việc tăng max_hp và max_mp để giữ vững Game Balance
-          
           leveledUp = true;
           requiredExp = getExpForNextLevel(user.level);
+        }
+        if (user.level >= MAX_LEVEL) {
+          user.level = MAX_LEVEL;
         }
 
         // Hồi lại MP khi hoàn thành task (có chút ngẫu nhiên)

@@ -127,3 +127,20 @@ export function parseRecipeIngredientString(raw: string): {
   }
   return { cleanName: trimmed };
 }
+
+/**
+ * Danh sách từ khóa nhận diện gia vị / chất nêm nếm.
+ * Dùng để ngăn việc tự động map gia vị vào danh sách nguyên liệu trừ kho khi nấu ăn.
+ */
+export const COMMON_SPICE_KEYWORDS = [
+  'mắm', 'muối', 'tiêu', 'đường', 'bột ngọt', 'mì chính', 'hạt nêm', 'knorr',
+  'maggi', 'bột canh', 'dầu ăn', 'dầu hào', 'dầu mè', 'dầu oliu', 'nước tương',
+  'xì dầu', 'tương ớt', 'tương cà', 'giấm', 'dấm', 'sa tế', 'ớt bột', 'bột nghệ',
+  'bột cà ri', 'ngũ vị hương', 'bột quế', 'hoa hồi', 'thảo quả', 'sốt', 'mayonnaise'
+];
+
+export function isSpiceIngredient(name?: string): boolean {
+  if (!name || typeof name !== 'string') return false;
+  const n = name.toLowerCase().trim();
+  return COMMON_SPICE_KEYWORDS.some(kw => n.includes(kw));
+}
