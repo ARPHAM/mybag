@@ -145,6 +145,35 @@ export function capitalizeFirst(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+/**
+ * Chuẩn hóa mô tả giao dịch/hành động: loại bỏ các từ rườm rà, thủ tục,
+ * đưa về dạng ngắn gọn súc tích (2-5 từ) như ghi chép sổ tay cá nhân.
+ * Ví dụ: "Đổi tiền mặt theo yêu cầu của em Tú" -> "Em Tú đổi tiền"
+ *        "Chuyển tiền theo yêu cầu của anh Nam" -> "Chuyển tiền anh Nam"
+ */
+export function cleanActionDescription(text: string): string {
+  if (!text) return '';
+  let cleaned = cleanTemporalWords(text);
+
+  // Mẫu "Đổi tiền (mặt) theo yêu cầu của [tên]" / "Đổi tiền cho/giúp/hộ [tên]" / "Đổi tiền do [tên] muốn đổi" -> "[tên] đổi tiền"
+  const doiTienMatch = cleaned.match(/(?:đổi\s+tiền(?:\s+mặt)?|rút\s+tiền(?:\s+mặt)?)\s+(?:theo\s+(?:yêu\s+cầu|lời|đề\s+nghị)\s+của|cho|giúp|hộ|(?:do|vì)\s+([a-zA-ZÀ-ỹ0-9\s]+?)\s+(?:muốn|cần|nhờ))\s*([a-zA-ZÀ-ỹ0-9\s]*)/i);
+  if (doiTienMatch) {
+    const person = (doiTienMatch[1] || doiTienMatch[2] || '').trim();
+    if (person) return capitalizeFirst(`${person} đổi tiền`);
+  }
+
+  // Loại bỏ các tiền tố / cụm từ rườm rà
+  cleaned = cleaned
+    .replace(/\b(?:theo\s+(?:yêu\s+cầu|đề\s+nghị|lời(?:\s+dặn)?)\s+của)\s+/gi, '')
+    .replace(/\b(?:thực\s+hiện\s+giao\s+dịch(?:\s+chuyển\s+khoản)?(?:\s+cho)?)\s+/gi, '')
+    .replace(/\b(?:khoản\s+tiền\s+dành\s+cho|khoản\s+chi\s+cho|khoản\s+tiền)\s+/gi, '')
+    .replace(/\b(?:để\s+phục\s+vụ\s+cho\s+mục\s+đích)\s+/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  return capitalizeFirst(cleaned);
+}
+
 export function normalizeVietnamese(text: string): string {
   if (!text) return '';
   return text
@@ -988,7 +1017,11 @@ CRITICAL LANGUAGE DIRECTIVE: The user speaks ENGLISH. You MUST output all respon
    - Main food items (meat, vegetables, eggs, rice, tofu): When cooked at home, use "meal" with "source": "home" and "ingredients_used": [{ "invId": string, "name": string, "qty": number, "unit": string }] matching items from "kho_do_hien_co". The meal API will auto-deduct them, so do NOT create duplicate "update_inventory" calls for main food ingredients!
    - Spices and cooking condiments (any item with "danh_muc": "spices" in "kho_do_hien_co", regardless of its name): Do NOT put entire bottles/containers into "meal.ingredients_used" in eating history. When Papa says a spice is finished/out ("hết cả...", "hết sạch..."), the task is to change inventory status using "update_inventory" with "stock_status": "out" (and "operation": "set", "quantity": 0), and optionally suggest "create_shopping_item" to replenish!
 6. PAYING ON BEHALF & IMMEDIATE REPAYMENT (TRANSFER AS CASHFLOW):
-   - If Papa pays on behalf of someone using wallet A, and that person immediately repays into wallet B (e.g. "trả hộ anh Tiệp 40k bằng MB, mà anh ấy trả lại vào momo"): The net cashflow is a direct transfer between wallets! Generate a SINGLE action "transfer" with "wallet_id": <wallet_A>, "to_wallet_id": <wallet_B>, "amount": <amount>, and "description": "Trả hộ [person] [details] qua [wallet A], nhận lại vào [wallet B]". Do NOT create artificial "expense" + "income" because Papa did not consume the item and this is not real income!
+   - If Papa pays on behalf of someone using wallet A, and that person immediately repays into wallet B (e.g. "trả hộ anh Tiệp 40k bằng MB, mà anh ấy trả lại vào momo"): The net cashflow is a direct transfer between wallets! Generate a SINGLE action "transfer" with "wallet_id": <wallet_A>, "to_wallet_id": <wallet_B>, "amount": <amount>, and "description": "Trả hộ [person] [details]". Do NOT create artificial "expense" + "income" because Papa did not consume the item and this is not real income!
+7. CONCISE & NATURAL ACTION DESCRIPTIONS:
+   - For all "description" or "title" fields in actions ("expense", "income", "transfer", "debt_lent", "debt_borrowed", "create_task", "create_calendar_event"), keep them SHORT, crisp, and natural (2 to 5 words), just like real personal bookkeeping.
+   - Do NOT output verbose, bureaucratic, or robotic phrases like "Convert cash according to request of...", "Perform transfer transaction for...", "Money spent for dining purposes...".
+   - Instead, write direct, concise phrases: "Em Tú đổi tiền", "Ăn bún cá", "Cà phê", "Đổ xăng", "Chuyển tiền trọ", etc.
 </grounding_rules>
 
 <user_context>
@@ -1054,7 +1087,11 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC: Người dùng nói TIẾNG VIỆT. Bạn B�
    - Thực phẩm chính (thịt, cá, trứng, rau củ, đậu phụ, gạo/cơm): Nấu ăn tại nhà dùng "meal" với "source": "home" và "ingredients_used": [{ "invId": string, "name": string, "qty": number, "unit": string }] khớp từ "kho_do_hien_co". API bữa ăn sẽ tự động khấu trừ kho, KHÔNG tạo thêm "update_inventory" trùng lặp cho thực phẩm chính!
    - Gia vị, phụ phẩm nấu nướng (bất kỳ món nào có "danh_muc": "spices" trong "kho_do_hien_co", bất kể tên gọi là gì): TUYỆT ĐỐI KHÔNG thêm cả chai/lọ gia vị vào "meal.ingredients_used" của lịch sử ăn uống. Khi Papa báo hết một món gia vị ("hết cả...", "hết sạch..."), nhiệm vụ của Yui là CHUYỂN TRẠNG THÁI KHO ĐỒ bằng "update_inventory" với "stock_status": "out" (và "operation": "set", "quantity": 0), và có thể tạo thêm "create_shopping_item" để nhắc Papa mua mới!
 6. THANH TOÁN HỘ VÀ ĐƯỢC HOÀN TRẢ NGAY QUA VÍ KHÁC (BẢN CHẤT DÒNG TIỀN TRANSFER):
-   - Khi Papa trả hộ ai đó bằng ví A, và người đó chuyển trả lại ngay bằng ví B (ví dụ: "trả hộ anh Tiệp 40k bún cá qua MB, mà anh ấy lại trả 40k vào momo"): Bản chất dòng tiền thực tế là một giao dịch chuyển đổi giữa 2 ví! Hãy tạo DUY NHẤT một hành động "transfer" với "wallet_id": <id_vi_A>, "to_wallet_id": <id_vi_B>, "amount": <so_tien>, và "description": "Trả hộ [tên người] [món/việc] qua [ví A], nhận lại vào [ví B]". TUYỆT ĐỐI KHÔNG tách thành 1 "expense" + 1 "income" vì Papa không hề tiêu cho bản thân và đây cũng không phải thu nhập!
+   - Khi Papa trả hộ ai đó bằng ví A, và người đó chuyển trả lại ngay bằng ví B (ví dụ: "trả hộ anh Tiệp 40k bún cá qua MB, mà anh ấy lại trả 40k vào momo"): Bản chất dòng tiền thực tế là một giao dịch chuyển đổi giữa 2 ví! Hãy tạo DUY NHẤT một hành động "transfer" với "wallet_id": <id_vi_A>, "to_wallet_id": <id_vi_B>, "amount": <so_tien>, và "description": "Trả hộ [tên người] [món/việc]" (VD: "Trả hộ anh Tiệp bún cá"). TUYỆT ĐỐI KHÔNG tách thành 1 "expense" + 1 "income" vì Papa không hề tiêu cho bản thân và đây cũng không phải thu nhập!
+7. MÔ TẢ GIAO DỊCH & HÀNH ĐỘNG NGẮN GỌN, TỰ NHIÊN (CONCISE ACTION DESCRIPTIONS):
+   - Mọi trường "description" hoặc "title" trong actions ("expense", "income", "transfer", "debt_lent", "debt_borrowed", "create_task", "create_calendar_event") PHẢI viết NGẮN GỌN, trực diện như người dùng ghi chép sổ tay cá nhân (tối ưu từ 2 đến 5 từ).
+   - TUYỆT ĐỐI TRÁNH câu chữ dài dòng, máy móc hoặc rườm rà như: "Đổi tiền mặt theo yêu cầu của em Tú", "Thực hiện giao dịch chuyển tiền cho...", "Khoản chi phục vụ mục đích ăn uống...".
+   - THAY VÀO ĐÓ, viết súc tích, tự nhiên: "Em Tú đổi tiền", "Ăn bún cá", "Cà phê", "Đổ xăng", "Chuyển tiền trọ", "Anh Nam mượn tiền", v.v.
 </grounding_rules>
 
 <user_context>
@@ -1316,7 +1353,7 @@ export async function sanitizeYuiPlanActions(userId: string, rawActions: any[], 
     // 3. EXPENSE / INCOME
     if (type === 'expense' || type === 'income') {
       a.amount = Math.max(1, Math.round(Number(a.amount) || 0));
-      a.description = capitalizeFirst(cleanTemporalWords(a.description || a.name || (type === 'expense' ? 'Chi tiêu' : 'Thu nhập')));
+      a.description = cleanActionDescription(a.description || a.name || (type === 'expense' ? 'Chi tiêu' : 'Thu nhập'));
       const w = resolveWalletId(a.wallet_id, a.walletName);
       if (w) {
         a.wallet_id = w.id;
@@ -1329,12 +1366,14 @@ export async function sanitizeYuiPlanActions(userId: string, rawActions: any[], 
     // 4. TRANSFER
     if (type === 'transfer') {
       a.amount = Math.max(1, Math.round(Number(a.amount) || 0));
-      a.description = capitalizeFirst(cleanTemporalWords(a.description || 'Chuyển tiền'));
+      a.description = cleanActionDescription(a.description || 'Chuyển tiền');
       const fromW = resolveWalletId(a.wallet_id, a.walletName);
       const toW = resolveWalletId(a.to_wallet_id, a.toWalletName);
       if (fromW && toW && fromW.id !== toW.id) {
         a.wallet_id = fromW.id;
         a.to_wallet_id = toW.id;
+        a.walletName = fromW.name;
+        a.toWalletName = toW.name;
         sanitized.push(a);
       }
       continue;
@@ -1534,7 +1573,7 @@ export async function sanitizeYuiPlanActions(userId: string, rawActions: any[], 
     );
     if (incomeIndex !== -1) {
       const inc = sanitized[incomeIndex];
-      const transferDesc = `${exp.description}, nhận lại qua ${inc.walletName || 'ví khác'}`;
+      const transferDesc = cleanActionDescription(exp.description || 'Trả hộ tiền');
       const transferAction = {
         actionType: 'transfer',
         amount: exp.amount,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import {
   Sparkles,
@@ -38,7 +39,8 @@ import {
   Bell,
   ChevronDown,
   ChevronUp,
-  Eraser
+  Eraser,
+  GraduationCap
 } from 'lucide-react';
 import { compressImageFile } from '@/lib/imageClient';
 import {
@@ -47,7 +49,7 @@ import {
   getYuiActionScheduleDisplay,
   toVnDatetimeLocalValue
 } from '@/lib/vnTime';
-import { getYuiBriefing, parseYuiMessage, executeYuiActions } from './api';
+import { getYuiBriefing, parseYuiMessage, executeYuiActions, sendYuiReport } from './api';
 import styles from './YuiAssistant.module.css';
 import SaoMediaPickerButton from '../SaoMediaPickerButton';
 import { useI18n } from '@/lib/i18n';
@@ -777,6 +779,32 @@ export default function YuiAssistant() {
   const [listening, setListening] = useState(false);
   const [editingRow, setEditingRow] = useState<{ msgIdx: number; actionIdx: number } | null>(null);
   const [mobilePanelStyle, setMobilePanelStyle] = useState<React.CSSProperties | undefined>(undefined);
+  const [reportingMsgIdx, setReportingMsgIdx] = useState<number | null>(null);
+  const [reportExpectedText, setReportExpectedText] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportSuccessNotice, setReportSuccessNotice] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  useEffect(() => {
+    if (reportingMsgIdx === null) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !reportSubmitting) {
+        setReportingMsgIdx(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [reportingMsgIdx, reportSubmitting]);
 
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -1114,6 +1142,51 @@ export default function YuiAssistant() {
       }
       return copy;
     });
+  };
+
+  const openReportModal = (yuiIdx: number) => {
+    setReportingMsgIdx(yuiIdx);
+    setReportExpectedText('');
+    setReportSuccessNotice(false);
+  };
+
+  const handleSendReport = async () => {
+    if (reportingMsgIdx === null || !reportExpectedText.trim() || reportSubmitting) return;
+    const yuiMsg = msgs[reportingMsgIdx];
+    if (!yuiMsg || yuiMsg.role !== 'yui') return;
+
+    setReportSubmitting(true);
+    try {
+      let userText = '';
+      for (let k = reportingMsgIdx - 1; k >= 0; k--) {
+        if (msgs[k].role === 'user') {
+          userText = msgs[k].text;
+          break;
+        }
+      }
+      if (!userText) {
+        userText = input.trim() || 'Hội thoại Yui';
+      }
+
+      await sendYuiReport({
+        user_message: userText,
+        yui_reply: yuiMsg.text || '',
+        suggested_actions: yuiMsg.plan?.actions || [],
+        expected_behavior: reportExpectedText.trim(),
+        context_snapshot: {
+          history: msgs.slice(Math.max(0, reportingMsgIdx - 4), reportingMsgIdx + 1).map((m) => ({ role: m.role, text: m.text }))
+        }
+      });
+      setReportSuccessNotice(true);
+      setTimeout(() => {
+        setReportingMsgIdx(null);
+        setReportSuccessNotice(false);
+      }, 1800);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || err?.message || 'Lỗi gửi báo cáo huấn luyện');
+    } finally {
+      setReportSubmitting(false);
+    }
   };
 
   const renderActionBadge = (a: any) => {
@@ -1626,6 +1699,21 @@ export default function YuiAssistant() {
                     )}
                   </div>
                 )}
+
+                {/* NÚT BÁO CÁO & HUẤN LUYỆN YUI */}
+                {m.role === 'yui' && i > 0 && (
+                  <div className={styles.msgFooterActions}>
+                    <button
+                      type="button"
+                      className={styles.reportTriggerBtn}
+                      onClick={() => openReportModal(i)}
+                      title={t('yui.reportBtn')}
+                    >
+                      <GraduationCap size={12} />
+                      <span>{t('yui.reportBtn')}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
 
@@ -1710,6 +1798,110 @@ export default function YuiAssistant() {
             </button>
           </form>
         </div>
+      )}
+
+      {/* SAO REPORT & TRAINING MODAL (PORTALED TO DOCUMENT.BODY) */}
+      {mounted && reportingMsgIdx !== null && createPortal(
+        <div
+          className={styles.reportModalOverlay}
+          onClick={() => !reportSubmitting && setReportingMsgIdx(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className={styles.reportModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.reportHeader}>
+              <div className={styles.reportTitleArea}>
+                <div className={styles.reportTitle}>
+                  <GraduationCap size={16} color="#ffaa00" />
+                  <span>{t('yui.reportTitle')}</span>
+                </div>
+                <div className={styles.reportSub}>
+                  {t('yui.reportDesc')}
+                </div>
+              </div>
+              <button
+                type="button"
+                className={styles.reportCloseBtn}
+                onClick={() => setReportingMsgIdx(null)}
+                aria-label={t('yui.reportCancel')}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className={styles.reportContent}>
+              {/* Prompt của Papa */}
+              <div className={styles.reportSnippetBox}>
+                <span className={styles.reportSnippetLabel}>{t('yui.reportPromptLabel')}</span>
+                <div className={styles.reportSnippetText}>
+                  {(() => {
+                    for (let k = reportingMsgIdx - 1; k >= 0; k--) {
+                      if (msgs[k].role === 'user') return msgs[k].text;
+                    }
+                    return '(Không có tin nhắn trước đó)';
+                  })()}
+                </div>
+              </div>
+
+              {/* Phản hồi của Yui */}
+              <div className={styles.reportSnippetBox}>
+                <span className={styles.reportSnippetLabel}>{t('yui.reportReplyLabel')}</span>
+                <div className={styles.reportSnippetText}>
+                  {msgs[reportingMsgIdx]?.text || ''}
+                  {(() => {
+                    const cur = msgs[reportingMsgIdx];
+                    if (cur && cur.role === 'yui' && cur.plan?.actions?.length) {
+                      return ` (${cur.plan.actions.length} hành động đề xuất)`;
+                    }
+                    return '';
+                  })()}
+                </div>
+              </div>
+
+              {/* Ô nhập mong muốn thực sự */}
+              <div className={styles.reportField}>
+                <label>{t('yui.reportExpectedLabel')}</label>
+                <textarea
+                  className={styles.reportTextarea}
+                  value={reportExpectedText}
+                  onChange={(e) => setReportExpectedText(e.target.value)}
+                  placeholder={t('yui.reportExpectedPlaceholder')}
+                  rows={3}
+                  disabled={reportSubmitting || reportSuccessNotice}
+                  autoFocus
+                />
+              </div>
+
+              {reportSuccessNotice && (
+                <div className={styles.reportSuccessNotice}>
+                  <Check size={14} />
+                  <span>{t('yui.reportSuccess')}</span>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.reportFooter}>
+              <button
+                type="button"
+                className={styles.reportCancelBtn}
+                onClick={() => setReportingMsgIdx(null)}
+                disabled={reportSubmitting}
+              >
+                {t('yui.reportCancel')}
+              </button>
+              <button
+                type="button"
+                className={styles.reportSubmitBtn}
+                onClick={handleSendReport}
+                disabled={reportSubmitting || !reportExpectedText.trim() || reportSuccessNotice}
+              >
+                <Send size={13} />
+                <span>{reportSubmitting ? t('yui.reportSubmitting') : t('yui.reportSubmit')}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </>
   );

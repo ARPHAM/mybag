@@ -1171,3 +1171,265 @@
   animation: spin 1s linear infinite;
 }
 
+/* ============================================================
+   SAO TRAINING & REPORT MODAL
+   ============================================================ */
+.msgFooterActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+  gap: 6px;
+}
+
+.reportTriggerBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 170, 0, 0.35);
+  color: #ffcc66;
+  font-family: inherit;
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+  opacity: 0.8;
+}
+
+.reportTriggerBtn:hover {
+  opacity: 1;
+  background: rgba(255, 170, 0, 0.15);
+  border-color: #ffaa00;
+  box-shadow: 0 0 8px rgba(255, 170, 0, 0.3);
+  color: #fff;
+}
+
+.reportModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(2, 8, 20, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: modalOverlayFadeIn 0.2s ease-out;
+}
+
+@keyframes modalOverlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.reportModal {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, rgba(8, 22, 42, 0.98) 0%, rgba(4, 12, 26, 0.99) 100%);
+  border: 1px solid rgba(255, 170, 0, 0.65);
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.95),
+    0 0 40px rgba(255, 170, 0, 0.3),
+    inset 0 0 25px rgba(0, 240, 255, 0.08);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  animation: pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+  z-index: 10000;
+}
+
+.reportHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: linear-gradient(90deg, rgba(255, 170, 0, 0.2) 0%, rgba(10, 20, 40, 0.6) 100%);
+  border-bottom: 1px solid rgba(255, 170, 0, 0.35);
+}
+
+.reportTitleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reportTitle {
+  font-family: monospace, var(--font-geist-mono), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #ffcc66;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reportSub {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+.reportCloseBtn {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.reportCloseBtn:hover {
+  color: #ff6666;
+  background: rgba(255, 68, 68, 0.15);
+}
+
+.reportContent {
+  padding: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reportSnippetBox {
+  background: rgba(4, 10, 24, 0.8);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.reportSnippetLabel {
+  font-size: 0.68rem;
+  color: #93c5fd;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.reportSnippetText {
+  font-size: 0.76rem;
+  color: #e2e8f0;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.reportField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.reportField label {
+  font-size: 0.72rem;
+  color: #ffcc66;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.reportTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #061122;
+  border: 1px solid rgba(255, 170, 0, 0.45);
+  border-radius: 4px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.8rem;
+  padding: 8px 10px;
+  min-height: 90px;
+  outline: none;
+  resize: vertical;
+  line-height: 1.45;
+  color-scheme: dark;
+  transition: all 0.2s;
+}
+
+.reportTextarea:focus {
+  border-color: #ffaa00;
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+}
+
+.reportFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255, 170, 0, 0.25);
+  background: rgba(10, 22, 44, 0.8);
+}
+
+.reportCancelBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cbd5e1;
+  font-family: inherit;
+  font-size: 0.74rem;
+  padding: 6px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reportCancelBtn:hover:not(:disabled) {
+  background: rgba(255, 68, 68, 0.18);
+  border-color: #ff6666;
+  color: #ff9999;
+}
+
+.reportSubmitBtn {
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.3) 0%, rgba(255, 120, 0, 0.25) 100%);
+  border: 1px solid #ffaa00;
+  color: #ffcc66;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+  transition: all 0.2s;
+}
+
+.reportSubmitBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.5) 0%, rgba(255, 120, 0, 0.4) 100%);
+  box-shadow: 0 0 16px rgba(255, 170, 0, 0.5);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.reportSubmitBtn:disabled, .reportCancelBtn:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+
+.reportSuccessNotice {
+  padding: 8px 10px;
+  background: rgba(0, 255, 170, 0.12);
+  border: 1px solid rgba(0, 255, 170, 0.35);
+  border-radius: 4px;
+  color: #00ffaa;
+  font-size: 0.74rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
