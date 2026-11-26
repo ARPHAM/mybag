@@ -471,6 +471,7 @@ export default function TasksPage() {
       <SaoFab
         title={t('tasks.addQuest')}
         onClick={openAddModal}
+        position="fixed"
       />
 
       {/* ========================================================

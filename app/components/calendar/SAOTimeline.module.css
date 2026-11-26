@@ -93,26 +93,16 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   position: relative;
   padding-bottom: 24px;
 }
 
 .scrollArea::-webkit-scrollbar {
-  width: 6px;
-}
-
-.scrollArea::-webkit-scrollbar-track {
-  background: rgba(6, 18, 35, 0.6);
-}
-
-.scrollArea::-webkit-scrollbar-thumb {
-  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
-  border-radius: 2px;
-}
-
-.scrollArea::-webkit-scrollbar-thumb:hover {
-  background: var(--sao-primary-hex, #00f0ff);
-  box-shadow: 0 0 8px var(--sao-primary-hex, #00f0ff);
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* ========================================================
@@ -307,6 +297,7 @@
   white-space: pre-wrap;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

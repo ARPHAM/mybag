@@ -112,6 +112,7 @@ export default function DebtsTab({ debts, formatMoney, onAdd, onEdit, onDebtActi
       <SaoFab
         title={t('finance.addDebt')}
         onClick={onAdd}
+        position="fixed"
       />
     </div>
   );

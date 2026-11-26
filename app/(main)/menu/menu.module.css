@@ -10,13 +10,14 @@
 .scrollArea {
   flex: 1;
   overflow-y: auto;
-  padding-right: 10px;
+  overflow-y: overlay;
+  padding-right: 0;
   padding-bottom: 80px;
 }
 
 @media (max-width: 768px) {
   .scrollArea {
-    padding-right: 4px;
+    padding-right: 0;
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   }
 }

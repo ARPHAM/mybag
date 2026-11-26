@@ -75,14 +75,14 @@ export default function SAOMonthView({
   return (
     <div className="h-full flex flex-col bg-zinc-900/90 border border-cyan-500/30 rounded-sm overflow-hidden font-mono shadow-[0_0_15px_rgba(0,0,0,0.5)]">
       {/* Month Title Header */}
-      <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-950/60 flex items-center justify-between">
+      <div className="px-4 py-2.5 border-b border-zinc-800 bg-zinc-950/60 flex items-center justify-between shrink-0">
         <span className="text-sm font-bold text-[var(--sao-primary-hex)] uppercase tracking-wider">
           {monthTitle}
         </span>
         {onSwitchToDayView && (
           <button
             onClick={onSwitchToDayView}
-            className="text-xs text-cyan-400 hover:underline"
+            className="text-xs text-cyan-400 hover:underline cursor-pointer"
           >
             {t('calendar.switchToDayView')}
           </button>

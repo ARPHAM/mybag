@@ -32,6 +32,7 @@ export default function BudgetsTab({ budgets, formatMoney, onAdd, onEdit }: Prop
       <SaoFab
         title={t('finance.setupBudget')}
         onClick={onAdd}
+        position="fixed"
       />
     </div>
   );

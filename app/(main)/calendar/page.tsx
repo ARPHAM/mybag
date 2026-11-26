@@ -39,6 +39,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [questTab, setQuestTab] = useState<'events' | 'quests'>('events');
+  const [mobileDaySubTab, setMobileDaySubTab] = useState<'timeline' | 'list'>('timeline');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
@@ -83,29 +84,44 @@ export default function CalendarPage() {
     }
   };
 
+  const currentRangeKeyRef = React.useRef<string>('');
+
+  const getCalendarRange = (date: Date, mode: 'day' | 'week' | 'month') => {
+    let start: Date;
+    let end: Date;
+
+    if (mode === 'day') {
+      start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+      end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+    } else if (mode === 'week') {
+      const day = date.getDay();
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      start = new Date(date.getFullYear(), date.getMonth(), date.getDate() + diffToMonday, 0, 0, 0, 0);
+      end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6, 23, 59, 59, 999);
+    } else if (mode === 'month') {
+      // Bao trọn tháng kèm các ngày đệm phía trước và phía sau
+      start = new Date(date.getFullYear(), date.getMonth(), 1 - 7, 0, 0, 0, 0);
+      end = new Date(date.getFullYear(), date.getMonth() + 1, 7, 23, 59, 59, 999);
+    } else {
+      start = new Date(date);
+      end = new Date(date);
+    }
+    return { start, end };
+  };
+
   const fetchEvents = async (force = false) => {
+    const { start, end } = getCalendarRange(selectedDate, viewMode);
+    const rangeKey = `${viewMode}_${start.toISOString()}_${end.toISOString()}`;
+
+    // Nếu khoảng thời gian hiển thị (Tuần/Tháng) không hề thay đổi và không ép buộc làm mới (force),
+    // không kích hoạt loading hay gọi API lại để tránh làm chớp giật/reload lại giao diện!
+    if (!force && rangeKey === currentRangeKeyRef.current) {
+      return;
+    }
+
+    currentRangeKeyRef.current = rangeKey;
     setLoading(true);
     try {
-      let start: Date;
-      let end: Date;
-
-      if (viewMode === 'day') {
-        start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0);
-        end = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999);
-      } else if (viewMode === 'week') {
-        const day = selectedDate.getDay();
-        const diffToMonday = day === 0 ? -6 : 1 - day;
-        start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + diffToMonday, 0, 0, 0, 0);
-        end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6, 23, 59, 59, 999);
-      } else if (viewMode === 'month') {
-        // Bao trọn tháng kèm các ngày đệm phía trước và phía sau
-        start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1 - 7, 0, 0, 0, 0);
-        end = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 7, 23, 59, 59, 999);
-      } else {
-        start = new Date(selectedDate);
-        end = new Date(selectedDate);
-      }
-
       const data: any = await getEvents(start.toISOString(), end.toISOString(), force);
       setEvents(data || []);
     } catch (error) {
@@ -251,10 +267,11 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="p-1.5 sm:p-2 lg:p-4 pb-28 lg:pb-4 flex flex-col font-mono h-full overflow-y-auto lg:overflow-hidden">
+    <div className="flex flex-col font-mono h-full w-full overflow-hidden">
       <DateSelector
         selectedDate={selectedDate}
         onChange={setSelectedDate}
+        viewMode={viewMode}
         className="mb-2 lg:mb-3 shrink-0"
       />
 
@@ -286,7 +303,7 @@ export default function CalendarPage() {
             </button>
           </div>
         }
-        className="flex-1 min-h-0 flex flex-col overflow-y-auto lg:overflow-hidden"
+        className="flex-1 min-h-0 flex flex-col overflow-hidden"
       >
         {loading && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -295,9 +312,37 @@ export default function CalendarPage() {
         )}
 
         {viewMode === 'day' && (
-          <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-4 overflow-y-auto lg:overflow-hidden">
-            {/* Cột trái (Timeline): 8/12 cột (~67%) trên desktop, h-[350px] trên mobile */}
-            <div className="h-[350px] lg:h-full lg:col-span-8 min-h-0 flex flex-col shrink-0 lg:shrink">
+          <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-4 overflow-hidden">
+            {/* Bộ chuyển đổi Biểu đồ 24h vs Danh sách sự kiện dành riêng cho Mobile */}
+            <div className="flex lg:hidden items-center p-1 bg-black/40 border border-[rgba(var(--sao-primary-rgb),0.3)] rounded-sm shrink-0 gap-1">
+              <button
+                type="button"
+                className={`flex-1 py-1 px-2 text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 ${
+                  mobileDaySubTab === 'timeline'
+                    ? 'bg-[var(--sao-primary-hex,#00f0ff)] text-black shadow-[0_0_10px_var(--sao-primary-hex,#00f0ff)]'
+                    : 'text-[#8ab4f8] hover:text-white'
+                }`}
+                onClick={() => setMobileDaySubTab('timeline')}
+              >
+                <Clock size={13} />
+                <span>{t('calendar.timelineView') || 'Dòng thời gian'}</span>
+              </button>
+              <button
+                type="button"
+                className={`flex-1 py-1 px-2 text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 ${
+                  mobileDaySubTab === 'list'
+                    ? 'bg-[var(--sao-primary-hex,#00f0ff)] text-black shadow-[0_0_10px_var(--sao-primary-hex,#00f0ff)]'
+                    : 'text-[#8ab4f8] hover:text-white'
+                }`}
+                onClick={() => setMobileDaySubTab('list')}
+              >
+                <Award size={13} />
+                <span>{t('calendar.eventsTab')} ({dayEvents.length})</span>
+              </button>
+            </div>
+
+            {/* Cột trái (Timeline): 8/12 cột (~67%) trên desktop, full height khi chọn timeline trên mobile */}
+            <div className={`${mobileDaySubTab === 'timeline' ? 'flex-1 min-h-[380px] flex' : 'hidden'} lg:flex lg:h-full lg:col-span-8 min-h-0 flex-col shrink-0 lg:shrink`}>
               <SAOTimeline
                 events={dayEvents}
                 selectedDate={selectedDate}
@@ -305,8 +350,8 @@ export default function CalendarPage() {
               />
             </div>
 
-            {/* Cột phải (Quest Log HUD Card): 4/12 cột (~33%) trên desktop, min-h-[260px] trên mobile */}
-            <div className="min-h-[260px] max-h-[360px] lg:max-h-none lg:h-full lg:col-span-4 min-h-0 flex flex-col shrink-0 lg:shrink">
+            {/* Cột phải (Quest Log HUD Card): 4/12 cột (~33%) trên desktop, full height khi chọn list trên mobile */}
+            <div className={`${mobileDaySubTab === 'list' ? 'flex-1 min-h-[340px] flex' : 'hidden'} lg:flex lg:max-h-none lg:h-full lg:col-span-4 min-h-0 flex-col shrink-0 lg:shrink`}>
               <div className={styles.questLogCard}>
                 <span className={styles.questLogBevelTL} aria-hidden="true" />
                 <span className={styles.questLogDiamondTL} aria-hidden="true" />
@@ -338,7 +383,7 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
-                <div className="overflow-y-auto flex-1 custom-scrollbar pr-1 space-y-2 mt-2">
+                <div className="overflow-y-auto flex-1 custom-scrollbar space-y-2 mt-2">
                   {questTab === 'events' ? (
                     dayEvents.length === 0 ? (
                       <div className="text-zinc-500 italic text-xs py-8 text-center">{t('calendar.noEvents')}</div>

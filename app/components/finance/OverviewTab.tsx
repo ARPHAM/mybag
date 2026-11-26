@@ -34,6 +34,7 @@ export default function OverviewTab({ wallets, transactions, formatMoney, onAddT
       <SaoFab
         title="Thêm giao dịch"
         onClick={onAddTransaction}
+        position="fixed"
       />
     </div>
   );

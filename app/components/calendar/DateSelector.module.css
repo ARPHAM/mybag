@@ -62,7 +62,7 @@
 .navCluster {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -79,6 +79,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;
+  flex-shrink: 0;
 }
 
 .navArrowBtn:hover:not(:disabled) {
@@ -95,8 +96,9 @@
 }
 
 .todayBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   font-size: 0.75rem;
   font-family: inherit;
@@ -108,6 +110,8 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   height: 30px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .todayActive {
@@ -135,26 +139,17 @@
   align-items: center;
   gap: 6px;
   overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   padding: 2px 0;
   flex: 1;
   min-width: 0;
 }
 
 .dateStrip::-webkit-scrollbar {
-  height: 4px;
-}
-
-.dateStrip::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.dateStrip::-webkit-scrollbar-thumb {
-  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
-  border-radius: 2px;
-}
-
-.dateStrip::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.6);
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .datePill {
@@ -216,14 +211,22 @@
 }
 
 /* NÚT DATE PICKER (LỊCH CỤ THỂ) */
-.pickerBtn {
-  display: flex;
+.pickerContainer {
+  display: inline-flex;
   align-items: center;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.pickerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-family: inherit;
   font-weight: 600;
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 3px;
   border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
   background: rgba(0, 0, 0, 0.5);
@@ -231,7 +234,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  height: 32px;
+  height: 30px;
+  white-space: nowrap;
 }
 
 .pickerBtn:hover {
@@ -256,6 +260,8 @@
     height: 26px;
     padding: 2px 7px;
     font-size: 0.7rem;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .datePill {
@@ -264,8 +270,10 @@
   }
 
   .pickerBtn {
-    height: 28px;
-    padding: 4px 8px;
-    font-size: 0.72rem;
+    height: 26px;
+    padding: 2px 7px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 }

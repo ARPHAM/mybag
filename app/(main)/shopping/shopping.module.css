@@ -37,7 +37,7 @@
 }
 
 .thirdMetricCard {
-  /* Inherits SaoSummaryCard */
+  position: relative;
 }
 
 /* Ẩn thanh Mobile Summary Strip trên Desktop */
@@ -117,28 +117,19 @@
   flex: 1;
   width: 100%;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-right: 6px;
+  padding-right: 0;
   padding-bottom: 85px;
 }
 
 .groceryList::-webkit-scrollbar {
-  width: 6px;
-}
-
-.groceryList::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.groceryList::-webkit-scrollbar-thumb {
-  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.3);
-  border-radius: 3px;
-}
-
-.groceryList::-webkit-scrollbar-thumb:hover {
-  background: var(--sao-primary-hex, #00f0ff);
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .emptyState {

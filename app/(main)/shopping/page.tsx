@@ -356,6 +356,7 @@ export default function ShoppingPage() {
       <SaoFab
         title={t('shopping.addItem')}
         onClick={() => setIsAddModalOpen(true)}
+        position="fixed"
       />
 
       {/* ========================================================

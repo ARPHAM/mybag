@@ -3,6 +3,12 @@
   width: 100%;
 }
 
+.customTriggerContainer {
+  width: auto;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
 .inputWrapper {
   position: relative;
   display: flex;

@@ -50,7 +50,8 @@
 .tabContent {
   flex: 1;
   overflow-y: auto;
-  padding-right: 10px;
+  overflow-y: overlay;
+  padding-right: 0;
   padding-bottom: 20px;
 }
 
@@ -1576,16 +1577,16 @@
   }
 
   .overviewFab {
-    bottom: 12px;
-    left: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    left: 16px;
     right: auto;
     width: 46px;
     height: 46px;
   }
 
   .inventoryFabGroup {
-    bottom: 12px;
-    left: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    left: 16px;
     right: auto;
     gap: 10px;
   }

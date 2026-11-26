@@ -70,21 +70,25 @@ export default function SAOWeekView({
             return getLocalDateKey(t.due_date) === targetDayKey;
           });
 
-
           return (
             <div
               key={idx}
               onClick={() => onSelectDate(day)}
-              className={`flex flex-col md:min-h-[350px] cursor-pointer transition-colors ${
+              className={`flex flex-col md:min-h-[350px] cursor-pointer transition-all duration-200 relative ${
                 isSelected
-                  ? 'bg-cyan-950/25 ring-1 ring-inset ring-cyan-500/50'
+                  ? 'bg-cyan-950/25 ring-1 ring-inset ring-cyan-500/60 shadow-[inset_0_0_15px_rgba(0,240,255,0.12)]'
                   : 'hover:bg-zinc-800/30'
               }`}
             >
+              {/* Vạch đèn neon đỉnh cột khi được chọn */}
+              {isSelected && (
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-[var(--sao-primary-hex,#00f0ff)] shadow-[0_0_8px_var(--sao-primary-hex,#00f0ff)] z-10" />
+              )}
+
               {/* Day Header */}
               <div className={`px-3 py-2 md:p-2 border-b flex flex-row md:flex-col items-center justify-between md:justify-center transition-colors ${
                 isSelected
-                  ? 'border-cyan-500 bg-cyan-900/30'
+                  ? 'border-cyan-500 bg-cyan-900/40 text-[var(--sao-primary-hex)]'
                   : isCurrentToday
                     ? 'border-zinc-500 bg-zinc-800/50'
                     : 'border-zinc-800 bg-zinc-900/60'

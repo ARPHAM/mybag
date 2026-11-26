@@ -4,6 +4,14 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import styles from './SaoDatePicker.module.css';
+import { useI18n } from '@/lib/i18n';
+
+interface CustomTriggerProps {
+  value: string;
+  displayValue: string;
+  isOpen: boolean;
+  toggle: () => void;
+}
 
 interface SaoDatePickerProps {
   value?: string; // YYYY-MM-DD
@@ -14,6 +22,8 @@ interface SaoDatePickerProps {
   required?: boolean;
   name?: string;
   placeholder?: string;
+  customTrigger?: (props: CustomTriggerProps) => React.ReactNode;
+  className?: string;
 }
 
 export default function SaoDatePicker({
@@ -24,8 +34,11 @@ export default function SaoDatePicker({
   clearable = false,
   required,
   name,
-  placeholder = "DD/MM/YYYY"
+  placeholder = "DD/MM/YYYY",
+  customTrigger,
+  className
 }: SaoDatePickerProps) {
+  const { language } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -215,39 +228,55 @@ export default function SaoDatePicker({
            parseInt(y) === currentMonth.getFullYear();
   };
 
-  const dayNames = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-  const monthNames = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+  const dayNames = language === 'en'
+    ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+    : ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  const monthNames = language === 'en'
+    ? ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    : ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
 
   return (
-    <div className={styles.datePickerContainer} ref={containerRef}>
+    <div
+      className={`${styles.datePickerContainer} ${customTrigger ? styles.customTriggerContainer : ''} ${className || ''}`}
+      ref={containerRef}
+    >
       {name && <input type="hidden" name={name} value={actualValue} />}
-      <div className={styles.inputWrapper} onClick={handleToggle}>
-        <input 
-          type="text" 
-          className={`${styles.dateInput} ${clearable ? styles.clearable : ''}`} 
-          value={formatDateDisplay(actualValue)} 
-          readOnly 
-          placeholder={placeholder}
-          required={required}
-        />
-        {clearable && actualValue && (
-          <button
-            type="button"
-            className={styles.clearBtn}
-            onClick={(e) => {
-              e.stopPropagation();
-              setInternalValue('');
-              if (onChange) onChange('');
-              if (onClear) onClear();
-            }}
-            title="Xóa ngày"
-            tabIndex={-1}
-          >
-            <X size={13} />
-          </button>
-        )}
-        <CalendarIcon size={16} className={styles.calendarIcon} />
-      </div>
+      {customTrigger ? (
+        customTrigger({
+          value: actualValue,
+          displayValue: formatDateDisplay(actualValue),
+          isOpen,
+          toggle: handleToggle
+        })
+      ) : (
+        <div className={styles.inputWrapper} onClick={handleToggle}>
+          <input 
+            type="text" 
+            className={`${styles.dateInput} ${clearable ? styles.clearable : ''}`} 
+            value={formatDateDisplay(actualValue)} 
+            readOnly 
+            placeholder={placeholder}
+            required={required}
+          />
+          {clearable && actualValue && (
+            <button
+              type="button"
+              className={styles.clearBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                setInternalValue('');
+                if (onChange) onChange('');
+                if (onClear) onClear();
+              }}
+              title="Xóa ngày"
+              tabIndex={-1}
+            >
+              <X size={13} />
+            </button>
+          )}
+          <CalendarIcon size={16} className={styles.calendarIcon} />
+        </div>
+      )}
 
       {/* Render Popover qua React Portal ra document.body để không bao giờ bị overflow-hidden hay clip-path cắt cụt */}
       {isOpen && mounted && popoverCoords && createPortal(

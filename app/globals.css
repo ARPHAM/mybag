@@ -19,26 +19,47 @@
   }
 }
 
+html,
+body {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Global SAO Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ========================================================
+   HỆ THỐNG THANH CUỘN NỔI ZERO-GUTTER (TRUE ZERO-SPACE OVERLAY)
+   - Hoàn toàn KHÔNG chiếm diện tích màn hình (0px reserved gutter)
+   - Không đẩy dồn layout, nội dung mở rộng 100% tràn viền
+   - Thao tác cuộn chuột, cảm ứng, touchpad vẫn mượt mà tự nhiên
+   - Hiệu ứng ánh sáng neon Cyber SAO nổi ở mép khi hover/tương tác
+   ======================================================== */
+
+/* Triệt tiêu 100% khoảng chiếm chỗ của thanh cuộn trên mọi trình duyệt */
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
-::-webkit-scrollbar-thumb {
-  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.5);
-  border-radius: 4px;
-  border: 1px solid rgba(var(--sao-primary-rgb, 0, 240, 255), 0.8);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.8);
+
+/* Chỉ báo Cyber HUD Neon nổi (Overlay 100% bằng inset shadow, 0px footprint, không đẩy giao diện) */
+div[class*="scrollArea"]:hover,
+div[class*="taskList"]:hover,
+div[class*="groceryList"]:hover,
+div[class*="tabContent"]:hover,
+.custom-scrollbar:hover {
+  box-shadow: inset -2px 0 6px -1px rgba(var(--sao-primary-rgb, 0, 240, 255), 0.35);
+  transition: box-shadow 0.25s ease;
 }

@@ -237,6 +237,7 @@ export default function HistoryTab({
       <SaoFab
         title={t('finance.addTransaction')}
         onClick={onAdd}
+        position="fixed"
       />
     </div>
   );

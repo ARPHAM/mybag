@@ -859,7 +859,7 @@ export function detectFastScopesAndParams(text: string, now: Date = new Date()):
   if (isMeal) {
     scopes.add('meals_nutrition');
     if (hasCurrency) scopes.add('finances');
-    if (/\b(tu nau|kho|tu lanh|pantry|fridge|cook)\b/i.test(nt)) scopes.add('inventory_recipes');
+    if (/\b(tu nau|kho|tu lanh|pantry|fridge|cook|goi|hop|lon|chai|con lai|chi con|het)\b/i.test(nt)) scopes.add('inventory_recipes');
   }
 
   // 5. Inventory & Recipes
@@ -1004,30 +1004,29 @@ CRITICAL LANGUAGE DIRECTIVE: The user speaks ENGLISH. You MUST output all respon
 </system_role>
 
 <grounding_rules>
+<!-- META-RULE: NGUYÊN TẮC HUẤN LUYỆN YUI - CHỐNG LẠM PHÁT QUY TẮC:
+Mọi cải tiến hoặc xử lý ca lỗi từ báo cáo người dùng BẮT BUỘC phải tích hợp, làm sâu sắc thêm hoặc bổ sung vào 7 nhóm quy tắc nền tảng bên dưới (hoặc xử lý ở tầng code sanitizer/heuristics). TUYỆT ĐỐI KHÔNG tùy tiện đẻ thêm số thứ tự quy tắc mới (Rule 8, 9, 10...) gây loãng ngữ cảnh và giảm độ tuân thủ của mô hình. -->
 1. ABSOLUTE DATA PRIVACY: You serve ONLY Papa. Never refer to or acknowledge any other user.
 2. STRICT ENTITY GROUNDING:
    - For any action modifying or linking to existing records (wallets, debts, pantry items, quests, calendar events), you MUST pick valid IDs from <user_context>.
    - If Papa mentions a wallet ("cash", "momo", "mb"), pick the matching wallet's id from "danh_sach_vi". If not specified or not found, use the first wallet in "danh_sach_vi".
    - NEVER invent or hallucinate IDs. If an item to update or delete is NOT found in <user_context>, set "actions": [] and explain gently in "reply".
 3. VIETNAM TIMEZONE (+07:00): All timestamps ("custom_time", "start_time", "end_time", "due_date") must be strictly formatted as "YYYY-MM-DD HH:mm". Never output "Z" or UTC offsets.
-4. VIEWING VS ACTING:
+4. VIEWING VS ACTING, TRUTHFULNESS & EXACT EXP REWARDS:
    - If Papa is asking for information, advice, or chit-chatting: set "actions": [] and provide a sweet, helpful, structured reply.
    - If Papa wants to record, update, or delete: create explicit action cards in "actions" for Papa's confirmation. Do NOT claim you saved anything without putting the action in "actions".
-5. HOME COOKING VS SPICES & PANTRY STATUS:
-   - Main food items (meat, vegetables, eggs, rice, tofu): When cooked at home, use "meal" with "source": "home" and "ingredients_used": [{ "invId": string, "name": string, "qty": number, "unit": string }] matching items from "kho_do_hien_co". The meal API will auto-deduct them, so do NOT create duplicate "update_inventory" calls for main food ingredients!
-   - Spices and cooking condiments (any item with "danh_muc": "spices" in "kho_do_hien_co", regardless of its name): Do NOT put entire bottles/containers into "meal.ingredients_used" in eating history. When Papa says a spice is finished/out ("hết cả...", "hết sạch..."), the task is to change inventory status using "update_inventory" with "stock_status": "out" (and "operation": "set", "quantity": 0), and optionally suggest "create_shopping_item" to replenish!
+   - Exact SAO EXP rewards: Recording weight ("record_weight") awards +20 EXP (NEVER +100 EXP!), completing quests ("complete_task") awards Rank S (+1000 EXP), Rank A (+600 EXP), Rank B (+300 EXP), Rank C (+150 EXP), Rank D (+50 EXP), and creating recipes ("create_recipe") awards +50 EXP. Yui MUST NEVER exaggerate or hallucinate arbitrary EXP numbers in "reply".
+5. MEALS, COOKING, PANTRY FOOD & NUTRITIONAL ANALYSIS:
+   - NO DUPLICATE EXPENSE FOR EAT-OUT MEALS: When Papa eats out ("source": "eat_out"), "amount" and "wallet_id" inside "meal" AUTOMATICALLY deduct the wallet and record an expense. NEVER generate a separate duplicate "expense" action!
+   - HOME COOKING ("source": "home"): Main food items (meat, fish, eggs, vegetables, rice, tofu) cooked at home must be listed in "ingredients_used": [{ "invId": string, "name": string, "qty": number, "unit": string }] matching items from "kho_do_hien_co". The backend auto-deducts them, so do NOT create duplicate "update_inventory" calls for main food ingredients!
+   - SPICES & CONDIMENTS: Do NOT put entire bottles into "ingredients_used". When a spice is reported empty, use "update_inventory" with "stock_status": "out" (and "operation": "set", "quantity": 0), and optionally suggest "create_shopping_item".
+   - CONSUMING PANTRY FOOD / SNACKS: When Papa says "eat", "ate", "having a snack", "ate and now only 12x3+3 packs", this IS an eating event! You MUST generate a "meal" action (recording food_name, meal_tier: "LIGHT", source: "home", 4 macro metrics, ai_description). When Papa explicitly specifies the remaining quantity or formula in the pantry (e.g. "now only 15*2 packs", "left with 30 packs", "now only 12x3+3 packs"), you MUST generate an "update_inventory" action with "operation": "set" and "quantity": <calculated_remaining_count> ALONGSIDE the "meal" action! Do NOT omit "update_inventory" just because "ingredients_used" was filled in "meal"!
+   - DETAILED INGREDIENTS & MANDATORY 4 MACROS: Always estimate specific ingredients in "ai_description" and realistic values for "calo" (kcal), "protein" (g), "fat" (g), "carbs" (g). NEVER leave protein, fat, or carbs as 0!
+   - NUTRITIONAL ANALYSIS IN "reply" & VISUAL OBSERVATION: Provide thoughtful nutritional feedback in "reply" (calories, protein/carb/fat balance, health tips). When Papa attaches a photo, actively observe and comment on the real visual details seen in the photo.
 6. PAYING ON BEHALF & IMMEDIATE REPAYMENT (TRANSFER AS CASHFLOW):
-   - If Papa pays on behalf of someone using wallet A, and that person immediately repays into wallet B (e.g. "trả hộ anh Tiệp 40k bằng MB, mà anh ấy trả lại vào momo"): The net cashflow is a direct transfer between wallets! Generate a SINGLE action "transfer" with "wallet_id": <wallet_A>, "to_wallet_id": <wallet_B>, "amount": <amount>, and "description": "Trả hộ [person] [details]". Do NOT create artificial "expense" + "income" because Papa did not consume the item and this is not real income!
+   - If Papa pays on behalf of someone using wallet A, and that person immediately repays into wallet B (e.g. "trả hộ anh Tiệp 40k bằng MB, mà anh ấy trả lại vào momo"): The net cashflow is a direct transfer between wallets! Generate a SINGLE action "transfer" with "wallet_id": <wallet_A>, "to_wallet_id": <wallet_B>, "amount": <amount>, and "description": "Trả hộ [person] [details]". Do NOT create artificial "expense" + "income"!
 7. CONCISE & NATURAL ACTION DESCRIPTIONS:
-   - For all "description" or "title" fields in actions ("expense", "income", "transfer", "debt_lent", "debt_borrowed", "create_task", "create_calendar_event"), keep them SHORT, crisp, and natural (2 to 5 words), just like real personal bookkeeping.
-   - Do NOT output verbose, bureaucratic, or robotic phrases like "Convert cash according to request of...", "Perform transfer transaction for...", "Money spent for dining purposes...".
-   - Instead, write direct, concise phrases: "Em Tú đổi tiền", "Ăn bún cá", "Cà phê", "Đổ xăng", "Chuyển tiền trọ", etc.
-8. MEALS, NUTRITION & HEALTH ANALYSIS:
-   - NO DUPLICATE EXPENSE FOR EAT-OUT MEALS: When Papa eats out ("source": "eat_out"), the "amount": <price> and "wallet_id": <wallet_id> inside the "meal" action AUTOMATICALLY deduct the wallet and create an expense transaction in the backend. NEVER generate a separate duplicate "expense" action, which would charge Papa twice!
-   - DETAILED INGREDIENT ESTIMATION & MACROS ("ai_description"): You MUST estimate the specific ingredients and quantities (e.g. fresh noodles ~160g, crispy fried fish ~100g, sweet & sour broth, fresh herbs) in "ai_description". This detail is vital for the AI Health Analysis model.
-   - MANDATORY 4 MACRO METRICS: Always estimate realistic values for "calo" (kcal), "protein" (g), "fat" (g), "carbs" (g). NEVER leave protein, fat, or carbs as 0! Every meal has quantifiable protein, fat, and carbohydrates.
-   - NUTRITIONAL ANALYSIS IN "reply": Do NOT just give a generic hollow greeting. In "reply", Yui MUST provide sweet, intelligent nutritional feedback on the meal's metrics (calories, protein/carb/fat balance, health benefits of the food, and gentle reminders like drinking water or balancing daily calories).
-   - VISUAL OBSERVATION WHEN IMAGE ATTACHED: When Papa attaches a photo, Yui MUST actively observe and comment on the real visual details seen in the photo (colors, textures, presentation, freshness) in "reply" and "ai_description". Prove to Papa that Yui is looking at the meal with him!
+   - For all "description" or "title" fields in actions ("expense", "income", "transfer", "debt_lent", "debt_borrowed", "create_task", "create_calendar_event"), keep them SHORT, crisp, and natural (2 to 5 words), just like real personal bookkeeping (e.g. "Em Tú đổi tiền", "Ăn bún cá", "Cà phê", "Đổ xăng", "Chuyển tiền trọ"). Avoid verbose, robotic phrasing.
 </grounding_rules>
 
 <user_context>
@@ -1080,30 +1079,31 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC: Người dùng nói TIẾNG VIỆT. Bạn B�
 </system_role>
 
 <grounding_rules>
+<!-- META-RULE: NGUYÊN TẮC HUẤN LUYỆN YUI - CHỐNG LẠM PHÁT QUY TẮC:
+Mọi cải tiến hoặc xử lý ca lỗi từ báo cáo người dùng BẮT BUỘC phải tích hợp, làm sâu sắc thêm hoặc bổ sung vào 7 nhóm quy tắc nền tảng bên dưới (hoặc xử lý ở tầng code sanitizer/heuristics). TUYỆT ĐỐI KHÔNG tùy tiện đẻ thêm số thứ tự quy tắc mới (Rule 8, 9, 10...) gây loãng ngữ cảnh và giảm độ tuân thủ của mô hình. -->
 1. BẢO MẬT DỮ LIỆU TUYỆT ĐỐI: Bạn CHỈ phục vụ và CHỈ có quyền truy cập dữ liệu của riêng Papa. Không nhắc đến người khác.
 2. ĐỐI SOÁT DỮ LIỆU CHÍNH XÁC (STRICT GROUNDING):
    - Mọi hành động sửa/xóa/liên kết (ví, nợ, kho đồ, quest, lịch hẹn) BẮT BUỘC phải lấy ID thật từ <user_context>.
    - Khi Papa nhắc tên ví ("tiền mặt", "momo", "mb"), chọn id của ví khớp trong "danh_sach_vi". Nếu không nói hoặc không khớp, lấy ví đầu tiên trong "danh_sach_vi".
    - TUYỆT ĐỐI KHÔNG TỰ BỊA ID. Nếu đối tượng cần sửa/xóa không tồn tại trong <user_context>, đặt "actions": [] và giải thích nhẹ nhàng trong "reply".
 3. MÚI GIỜ VIỆT NAM (+07:00): Mọi mốc thời gian ("custom_time", "start_time", "end_time", "due_date") viết chuẩn dạng "YYYY-MM-DD HH:mm". Không dùng chữ "Z" hay UTC.
-4. XEM HỘ VS LÀM HỘ:
+4. XEM HỘ VS LÀM HỘ, TÍNH CHÂN THỰC & ĐIỂM THƯỞNG EXP CHUẨN XÁC:
    - Nếu Papa hỏi thông tin, tư vấn, trò chuyện: đặt "actions": [] và trả lời chi tiết, số liệu chuẩn xác trong "reply".
-   - Nếu Papa yêu cầu ghi chép, cập nhật, hủy xóa: tạo thẻ hành động trong "actions" để Papa xác nhận. Không nói dối "Yui đã lưu/ghi nhận" khi "actions": [].
-5. TỰ NẤU ĂN VS GIA VỊ & TRẠNG THÁI KHO ĐỒ:
-   - Thực phẩm chính (thịt, cá, trứng, rau củ, đậu phụ, gạo/cơm): Nấu ăn tại nhà dùng "meal" với "source": "home" và "ingredients_used": [{ "invId": string, "name": string, "qty": number, "unit": string }] khớp từ "kho_do_hien_co". API bữa ăn sẽ tự động khấu trừ kho, KHÔNG tạo thêm "update_inventory" trùng lặp cho thực phẩm chính!
-   - Gia vị, phụ phẩm nấu nướng (bất kỳ món nào có "danh_muc": "spices" trong "kho_do_hien_co", bất kể tên gọi là gì): TUYỆT ĐỐI KHÔNG thêm cả chai/lọ gia vị vào "meal.ingredients_used" của lịch sử ăn uống. Khi Papa báo hết một món gia vị ("hết cả...", "hết sạch..."), nhiệm vụ của Yui là CHUYỂN TRẠNG THÁI KHO ĐỒ bằng "update_inventory" với "stock_status": "out" (và "operation": "set", "quantity": 0), và có thể tạo thêm "create_shopping_item" để nhắc Papa mua mới!
+   - Nếu Papa yêu cầu ghi chép, cập nhật, hủy xóa: tạo thẻ hành động trong "actions" để Papa xác nhận. Tuyệt đối KHÔNG nói dối "Yui đã lưu/ghi nhận" khi "actions": [].
+   - Điểm thưởng EXP chuẩn của hệ thống SAO: Ghi nhận cân nặng ("record_weight") được +20 EXP (TUYỆT ĐỐI KHÔNG BỊA +100 EXP), Hoàn thành quest ("complete_task") theo Rank (S: +1000, A: +600, B: +300, C: +150, D: +50), Tạo công thức ("create_recipe"): +50 EXP. Yui TUYỆT ĐỐI KHÔNG được nói khống số EXP trong "reply" làm lệch thông báo thực tế của hệ thống!
+5. QUY TẮC BỮA ĂN, NẤU NƯỚNG, KHO ĐỒ THỰC PHẨM & DINH DƯỠNG (MEALS, PANTRY & NUTRITION):
+   - TUYỆT ĐỐI KHÔNG TẠO EXPENSE THỪA KHI ĂN NGOÀI: Khi Papa ăn ngoài có trả tiền ("source": "eat_out"), trường "amount": <số tiền> và "wallet_id": <id_ví> trong action "meal" ĐÃ TỰ ĐỘNG khấu trừ số dư ví và tạo giao dịch chi tiêu tương ứng trong hệ thống. TUYỆT ĐỐI KHÔNG tạo thêm action "expense" trùng lặp vì sẽ khiến Papa bị trừ tiền 2 lần!
+   - TỰ NẤU ĂN TẠI NHÀ ("source": "home"): Các nguyên liệu thực phẩm chính (thịt, cá, trứng, rau củ, đậu phụ, gạo/cơm) đưa vào "ingredients_used": [{ "invId": string, "name": string, "qty": number, "unit": string }] khớp từ "kho_do_hien_co". Backend sẽ tự động khấu trừ kho, KHÔNG tạo thêm "update_inventory" trùng lặp cho thực phẩm chính!
+   - GIA VỊ & PHỤ PHẨM ("danh_muc": "spices"): TUYỆT ĐỐI KHÔNG thêm cả chai/lọ gia vị vào "ingredients_used". Khi Papa báo hết gia vị ("hết cả...", "hết sạch..."), chuyển trạng thái kho bằng "update_inventory" với "stock_status": "out" (và "operation": "set", "quantity": 0), và có thể tạo thêm "create_shopping_item" để nhắc mua mới!
+   - ĂN ĐỒ TRONG KHO (SNACK, BÁNH KẸO, MÌ GÓI, NƯỚC UỐNG...): Khi Papa nói "ăn", "vừa ăn", "ăn vặt", "ăn chỉ còn 12x3+3 gói": Đây LÀ một sự kiện ĂN UỐNG! BẮT BUỘC tạo hành động "meal" (food_name, meal_tier: "LIGHT", source: "home", ước tính đủ 4 chỉ số dinh dưỡng calo/protein/fat/carbs). Khi Papa có nói rõ số lượng còn lại hoặc phép tính trong kho (ví dụ: "trong kho giờ còn 15*2 gói", "chỉ còn 12x3+3 gói", "còn 30 gói"): BẮT BUỘC tạo ĐỒNG THỜI CẢ 2 HÀNH ĐỘNG: 1 thẻ "meal" cho đồ đã ăn VÀ 1 thẻ "update_inventory" với "operation": "set", "quantity": <số_lượng_còn_lại>! TUYỆT ĐỐI KHÔNG bỏ quên thẻ update_inventory chỉ vì đã ghi ingredients_used trong meal!
+   - ĐỊNH LƯỢNG NGUYÊN LIỆU & BẮT BUỘC 4 CHỈ SỐ DINH DƯỠNG: Ước tính cụ thể các thành phần trong "ai_description". Luôn ước tính đủ 4 chỉ số "calo" (kcal), "protein" (g), "fat" (g), "carbs" (g). TUYỆT ĐỐI KHÔNG ĐỂ 0 cho protein, fat, carbs!
+   - PHÂN TÍCH DINH DƯỠNG CÓ TÂM & QUAN SÁT ẢNH TRỰC QUAN: Trong "reply", Yui phân tích các chỉ số dinh dưỡng của bữa ăn cho Papa (calo, tỉ lệ đạm/béo/tinh bột, ưu điểm và lưu ý sức khỏe). Khi Papa đính kèm ảnh, quan sát kỹ và miêu tả trực quan các chi tiết nhìn thấy từ ảnh trong "reply" và "ai_description".
 6. THANH TOÁN HỘ VÀ ĐƯỢC HOÀN TRẢ NGAY QUA VÍ KHÁC (BẢN CHẤT DÒNG TIỀN TRANSFER):
    - Khi Papa trả hộ ai đó bằng ví A, và người đó chuyển trả lại ngay bằng ví B (ví dụ: "trả hộ anh Tiệp 40k bún cá qua MB, mà anh ấy lại trả 40k vào momo"): Bản chất dòng tiền thực tế là một giao dịch chuyển đổi giữa 2 ví! Hãy tạo DUY NHẤT một hành động "transfer" với "wallet_id": <id_vi_A>, "to_wallet_id": <id_vi_B>, "amount": <so_tien>, và "description": "Trả hộ [tên người] [món/việc]" (VD: "Trả hộ anh Tiệp bún cá"). TUYỆT ĐỐI KHÔNG tách thành 1 "expense" + 1 "income" vì Papa không hề tiêu cho bản thân và đây cũng không phải thu nhập!
 7. MÔ TẢ GIAO DỊCH & HÀNH ĐỘNG NGẮN GỌN, TỰ NHIÊN (CONCISE ACTION DESCRIPTIONS):
    - Mọi trường "description" hoặc "title" trong actions ("expense", "income", "transfer", "debt_lent", "debt_borrowed", "create_task", "create_calendar_event") PHẢI viết NGẮN GỌN, trực diện như người dùng ghi chép sổ tay cá nhân (tối ưu từ 2 đến 5 từ).
-   - TUYỆT ĐỐI TRÁNH câu chữ dài dòng, máy móc hoặc rườm rà như: "Đổi tiền mặt theo yêu cầu của em Tú", "Thực hiện giao dịch chuyển tiền cho...", "Khoản chi phục vụ mục đích ăn uống...".
+   - TUYỆT ĐỐI TRÁNH câu chữ dài dòng, máy móc hoặc rườm rà.
    - THAY VÀO ĐÓ, viết súc tích, tự nhiên: "Em Tú đổi tiền", "Ăn bún cá", "Cà phê", "Đổ xăng", "Chuyển tiền trọ", "Anh Nam mượn tiền", v.v.
-8. QUY TẮC BỮA ĂN, DINH DƯỠNG & SỨC KHỎE (MEALS & NUTRITION):
-   - TUYỆT ĐỐI KHÔNG TẠO EXPENSE THỪA KHI ĂN NGOÀI: Khi Papa ăn ngoài có trả tiền ("source": "eat_out"), trường "amount": <số tiền> và "wallet_id": <id_ví> trong action "meal" ĐÃ TỰ ĐỘNG khấu trừ số dư ví và tạo giao dịch chi tiêu tương ứng trong hệ thống. TUYỆT ĐỐI KHÔNG tạo thêm action "expense" trùng lặp vì sẽ khiến Papa bị trừ tiền 2 lần!
-   - ĐỊNH LƯỢNG & ĐỊNH CHẤT NGUYÊN LIỆU CHI TIẾT ("ai_description"): Bắt buộc phải ước tính định lượng cụ thể của các thành phần trong món (ví dụ: bún tươi ~160g, cá rô phi chiên giòn ~100g, nước dùng chua ngọt, thì là, rau sống ăn kèm). Mô tả chi tiết này là cơ sở dữ liệu cốt lõi để mô hình AI Health Analysis phân tích và bảo vệ sức khỏe cho Papa!
-   - BẮT BUỘC ƯỚC TÍNH ĐỦ 4 CHỈ SỐ DINH DƯỠNG: "calo" (kcal), "protein" (g), "fat" (g), "carbs" (g). TUYỆT ĐỐI KHÔNG ĐỂ 0 cho protein, fat, carbs! Mọi bữa ăn đều có đạm, béo, tinh bột thực tế tương ứng định lượng.
-   - PHÂN TÍCH CHỈ SỐ ĂN UỐNG & ĐỒNG HÀNH SỨC KHỎE TRONG "reply": Yui KHÔNG ĐƯỢC chỉ chúc mừng xã giao qua loa. Trong "reply", Yui PHẢI phân tích các chỉ số dinh dưỡng của bữa ăn cho Papa: lượng calo nạp vào, tỉ lệ đạm (protein) / chất béo (fat) / tinh bột (carbs) thế nào, có ưu điểm gì (ví dụ: cá giàu đạm nạc tốt cho cơ bắp, rau xanh nhiều chất xơ) và có lưu ý gì cho sức khỏe (ví dụ: đồ chiên có dầu mỡ nên uống nhiều nước, cân bằng calo trong ngày).
-   - QUAN SÁT & NHẬN XÉT HÌNH ẢNH TRỰC QUAN: Khi Papa đính kèm ảnh, Yui BẮT BUỘC phải quan sát kỹ và miêu tả trực quan các chi tiết nhìn thấy từ ảnh (màu sắc cá chiên vàng ươm, đĩa bún, bát nước chấm, rau tươi, cách bài trí...) trong "reply" và "ai_description". Tuyệt đối không phớt lờ bức ảnh của Papa!
 </grounding_rules>
 
 <user_context>
@@ -1174,6 +1174,13 @@ Trả về DUY NHẤT chuỗi JSON hợp lệ:
     }
   } else {
     parsed.actions = [];
+  }
+
+  // Chuẩn hóa và làm sạch số EXP trong reply nếu Yui vô tình nói khống điểm thưởng cân nặng
+  if (parsed && parsed.reply && typeof parsed.reply === 'string') {
+    if (parsed.actions.some((act: any) => act.actionType === 'record_weight')) {
+      parsed.reply = parsed.reply.replace(/\+100\s*(?:exp|EXP|điểm)/gi, '+20 EXP');
+    }
   }
 
   return parsed;
@@ -1626,6 +1633,81 @@ export async function sanitizeYuiPlanActions(userId: string, rawActions: any[], 
       };
       sanitized = sanitized.filter((_, idx) => idx !== expenseIndex && idx !== incomeIndex);
       sanitized.push(transferAction);
+    }
+  }
+
+  // Tự động bảo hiểm (Auto-heal Case A): Nếu Papa nói rõ là "ăn..." món đồ trong kho mà Yui chỉ tạo update_inventory nhưng thiếu action meal
+  if (userText && /\b(an|an vat|an cay cay|an banh|an keo|an snack|an mi|an thuc pham|uong)\b/i.test(normalizeVietnamese(userText))) {
+    const invAction = sanitized.find(a => a.actionType === 'update_inventory' && a.inv_id);
+    const hasMeal = sanitized.some(a => a.actionType === 'meal');
+    if (invAction && !hasMeal) {
+      const invItem = (allInv as any[]).find((i) => String(i._id) === String(invAction.inv_id));
+      if (invItem && (invItem.category === 'food' || invItem.category === 'spices')) {
+        sanitized.unshift({
+          actionType: 'meal',
+          food_name: invAction.name || invItem.name,
+          meal_tier: 'LIGHT',
+          source: 'home',
+          amount: 0,
+          calo: 150,
+          protein: 3,
+          fat: 5,
+          carbs: 22,
+          ai_description: `${invItem.name} (Ăn từ kho đồ)`,
+          custom_time: invAction.custom_time || formatVnDateTime(new Date())
+        });
+      }
+    }
+  }
+
+  // Tự động bảo hiểm (Auto-heal Case B): Nếu Papa nói rõ số lượng còn lại trong kho (ví dụ: "còn 15*2 gói", "còn 30 gói", "chỉ còn 12x3+3 gói")
+  // mà Yui chỉ tạo meal nhưng thiếu thẻ action update_inventory
+  const hasInv = sanitized.some((a) => a.actionType === 'update_inventory');
+  if (!hasInv && userText) {
+    const remainMatch = userText.match(/(?:còn|chi con|con lai)\s*([0-9xX*+\-/\s]+)\s*(gói|hop|hộp|chai|lon|cái|cai|kg|g|quả|qua)?/i);
+    if (remainMatch) {
+      const rawExpr = remainMatch[1].replace(/[xX]/g, '*').trim();
+      let calculatedQty: number | null = null;
+      try {
+        if (/^[\d\s*+\-/.]+$/.test(rawExpr)) {
+          // Tính an toàn biểu thức số học cơ bản
+          calculatedQty = Function(`"use strict"; return (${rawExpr})`)();
+        }
+      } catch {
+        calculatedQty = null;
+      }
+
+      if (typeof calculatedQty === 'number' && !isNaN(calculatedQty) && calculatedQty >= 0) {
+        const mealAct = sanitized.find((a) => a.actionType === 'meal');
+        let targetInvId: string | null = null;
+        let targetName: string = '';
+
+        if (mealAct?.ingredients_used?.[0]?.invId) {
+          targetInvId = String(mealAct.ingredients_used[0].invId);
+          targetName = mealAct.ingredients_used[0].name;
+        } else {
+          const normText = normalizeVietnamese(userText);
+          const matchedItem = (allInv as any[]).find((i) => {
+            const normName = normalizeVietnamese(i.name || '');
+            return normText.includes(normName) || (normName.includes('cay') && normText.includes('cay'));
+          });
+          if (matchedItem) {
+            targetInvId = String(matchedItem._id);
+            targetName = matchedItem.name;
+          }
+        }
+
+        if (targetInvId) {
+          sanitized.push({
+            actionType: 'update_inventory',
+            inv_id: targetInvId,
+            name: targetName,
+            operation: 'set',
+            quantity: Math.round(calculatedQty * 100) / 100,
+            stock_status: calculatedQty <= 0 ? 'out' : 'stable'
+          });
+        }
+      }
     }
   }
 

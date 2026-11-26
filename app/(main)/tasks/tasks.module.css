@@ -32,7 +32,7 @@
 }
 
 .thirdMetricCard {
-  /* Override if needed */
+  position: relative;
 }
 
 /* Ẩn thanh Mobile Summary Strip trên Desktop */
@@ -81,29 +81,20 @@
   flex: 1;
   width: 100%;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
-  padding-right: 8px;
+  padding-right: 0;
   padding-bottom: 85px;
   align-content: start;
 }
 
 .taskList::-webkit-scrollbar {
-  width: 6px;
-}
-
-.taskList::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.taskList::-webkit-scrollbar-thumb {
-  background: rgba(var(--sao-primary-rgb), 0.3);
-  border-radius: 3px;
-}
-
-.taskList::-webkit-scrollbar-thumb:hover {
-  background: var(--sao-primary-hex);
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .emptyState {
@@ -823,8 +814,8 @@
   }
 
   .tasksFab {
-    bottom: 12px;
-    left: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    left: 16px;
     right: auto;
     width: 46px !important;
     height: 46px !important;

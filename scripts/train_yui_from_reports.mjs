@@ -38,7 +38,20 @@ async function main() {
     console.log(`--------------------------------------------------------------------------------\n`);
   }
 
-  console.log(`\n[HƯỚNG DẪN]`);
+  console.log(`\n================================================================================`);
+  console.log(`[NGUYÊN TẮC VÀNG HUẤN LUYỆN YUI - CHỐNG LẠM PHÁT QUY TẮC]`);
+  console.log(`1. KHÔNG tạo thêm số thứ tự quy tắc mới (Rule 8, 9, 10...) nếu có thể gộp được!`);
+  console.log(`2. Luôn gom nhóm ca lỗi vào 7 quy tắc nền tảng trong lib/yuiEngine.ts:`);
+  console.log(`   - Rule 1: Bảo mật dữ liệu tuyệt đối (riêng Papa)`);
+  console.log(`   - Rule 2: Đối soát dữ liệu chính xác (Strict Grounding - ID thật từ ngữ cảnh)`);
+  console.log(`   - Rule 3: Múi giờ Việt Nam (+07:00 YYYY-MM-DD HH:mm)`);
+  console.log(`   - Rule 4: Xem hộ vs Làm hộ, tính chân thực & Thưởng EXP chuẩn`);
+  console.log(`   - Rule 5: Bữa ăn, Nấu nướng, Kho đồ thực phẩm, Ăn vặt & Dinh dưỡng`);
+  console.log(`   - Rule 6: Thanh toán hộ và hoàn trả ngay (Transfer dòng tiền)`);
+  console.log(`   - Rule 7: Mô tả giao dịch & hành động ngắn gọn, tự nhiên (2-5 từ)`);
+  console.log(`3. Ưu tiên bảo vệ 2 lớp: Code Sanitizer / Heuristic (tự động nắn chỉnh action) + Prompt Grounding.`);
+  console.log(`================================================================================\n`);
+  console.log(`[HƯỚNG DẪN THỰC HIỆN]`);
   console.log(`1. Đọc các ca thực tế trên và cập nhật Rule/Grounding/Few-shot tương ứng trong lib/yuiEngine.ts.`);
   console.log(`2. Để đánh dấu đã huấn luyện xong, chạy script với flag: node scripts/train_yui_from_reports.mjs --mark-trained\n`);
 

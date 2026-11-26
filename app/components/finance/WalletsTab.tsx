@@ -32,6 +32,7 @@ export default function WalletsTab({ wallets, formatMoney, onAdd, onEdit }: Prop
       <SaoFab
         title={t('finance.addWallet')}
         onClick={onAdd}
+        position="fixed"
       />
     </div>
   );

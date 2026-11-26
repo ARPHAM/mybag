@@ -123,20 +123,9 @@
 }
 
 .dropdownMenu::-webkit-scrollbar {
-  width: 4px;
-}
-
-.dropdownMenu::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.dropdownMenu::-webkit-scrollbar-thumb {
-  background: rgba(var(--sao-primary-rgb, 0, 240, 255), 0.45);
-  border-radius: 2px;
-}
-
-.dropdownMenu::-webkit-scrollbar-thumb:hover {
-  background: var(--sao-primary-hex, #00f0ff);
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .option {

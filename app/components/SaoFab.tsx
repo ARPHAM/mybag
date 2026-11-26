@@ -22,7 +22,7 @@ export default function SaoFab({
   title,
   ariaLabel,
   variant = 'primary',
-  position = 'absolute',
+  position = 'fixed',
   className = '',
   style
 }: SaoFabProps) {

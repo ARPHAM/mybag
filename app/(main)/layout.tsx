@@ -275,9 +275,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               onClick={() => setMobileMoreOpen(false)}
             />
             <div className={styles.mobileMoreDrawer}>
+              <div className={styles.drawerTopLeftBevel} aria-hidden="true" />
+              <div className={styles.drawerBottomRightBevel} aria-hidden="true" />
+              <div className={styles.drawerBottomLaser} aria-hidden="true" />
               <div className={styles.mobileMoreHeader}>
                 <div className={styles.mobileMoreHeaderTitle}>
-                  <LayoutGrid size={15} />
+                  <LayoutGrid size={16} />
                   <span>{t('nav.more')}</span>
                 </div>
                 <button
