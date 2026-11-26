@@ -97,9 +97,10 @@ export default function BillScanReviewModal({
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>{t('menu.paymentWallet')}</label>
         <SaoSelect
+          value={billWalletId}
           initialValue={billWalletId}
           placeholder={t('menu.selectWallet')}
-          options={wallets.map(w => ({ value: w._id, label: `${w.name} (${formatMoney(w.balance)} đ)` }))}
+          options={wallets.map(w => ({ value: w._id || (w as any).id, label: `${w.name} (${formatMoney(w.balance)} đ)` }))}
           onChange={setBillWalletId}
         />
       </div>

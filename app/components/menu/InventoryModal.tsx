@@ -165,9 +165,10 @@ export default function InventoryModal({
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>{t('menu.paymentSource')}</label>
             <SaoSelect
+              value={inventoryForm.wallet_id}
               initialValue={inventoryForm.wallet_id}
               placeholder={t('menu.selectWallet')}
-              options={wallets.map(w => ({ value: w._id, label: `${w.name} (${formatMoney(w.balance)} đ)` }))}
+              options={wallets.map(w => ({ value: w._id || (w as any).id, label: `${w.name} (${formatMoney(w.balance)} đ)` }))}
               onChange={v => setInventoryForm({ ...inventoryForm, wallet_id: v })}
             />
           </div>

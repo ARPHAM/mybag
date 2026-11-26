@@ -79,7 +79,6 @@ export default function SettingsPage() {
           icon={<Languages size={20} />}
           className={styles.sectionPanel}
         >
-          <div className={styles.sectionDesc}>{t('settings.languageDesc')}</div>
           <div className={styles.languageGrid}>
             <LanguageCard
               code="vi"
@@ -126,7 +125,6 @@ export default function SettingsPage() {
           icon={<ImageIcon size={20} />}
           className={styles.sectionPanel}
         >
-          <div className={styles.sectionDesc}>{t('settings.wallpaperDesc')}</div>
           <WallpaperPicker />
         </SaoPanel>
 

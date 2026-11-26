@@ -54,27 +54,29 @@ export default function SaoSelect({
   const updatePosition = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const dropdownHeight = Math.min(240, Math.max(40, options.length * 40 + 10));
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
     const openUpward = spaceBelow < 180 && spaceAbove > spaceBelow;
 
+    const calculatedWidth = Math.min(rect.width, window.innerWidth - 16);
+    const calculatedLeft = Math.max(8, Math.min(rect.left, window.innerWidth - calculatedWidth - 8));
+
     if (openUpward) {
       setCoords({
-        bottom: window.innerHeight - rect.top + 4,
-        left: rect.left,
-        width: rect.width,
-        maxHeight: Math.max(120, Math.min(240, spaceAbove - 16))
+        bottom: Math.max(8, window.innerHeight - rect.top + 4),
+        left: calculatedLeft,
+        width: calculatedWidth,
+        maxHeight: Math.max(100, Math.min(240, spaceAbove - 16))
       });
     } else {
       setCoords({
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-        maxHeight: Math.max(120, Math.min(240, spaceBelow - 16))
+        top: Math.max(8, rect.bottom + 4),
+        left: calculatedLeft,
+        width: calculatedWidth,
+        maxHeight: Math.max(100, Math.min(240, spaceBelow - 16))
       });
     }
-  }, [options.length]);
+  }, []);
 
   const toggleDropdown = () => {
     if (disabled) return;
@@ -92,7 +94,7 @@ export default function SaoSelect({
     window.addEventListener('resize', handleReposition);
     window.addEventListener('scroll', handleReposition, true);
 
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
       if (
         containerRef.current && !containerRef.current.contains(target) &&
@@ -102,11 +104,13 @@ export default function SaoSelect({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
 
     return () => {
       window.removeEventListener('resize', handleReposition);
       window.removeEventListener('scroll', handleReposition, true);
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [isOpen, updatePosition]);
 
@@ -172,11 +176,11 @@ export default function SaoSelect({
       {isOpen && mounted && coords && createPortal(
         <div
           ref={dropdownRef}
-          className={styles.dropdownMenu}
+          className={`${styles.dropdownMenu} ${coords.bottom !== undefined ? styles.openUpward : ''}`}
           style={{
             position: 'fixed',
-            ...(coords.top !== undefined ? { top: `${coords.top}px` } : {}),
-            ...(coords.bottom !== undefined ? { bottom: `${coords.bottom}px` } : {}),
+            top: coords.top !== undefined ? `${coords.top}px` : 'auto',
+            bottom: coords.bottom !== undefined ? `${coords.bottom}px` : 'auto',
             left: `${coords.left}px`,
             width: `${coords.width}px`,
             maxHeight: `${coords.maxHeight}px`,
@@ -184,16 +188,25 @@ export default function SaoSelect({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {options.map((opt) => (
-            <div
-              key={opt.value}
-              className={`${styles.option} ${opt.value === selectedValue ? styles.selected : ''}`}
-              onClick={() => handleSelect(opt.value)}
-              title={opt.label}
-            >
-              {opt.label}
+          {options.length === 0 ? (
+            <div className={styles.option} style={{ opacity: 0.6, cursor: 'default' }}>
+              {placeholder}
             </div>
-          ))}
+          ) : (
+            options.map((opt) => (
+              <div
+                key={opt.value}
+                className={`${styles.option} ${opt.value === selectedValue ? styles.selected : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelect(opt.value);
+                }}
+                title={opt.label}
+              >
+                {opt.label}
+              </div>
+            ))
+          )}
         </div>,
         document.body
       )}

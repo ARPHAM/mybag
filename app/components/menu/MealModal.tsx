@@ -177,7 +177,12 @@ export default function MealModal({
               type="radio"
               name="source"
               checked={formCookSource === 'eat_out'}
-              onChange={() => setFormCookSource('eat_out')}
+              onChange={() => {
+                setFormCookSource('eat_out');
+                if (!formWalletId && wallets.length > 0) {
+                  setFormWalletId(wallets[0]._id || (wallets[0] as any).id);
+                }
+              }}
             />
             <span className={styles.radioPillIcon}>
               <ShoppingBag size={18} />
@@ -385,8 +390,13 @@ export default function MealModal({
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>{t('menu.paymentWallet')}</label>
             <SaoSelect
+              value={formWalletId}
               initialValue={formWalletId}
-              options={wallets.map(w => ({ value: w._id, label: `${w.name} (${w.balance.toLocaleString('vi-VN')} đ)` }))}
+              placeholder={t('menu.selectWallet')}
+              options={wallets.map(w => ({
+                value: w._id || (w as any).id,
+                label: `${w.name} (${Number(w.balance || 0).toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')} đ)`
+              }))}
               onChange={setFormWalletId}
             />
           </div>

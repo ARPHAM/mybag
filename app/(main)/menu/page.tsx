@@ -145,7 +145,7 @@ export default function MenuPage() {
       if (resR) setRecipes(resR);
       if (resM) setMeals(resM);
       if (resI) setInventory(resI.map((i: any) => ({ ...i, id: i._id })));
-      if (resW) setWallets(resW);
+      if (resW) setWallets(resW.map((w: any) => ({ ...w, _id: w._id || w.id, id: w._id || w.id })));
     } catch (e) {
       console.error(e);
     }
