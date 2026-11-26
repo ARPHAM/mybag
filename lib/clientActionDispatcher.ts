@@ -26,7 +26,7 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
         calo: Number(action.calo) || 0,
         protein: Number(action.protein) || 0,
         fat: Number(action.fat) || 0,
-        carb: Number(action.carb) || 0,
+        carb: Number(action.carb ?? action.carbs) || 0,
         meal_tier: action.meal_tier,
         ai_description: action.ai_description
       };
@@ -356,7 +356,10 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
         if (action.unit !== undefined) updatePayload.unit = action.unit;
         if (action.category !== undefined) updatePayload.category = action.category;
         if (action.expiryDate !== undefined) updatePayload.expiryDate = action.expiryDate;
-        if (action.stock_status !== undefined) updatePayload.stock_status = action.stock_status;
+        if (action.stock_status !== undefined) {
+          updatePayload.stock_status = action.stock_status;
+          updatePayload.justUpdateStockStatus = true;
+        }
         await axiosClient.put(`/api/finance/inventory/${invId}`, updatePayload);
         return { type: 'update_inventory', id: invId };
       }

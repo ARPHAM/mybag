@@ -148,12 +148,49 @@ const WALLET_ACTION_TYPES = new Set([
   'pay_debt',
   'borrow_more_debt',
   'purchase_shopping',
+  'create_inventory',
   'update_transaction'
 ]);
 
-const CATEGORY_ACTION_TYPES = new Set(['expense', 'upsert_budget', 'update_transaction']);
+const CATEGORY_ACTION_TYPES = new Set(['expense', 'income', 'upsert_budget', 'update_transaction']);
 const TASK_ACTION_TYPES = new Set(['create_task', 'update_task']);
 const CALENDAR_ACTION_TYPES = new Set(['create_calendar_event', 'update_calendar_event']);
+
+function getRowBorderClass(actType: string): string {
+  switch (actType) {
+    case 'meal':
+    case 'delete_meal':
+      return styles.planRowMeal;
+    case 'expense':
+    case 'pay_debt':
+    case 'delete_transaction':
+      return styles.planRowExpense;
+    case 'income':
+    case 'borrow_more_debt':
+      return styles.planRowIncome;
+    case 'transfer':
+      return styles.planRowTransfer;
+    case 'create_task':
+    case 'update_task':
+    case 'complete_task':
+    case 'delete_task':
+      return styles.planRowTask;
+    case 'create_calendar_event':
+    case 'update_calendar_event':
+    case 'delete_calendar_event':
+      return styles.planRowCalendar;
+    case 'create_shopping_item':
+    case 'purchase_shopping':
+      return styles.planRowShopping;
+    case 'create_inventory':
+    case 'update_inventory':
+      return styles.planRowInventory;
+    case 'record_weight':
+      return styles.planRowHealth;
+    default:
+      return '';
+  }
+}
 
 function getTitleFieldKey(actionType: string): string {
   if (actionType === 'meal') return 'food_name';
@@ -199,35 +236,68 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
   const { t, language } = useI18n();
   const actType = String(action?.actionType || '');
   const titleKey = getTitleFieldKey(actType);
-  const titleVal = String(action?.[titleKey] ?? action?.description ?? '');
+  const titleVal = String(action?.[titleKey] ?? action?.description ?? action?.name ?? action?.food_name ?? '');
   const categoryLabels = getCategoryLabels(t);
 
-  const showAmount = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'update_transaction'].includes(actType);
+  const showAmount = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'create_inventory', 'update_transaction'].includes(actType);
   const showWallet = WALLET_ACTION_TYPES.has(actType) && wallets.length > 0;
   const isTransfer = actType === 'transfer';
   const showCategory = CATEGORY_ACTION_TYPES.has(actType);
+  const showShoppingCategory = ['create_shopping_item', 'purchase_shopping'].includes(actType);
+  const showInventoryCategory = ['create_inventory', 'update_inventory'].includes(actType);
   const showTaskFields = TASK_ACTION_TYPES.has(actType);
   const showCalendarFields = CALENDAR_ACTION_TYPES.has(actType);
-  const showCustomTime = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'create_inventory', 'update_inventory', 'record_weight', 'update_transaction'].includes(actType);
+  const showQuantityUnit = ['create_shopping_item', 'purchase_shopping', 'create_inventory', 'update_inventory'].includes(actType);
+  const showCustomTime = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'create_inventory', 'record_weight', 'update_transaction'].includes(actType);
+
+  const inventoryCategoryLabels: Record<string, string> = {
+    food: t('finance.categories.food') || 'Thực phẩm',
+    spices: t('finance.categories.spices') || 'Gia vị',
+    household: t('finance.categories.housing') || 'Gia dụng',
+    medicine: t('finance.categories.health') || 'Y tế / Thuốc',
+    cosmetics: 'Mỹ phẩm',
+    electronics: 'Điện tử',
+    other: t('finance.categories.other') || 'Khác'
+  };
+
+  const shoppingCategoryLabels: Record<string, string> = {
+    food: t('shopping.foodTab') || 'Thực phẩm',
+    household: t('shopping.householdTab') || 'Gia dụng',
+    other: t('shopping.otherTab') || 'Khác'
+  };
 
   return (
     <div className={styles.inlineEditor}>
+      {/* Row 1: Tiêu đề / Tên / Đối tượng + Số tiền / Hạn mức / Cân nặng */}
       <div className={styles.inlineRow2}>
         <div className={styles.inlineField}>
-          <label>{titleKey === 'person' ? t('yui.targetPerson') : titleKey === 'title' ? t('yui.fieldTitle') : t('yui.fieldNameDesc')}</label>
+          <label>
+            {titleKey === 'person'
+              ? t('yui.targetPerson')
+              : titleKey === 'title'
+                ? t('yui.fieldTitle')
+                : t('yui.fieldNameDesc')}
+          </label>
           <input
             type="text"
             value={titleVal}
-            onChange={(e) => onChange({
-              [titleKey]: e.target.value,
-              ...(titleKey === 'food_name' ? { description: e.target.value } : {})
-            })}
+            onChange={(e) => {
+              const val = e.target.value;
+              const patch: Record<string, any> = { [titleKey]: val };
+              if (titleKey === 'food_name') patch.description = val;
+              if (titleKey === 'person') patch.personName = val;
+              onChange(patch);
+            }}
           />
         </div>
 
         {showAmount && (
           <div className={styles.inlineField}>
-            <label>{t('menu.cost')} ({t('common.currency')})</label>
+            <label>
+              {actType === 'create_inventory'
+                ? `${t('finance.totalCostEst')} (${t('common.currency')})`
+                : `${t('menu.cost')} (${t('common.currency')})`}
+            </label>
             <input
               type="number"
               min={0}
@@ -243,7 +313,7 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
             <input
               type="number"
               min={0}
-              value={action?.limit ?? ''}
+              value={action?.limit ?? action?.amount ?? ''}
               onChange={(e) => onChange({ limit: e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)) })}
             />
           </div>
@@ -261,45 +331,149 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
             />
           </div>
         )}
+      </div>
 
-        {['create_shopping_item', 'create_inventory'].includes(actType) && (
+      {/* Row Chiều cao khi ghi cân nặng */}
+      {actType === 'record_weight' && (
+        <div className={styles.inlineRow2}>
+          <div className={styles.inlineField}>
+            <label>{t('yui.height') || 'Chiều cao (cm)'}</label>
+            <input
+              type="number"
+              step="0.5"
+              min={50}
+              value={action?.height ?? ''}
+              onChange={(e) => onChange({ height: e.target.value === '' ? undefined : Number(e.target.value) })}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Row Số lượng & Đơn vị tính */}
+      {showQuantityUnit && (
+        <div className={styles.inlineRow2}>
           <div className={styles.inlineField}>
             <label>{t('yui.quantity')}</label>
             <input
               type="number"
               step="0.1"
-              min={0.1}
-              value={action?.quantity ?? 1}
-              onChange={(e) => onChange({ quantity: Math.max(0.1, Number(e.target.value) || 1) })}
+              min={0.01}
+              value={action?.quantity ?? action?.delta_quantity ?? 1}
+              onChange={(e) => {
+                const q = Math.max(0.01, Number(e.target.value) || 1);
+                onChange({ quantity: q, delta_quantity: q });
+              }}
             />
           </div>
-        )}
-      </div>
+          <div className={styles.inlineField}>
+            <label>{t('yui.unit') || 'Đơn vị'}</label>
+            <input
+              type="text"
+              value={action?.unit ?? ''}
+              placeholder="kg, món, gói..."
+              onChange={(e) => onChange({ unit: e.target.value })}
+            />
+          </div>
+        </div>
+      )}
 
-      {(showWallet || showCategory || showTaskFields || actType === 'meal') && (
+      {/* Row Danh mục (Tài chính / Mua sắm / Kho đồ) & Thao tác kho */}
+      {(showCategory || showShoppingCategory || showInventoryCategory) && (
         <div className={styles.inlineRow2}>
-          {showWallet && (
+          {showCategory && (
             <div className={styles.inlineField}>
-              <label>{isTransfer ? t('yui.sourceWallet') : t('yui.accountWallet')}</label>
+              <label>{t('menu.category')}</label>
               <select
-                value={action?.wallet_id || ''}
-                onChange={(e) => {
-                  const chosen = wallets.find((w) => w.id === e.target.value);
-                  onChange({
-                    wallet_id: chosen?.id || undefined,
-                    walletName: chosen?.name || undefined
-                  });
-                }}
+                value={action?.category || 'other'}
+                onChange={(e) => onChange({ category: e.target.value })}
               >
-                <option value="">{t('yui.unselectedWallet')}</option>
-                {wallets.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name} ({fmt(w.balance, language)}{t('common.vnd')})
-                  </option>
+                {Object.entries(categoryLabels).map(([k, lbl]) => (
+                  <option key={k} value={k}>{lbl}</option>
                 ))}
               </select>
             </div>
           )}
+
+          {showShoppingCategory && (
+            <div className={styles.inlineField}>
+              <label>{t('menu.category')}</label>
+              <select
+                value={action?.category || 'food'}
+                onChange={(e) => onChange({ category: e.target.value, inventory_category: e.target.value })}
+              >
+                {Object.entries(shoppingCategoryLabels).map(([k, lbl]) => (
+                  <option key={k} value={k}>{lbl}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {showInventoryCategory && (
+            <div className={styles.inlineField}>
+              <label>{t('menu.category')}</label>
+              <select
+                value={action?.category || 'food'}
+                onChange={(e) => onChange({ category: e.target.value })}
+              >
+                {Object.entries(inventoryCategoryLabels).map(([k, lbl]) => (
+                  <option key={k} value={k}>{lbl}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {actType === 'update_inventory' && (
+            <div className={styles.inlineField}>
+              <label>{t('yui.inventoryOp') || 'Thao tác kho'}</label>
+              <select
+                value={action?.operation || 'set'}
+                onChange={(e) => onChange({ operation: e.target.value })}
+              >
+                <option value="set">{t('yui.opSet') || 'Cập nhật SL'}</option>
+                <option value="add">{t('yui.opAdd') || 'Thêm vào (+)'}</option>
+                <option value="deduct">{t('yui.opDeduct') || 'Dùng bớt (-)'}</option>
+                <option value="discard">{t('yui.opDiscard') || 'Hủy / Bỏ'}</option>
+              </select>
+            </div>
+          )}
+
+          {actType === 'upsert_budget' && (
+            <div className={styles.inlineField}>
+              <label>{t('yui.month') || 'Tháng'}</label>
+              <input
+                type="text"
+                placeholder="YYYY-MM (vd: 2026-11)"
+                value={action?.month ?? ''}
+                onChange={(e) => onChange({ month: e.target.value })}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Row Nguồn ví / Tài khoản thanh toán */}
+      {showWallet && (
+        <div className={styles.inlineRow2}>
+          <div className={styles.inlineField}>
+            <label>{isTransfer ? t('yui.sourceWallet') : t('yui.accountWallet')}</label>
+            <select
+              value={action?.wallet_id || ''}
+              onChange={(e) => {
+                const chosen = wallets.find((w) => w.id === e.target.value);
+                onChange({
+                  wallet_id: chosen?.id || undefined,
+                  walletName: chosen?.name || undefined
+                });
+              }}
+            >
+              <option value="">{t('yui.unselectedWallet')}</option>
+              {wallets.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name} ({fmt(w.balance, language)}{t('common.vnd')})
+                </option>
+              ))}
+            </select>
+          </div>
 
           {isTransfer && wallets.length > 0 && (
             <div className={styles.inlineField}>
@@ -323,61 +497,130 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
               </select>
             </div>
           )}
+        </div>
+      )}
 
-          {showCategory && (
-            <div className={styles.inlineField}>
-              <label>{t('menu.category')}</label>
-              <select
-                value={action?.category || 'other'}
-                onChange={(e) => onChange({ category: e.target.value })}
-              >
-                {Object.entries(categoryLabels).map(([k, lbl]) => (
-                  <option key={k} value={k}>{lbl}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {actType === 'meal' && (
+      {/* Bữa ăn nâng cao: Nguồn, Cấp bữa ăn (Tier), Calo, Dinh dưỡng Macro */}
+      {actType === 'meal' && (
+        <>
+          <div className={styles.inlineRow3}>
             <div className={styles.inlineField}>
               <label>{t('yui.mealSourceCalo')}</label>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <select
-                  value={action?.source === 'home' ? 'home' : 'eat_out'}
-                  onChange={(e) => onChange({ source: e.target.value })}
-                >
-                  <option value="eat_out">{t('menu.eatOut')}</option>
-                  <option value="home">{t('menu.homeCook')}</option>
-                </select>
-                <input
-                  type="number"
-                  min={0}
-                  value={action?.calo ?? 0}
-                  onChange={(e) => onChange({ calo: Math.max(0, Number(e.target.value) || 0) })}
-                  title="Calo (kcal)"
-                  style={{ width: '74px' }}
-                />
-              </div>
-            </div>
-          )}
-
-          {showTaskFields && (
-            <div className={styles.inlineField}>
-              <label>{t('tasks.rank')}</label>
               <select
-                value={action?.quest_rank || 'C'}
-                onChange={(e) => onChange({ quest_rank: e.target.value })}
+                value={action?.source === 'home' ? 'home' : 'eat_out'}
+                onChange={(e) => onChange({ source: e.target.value })}
               >
-                {['S', 'A', 'B', 'C', 'D'].map((r) => (
-                  <option key={r} value={r}>Rank {r}</option>
-                ))}
+                <option value="eat_out">{t('menu.eatOut')}</option>
+                <option value="home">{t('menu.homeCook')}</option>
+              </select>
+            </div>
+            <div className={styles.inlineField}>
+              <label>{t('yui.mealTier') || 'Cấp bữa ăn'}</label>
+              <select
+                value={action?.meal_tier || 'HEAVY'}
+                onChange={(e) => onChange({ meal_tier: e.target.value })}
+              >
+                <option value="HEAVY">{t('yui.mealTierHeavy') || 'Bữa chính'}</option>
+                <option value="LIGHT">{t('yui.mealTierLight') || 'Bữa nhẹ'}</option>
+                <option value="DRINK">{t('yui.mealTierDrink') || 'Thức uống'}</option>
+              </select>
+            </div>
+            <div className={styles.inlineField}>
+              <label>Calo (kcal)</label>
+              <input
+                type="number"
+                min={0}
+                value={action?.calo ?? 0}
+                onChange={(e) => onChange({ calo: Math.max(0, Number(e.target.value) || 0) })}
+              />
+            </div>
+          </div>
+
+          <div className={styles.inlineMacroRow}>
+            <div className={styles.inlineField}>
+              <label>{t('health.protein')} (g)</label>
+              <input
+                type="number"
+                min={0}
+                step="0.5"
+                value={action?.protein ?? ''}
+                onChange={(e) => onChange({ protein: Number(e.target.value) || 0 })}
+              />
+            </div>
+            <div className={styles.inlineField}>
+              <label>{t('health.carbs')} (g)</label>
+              <input
+                type="number"
+                min={0}
+                step="0.5"
+                value={action?.carb ?? action?.carbs ?? ''}
+                onChange={(e) => {
+                  const val = Number(e.target.value) || 0;
+                  onChange({ carb: val, carbs: val });
+                }}
+              />
+            </div>
+            <div className={styles.inlineField}>
+              <label>{t('health.fat')} (g)</label>
+              <input
+                type="number"
+                min={0}
+                step="0.5"
+                value={action?.fat ?? ''}
+                onChange={(e) => onChange({ fat: Number(e.target.value) || 0 })}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Nhiệm vụ: Rank, Tiến độ Status */}
+      {showTaskFields && (
+        <div className={styles.inlineRow2}>
+          <div className={styles.inlineField}>
+            <label>{t('tasks.rank')}</label>
+            <select
+              value={action?.quest_rank || 'C'}
+              onChange={(e) => onChange({ quest_rank: e.target.value })}
+            >
+              {['S', 'A', 'B', 'C', 'D'].map((r) => (
+                <option key={r} value={r}>Rank {r}</option>
+              ))}
+            </select>
+          </div>
+
+          {actType === 'update_task' && (
+            <div className={styles.inlineField}>
+              <label>{t('tasks.progress')}</label>
+              <select
+                value={action?.status || 'PENDING'}
+                onChange={(e) => onChange({ status: e.target.value })}
+              >
+                <option value="PENDING">{t('yui.taskPending')}</option>
+                <option value="IN_PROGRESS">{t('yui.taskInProgress')}</option>
+                <option value="COMPLETED">{t('yui.taskCompleted')}</option>
               </select>
             </div>
           )}
         </div>
       )}
 
-      {(showCustomTime || showTaskFields || showCalendarFields) && (
+      {/* Mua sắm: Tùy chọn nhập thẳng vào kho dự trữ */}
+      {actType === 'purchase_shopping' && (
+        <div className={styles.inlineField}>
+          <label className={styles.inlineCheckboxLabel}>
+            <input
+              type="checkbox"
+              checked={action?.add_to_inventory !== false}
+              onChange={(e) => onChange({ add_to_inventory: e.target.checked })}
+            />
+            <span>{t('shopping.moveToPantry')} ({t('yui.badgeBuyAndStock')})</span>
+          </label>
+        </div>
+      )}
+
+      {/* Mốc thời gian: custom_time, due_date, start_time/end_time, expiryDate, dueDate */}
+      {(showCustomTime || showTaskFields || showCalendarFields || ['debt_lent', 'debt_borrowed'].includes(actType) || ['create_inventory', 'update_inventory', 'purchase_shopping'].includes(actType)) && (
         <div className={styles.inlineRow2}>
           {showCustomTime && (
             <div className={styles.inlineField}>
@@ -403,6 +646,31 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
                   const iso = fromVnDatetimeLocalValue(e.target.value);
                   if (iso) onChange({ due_date: iso });
                 }}
+              />
+            </div>
+          )}
+
+          {['debt_lent', 'debt_borrowed'].includes(actType) && (
+            <div className={styles.inlineField}>
+              <label>{t('yui.dueDate') || 'Hạn trả nợ'}</label>
+              <input
+                type="datetime-local"
+                value={toVnDatetimeLocalValue(action?.dueDate || action?.custom_time, fallbackTime ? new Date(fallbackTime) : new Date())}
+                onChange={(e) => {
+                  const iso = fromVnDatetimeLocalValue(e.target.value);
+                  if (iso) onChange({ dueDate: iso });
+                }}
+              />
+            </div>
+          )}
+
+          {['create_inventory', 'update_inventory', 'purchase_shopping'].includes(actType) && (
+            <div className={styles.inlineField}>
+              <label>{t('yui.expiryDate') || 'Hạn sử dụng'}</label>
+              <input
+                type="date"
+                value={action?.expiryDate ? action.expiryDate.slice(0, 10) : ''}
+                onChange={(e) => onChange({ expiryDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
               />
             </div>
           )}
@@ -434,6 +702,46 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
             </>
           )}
         </div>
+      )}
+
+      {/* Mô tả chi tiết Task hoặc Sự kiện */}
+      {(showTaskFields || showCalendarFields) && (
+        <div className={styles.inlineField}>
+          <label>{t('tasks.taskDesc')}</label>
+          <input
+            type="text"
+            value={action?.description ?? ''}
+            placeholder={t('tasks.taskDescPlaceholder')}
+            onChange={(e) => onChange({ description: e.target.value })}
+          />
+        </div>
+      )}
+
+      {/* Chi tiết Công thức nấu ăn: Nguyên liệu & Hướng dẫn */}
+      {actType === 'create_recipe' && (
+        <>
+          <div className={styles.inlineField}>
+            <label>{t('yui.ingredients') || 'Nguyên liệu'} (phân tách bởi dấu phẩy)</label>
+            <input
+              type="text"
+              value={Array.isArray(action?.ingredients) ? action.ingredients.join(', ') : (action?.ingredients ?? '')}
+              placeholder="VD: Thịt bò, Trứng, Hành tây..."
+              onChange={(e) => {
+                const list = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
+                onChange({ ingredients: list });
+              }}
+            />
+          </div>
+          <div className={styles.inlineField}>
+            <label>{t('yui.instructions') || 'Hướng dẫn nấu'}</label>
+            <textarea
+              rows={2}
+              value={action?.instructions ?? ''}
+              placeholder="Các bước chế biến..."
+              onChange={(e) => onChange({ instructions: e.target.value })}
+            />
+          </div>
+        </>
       )}
 
       <div className={styles.inlineDoneRow}>
@@ -688,7 +996,7 @@ export default function YuiAssistant() {
     setBusy(true);
 
     try {
-      const res: any = await parseYuiMessage(text, recentHistory, attached?.dataUrl);
+      const res: any = await parseYuiMessage(text, recentHistory, attached?.dataUrl, language);
       const plan = res?.data;
 
       if (plan && !plan.actions?.length && (plan.reply || plan.summary)) {
@@ -1023,11 +1331,18 @@ export default function YuiAssistant() {
         <div className={styles.panel} style={mobilePanelStyle}>
           {/* HEADER */}
           <div className={styles.head}>
+            <div className={styles.topLeftBevelLine} />
             <div className={styles.avatar}>
               <Sparkles size={18} />
             </div>
-            <div>
-              <div className={styles.name}>YUI</div>
+            <div className={styles.headTitleArea}>
+              <div className={styles.nameRow}>
+                <span className={styles.name}>YUI</span>
+                <span className={styles.pixieBadge}>
+                  <span className={`${styles.statusDot} ${busy ? styles.statusDotBusy : ''}`} />
+                  MHCP-001
+                </span>
+              </div>
               <div className={styles.sub}>
                 Navigation Pixie · {busy ? t('yui.thinking') : t('yui.readyToHelp')}
               </div>
@@ -1139,8 +1454,11 @@ export default function YuiAssistant() {
                 {m.role === 'yui' && m.plan && (
                   <div className={styles.plan}>
                     <div className={styles.confirmNotice}>
-                      <AlertTriangle size={14} />
-                      {t('yui.confirmTitle')}
+                      <div className={styles.systemNoticeTitle}>
+                        <AlertTriangle size={14} />
+                        <span>{t('yui.actionConfirmation')}</span>
+                      </div>
+                      <span className={styles.systemNoticeTag}>[ SYSTEM // MHCP-001 ]</span>
                     </div>
 
                     {m.plan.actions.map((a: any, j: number) => {
@@ -1151,7 +1469,7 @@ export default function YuiAssistant() {
                       const showMetaTags = Boolean(schedule || a.walletName || a.toWalletName || a.to_wallet_name || recSummary || hasIngredientsUsed);
                       const isEditing = !m.done && editingRow?.msgIdx === i && editingRow?.actionIdx === j;
                       return (
-                      <div key={j} className={styles.planRow}>
+                      <div key={j} className={`${styles.planRow} ${getRowBorderClass(a.actionType)}`}>
                         <div className={styles.planRowHeader}>
                           <div className={styles.planTypeInfo}>
                             {iconFor(a.actionType)}

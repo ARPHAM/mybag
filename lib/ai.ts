@@ -245,7 +245,12 @@ export async function generateContentWithFallback(
     try {
       // Đặt timeout giới hạn chặt chẽ (mặc định 9s) để không bao giờ bị đứng hình chờ đợi
       const model = genAI.getGenerativeModel(
-        { model: modelName },
+        {
+          model: modelName,
+          generationConfig: isJson
+            ? { responseMimeType: "application/json", temperature: 0.2 }
+            : { temperature: 0.7 }
+        },
         { timeout: timeoutMs }
       );
 

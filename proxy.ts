@@ -11,10 +11,12 @@ const protectedRoutes = ['/profile', '/finance', '/health', '/tasks', '/menu', '
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Bỏ qua middleware cho các API routes, static files, next auth, images, v.v.
+  // Bỏ qua middleware/proxy cho các API routes, static files, images, icons, v.v.
   if (
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next') ||
+    pathname.startsWith('/static') ||
+    pathname.startsWith('/icons') ||
     pathname.includes('.')
   ) {
     return NextResponse.next();

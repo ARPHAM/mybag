@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const body = await req.json();
-    const { text, history, imageData } = body;
+    const { text, history, imageData, lang } = body;
 
     const cleanText = typeof text === 'string' ? text.trim() : '';
     const hasValidImage = typeof imageData === 'string' && imageData.startsWith('data:image/');
@@ -54,7 +54,8 @@ export async function POST(req: Request) {
       auth,
       cleanText,
       Array.isArray(history) ? history : [],
-      hasValidImage ? imageData : undefined
+      hasValidImage ? imageData : undefined,
+      lang === 'en' ? 'en' : 'vi'
     );
 
     return NextResponse.json({

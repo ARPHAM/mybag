@@ -24,7 +24,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!item) return NextResponse.json({ error: 'Không tìm thấy đồ dự trữ' }, { status: 404 });
 
     // Handle 1-tap stock status update for spices & secondary ingredients
-    if (justUpdateStockStatus) {
+    if (justUpdateStockStatus || (stock_status && ['stable', 'low', 'out'].includes(stock_status))) {
       if (!['stable', 'low', 'out'].includes(stock_status)) {
         return NextResponse.json({ error: 'Trạng thái không hợp lệ' }, { status: 400 });
       }
@@ -68,8 +68,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json(item);
     }
 
-    // Full update from Edit Form
-    if (!name || !category || !unit || quantity === undefined || quantity < 0) {
+    // Full update from Edit Form (cho phép partial update nếu thiếu các trường không đổi)
+    const resolvedName = name || item.name;
+    const resolvedCategory = category || item.category;
+    const resolvedUnit = unit || item.unit;
+    const resolvedQuantity = quantity !== undefined ? Number(quantity) : item.quantity;
+
+    if (!resolvedName || !resolvedCategory || !resolvedUnit || resolvedQuantity < 0) {
       return NextResponse.json({ error: 'Thông tin không hợp lệ' }, { status: 400 });
     }
 
@@ -154,11 +159,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       });
     }
 
-    item.name = name;
-    item.category = category;
-    item.stock_status = stock_status || item.stock_status || (category === 'spices' ? 'stable' : undefined);
-    item.quantity = quantity;
-    item.unit = unit;
+    item.name = resolvedName;
+    item.category = resolvedCategory;
+    item.stock_status = stock_status || item.stock_status || (resolvedCategory === 'spices' ? 'stable' : undefined);
+    item.quantity = resolvedQuantity;
+    item.unit = resolvedUnit;
     item.purchaseDate = purchaseDate ? new Date(`${purchaseDate.split('T')[0]}T12:00:00.000Z`) : item.purchaseDate;
     item.expiryDate = expiryDate ? new Date(`${expiryDate.split('T')[0]}T12:00:00.000Z`) : undefined;
     item.isGift = isGift;
