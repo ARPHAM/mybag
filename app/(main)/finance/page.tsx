@@ -324,7 +324,7 @@ export default function FinancePage() {
       setTxForm(item ? {
         type: item.type, amount: item.amount.toString(), wallet_id: item.wallet_id || '', to_wallet_id: item.to_wallet_id || '', date: formattedDate, description: item.description, category: item.category || 'food'
       } : {
-        type: 'expense', amount: '', wallet_id: '', to_wallet_id: '', date: formattedDate, description: '', category: 'food'
+        type: 'expense', amount: '', wallet_id: wallets[0]?.id || '', to_wallet_id: wallets[1]?.id || '', date: formattedDate, description: '', category: 'food'
       });
     }
     if (type === 'budgets') {
@@ -1142,8 +1142,8 @@ export default function FinancePage() {
             : modalType === 'debt_action'
               ? t('finance.debtActionTitle')
               : editingItem
-                ? `${t('common.edit')} ${modalType === 'transaction' || modalType === 'history' ? t('finance.expense') : modalType === 'wallets' ? t('finance.walletsTab') : modalType === 'budgets' ? t('finance.budgetsTab') : modalType === 'debts' ? t('finance.debtsTab') : t('finance.inventoryTab')}`
-                : `${t('common.add')} ${modalType === 'transaction' ? t('finance.expense') : modalType === 'wallets' ? t('finance.walletsTab') : modalType === 'budgets' ? t('finance.budgetsTab') : modalType === 'debts' ? t('finance.debtsTab') : t('finance.inventoryTab')}`
+                ? `${t('common.edit')} ${modalType === 'transaction' || modalType === 'history' ? (txForm.type === 'income' ? t('finance.income') : txForm.type === 'transfer' ? t('finance.transfer') : t('finance.expense')) : modalType === 'wallets' ? t('finance.walletsTab') : modalType === 'budgets' ? t('finance.budgetsTab') : modalType === 'debts' ? t('finance.debtsTab') : t('finance.inventoryTab')}`
+                : `${t('common.add')} ${modalType === 'transaction' ? (txForm.type === 'income' ? t('finance.income') : txForm.type === 'transfer' ? t('finance.transfer') : t('finance.expense')) : modalType === 'wallets' ? t('finance.walletsTab') : modalType === 'budgets' ? t('finance.budgetsTab') : modalType === 'debts' ? t('finance.debtsTab') : t('finance.inventoryTab')}`
         }
       >
         {renderModalContent()}

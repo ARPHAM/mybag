@@ -7,28 +7,30 @@ import '@/models/Recipe'; // Tránh lỗi MissingSchemaError
 import '@/models/User'; // Tránh lỗi MissingSchemaError cho User
 import { verifyToken } from '@/lib/auth';
 import { convertQtyToInventoryUnit } from '@/lib/unitHelper';
+import { parseVnDateTime } from '@/lib/vnTime';
+import { getRequestNow } from '@/lib/simClock';
 
-function getTodayVnDateStr(): string {
+function getTodayVnDateStr(now: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Ho_Chi_Minh',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  }).format(new Date());
+  }).format(now);
 }
 
-function resolveConsumedAtDate(consumed_at?: string): Date {
-  if (!consumed_at) return new Date();
+function resolveConsumedAtDate(consumed_at?: string, now: Date = new Date()): Date {
+  if (!consumed_at) return now;
   const trimmed = String(consumed_at).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    const todayVn = getTodayVnDateStr();
+    const todayVn = getTodayVnDateStr(now);
     if (trimmed === todayVn) {
-      return new Date();
+      return now;
     }
     return new Date(`${trimmed}T12:00:00+07:00`);
   }
-  const parsed = new Date(trimmed);
-  return isNaN(parsed.getTime()) ? new Date() : parsed;
+  const parsed = parseVnDateTime(trimmed, '12:00:00');
+  return parsed || now;
 }
 
 function cleanManualIngredientsNote(raw?: string): string | undefined {
@@ -93,7 +95,7 @@ export async function GET(req: Request) {
       const validDays = isNaN(numDays) || numDays <= 0 ? 7 : numDays;
 
       // Tính mốc 00:00:00 của (validDays - 1) ngày trước theo giờ Việt Nam (UTC+7)
-      const now = new Date();
+      const now = getRequestNow(req);
       const vnDateStr = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Ho_Chi_Minh',
         year: 'numeric',
@@ -113,7 +115,7 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Server Error', stack: error instanceof Error ? error.stack : undefined }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Server Error' }, { status: 500 });
   }
 }
 
@@ -147,6 +149,8 @@ export async function POST(req: Request) {
       protein,
       fat,
       carb,
+      carbs,
+      sugar,
       meal_tier: inputMealTier,
       hp_restored: inputHp,
       ai_description
@@ -156,7 +160,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Thiếu tên món ăn' }, { status: 400 });
     }
 
-    const resolvedDate = resolveConsumedAtDate(consumed_at);
+    const resolvedDate = resolveConsumedAtDate(consumed_at, getRequestNow(req));
     let calculatedCost = 0;
     let transaction_id: any = undefined;
     const processedIngredientsUsed: {
@@ -263,7 +267,8 @@ export async function POST(req: Request) {
         const numCalo = Number(calo) || 0;
         const numProtein = Number(protein) || 0;
         const numFat = Number(fat) || 0;
-        const numCarb = Number(carb) || 0;
+        const numCarb = Number(carbs ?? carb) || 0;
+        const numSugar = Number(sugar) || 0;
         const cleanAiDesc = typeof ai_description === 'string' ? ai_description.trim() : undefined;
         const hp_restored = Number(inputHp) || (numCalo > 0 ? Math.floor(numCalo * 1.0) : Math.floor(Math.random() * 101) + 200);
         const meal_tier = ['HEAVY', 'LIGHT', 'DRINK'].includes(inputMealTier) ? inputMealTier : 'LIGHT';
@@ -288,6 +293,7 @@ export async function POST(req: Request) {
           protein: numProtein,
           fat: numFat,
           carbs: numCarb,
+          sugar: numSugar,
           ai_description: cleanAiDesc
         });
 
@@ -302,6 +308,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: 'Đã lưu bữa ăn!', mealLog: newMealLog }, { status: 201 });
       } catch (error) {
         console.error(error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Server Error', stack: error instanceof Error ? error.stack : undefined }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Server Error' }, { status: 500 });
       }
     }

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import Wallet from '@/models/Wallet';
 import Transaction from '@/models/Transaction';
 import Inventory from '@/models/Inventory';
 import { verifyToken } from '@/lib/auth';
+import { getRequestNow } from '@/lib/simClock';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +21,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
     const body = await req.json();
     const { name, type, balance, color } = body;
 
@@ -55,6 +60,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
     const totalWallets = await Wallet.countDocuments({ user_id: decoded.userId });
     if (totalWallets <= 1) {
       return NextResponse.json({ error: 'Không thể xóa ví duy nhất còn lại của bạn' }, { status: 400 });
@@ -106,7 +114,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
           user_id: decoded.userId,
           type: 'transfer',
           amount: transferAmount,
-          date: new Date(),
+          date: getRequestNow(req),
           description: `Chuyển số dư khi đóng ví: ${wallet.name} -> ${targetWallet.name}`,
           category: 'transfer',
           wallet_id: wallet._id,

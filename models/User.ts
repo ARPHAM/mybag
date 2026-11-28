@@ -23,6 +23,8 @@ export interface IUser extends mongoose.Document {
     mobile?: string;
     overlay_dim?: number;
   };
+  theme_color?: string;
+  font_scale?: 'normal' | 'large' | 'xlarge';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +52,12 @@ const UserSchema = new mongoose.Schema<IUser>({
     mobile: { type: String, default: '' },
     overlay_dim: { type: Number, default: 0.6 },
   },
+  theme_color: { type: String, default: 'cyan' },
+  font_scale: { type: String, enum: ['normal', 'large', 'xlarge'], default: 'normal' },
 }, { timestamps: true });
+
+if (mongoose.models.User && (!mongoose.models.User.schema.path('theme_color') || !mongoose.models.User.schema.path('font_scale'))) {
+  delete mongoose.models.User;
+}
 
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

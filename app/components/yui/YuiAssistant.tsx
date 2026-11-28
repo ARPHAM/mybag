@@ -47,10 +47,13 @@ import {
   formatVnIsoString,
   fromVnDatetimeLocalValue,
   getYuiActionScheduleDisplay,
-  toVnDatetimeLocalValue
+  toVnDatetimeLocalValue,
+  formatVnDisplayTime,
+  getVnDateStr
 } from '@/lib/vnTime';
 import { getYuiBriefing, parseYuiMessage, executeYuiActions, sendYuiReport } from './api';
 import styles from './YuiAssistant.module.css';
+import SaoDatePicker from '../SaoDatePicker';
 import SaoMediaPickerButton from '../SaoMediaPickerButton';
 import { useI18n } from '@/lib/i18n';
 
@@ -249,8 +252,36 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
   const showInventoryCategory = ['create_inventory', 'update_inventory'].includes(actType);
   const showTaskFields = TASK_ACTION_TYPES.has(actType);
   const showCalendarFields = CALENDAR_ACTION_TYPES.has(actType);
-  const showQuantityUnit = ['create_shopping_item', 'purchase_shopping', 'create_inventory', 'update_inventory'].includes(actType);
-  const showCustomTime = ['meal', 'expense', 'income', 'transfer', 'debt_lent', 'debt_borrowed', 'pay_debt', 'borrow_more_debt', 'purchase_shopping', 'create_inventory', 'record_weight', 'update_transaction'].includes(actType);
+  const isSpiceInventory = (actType === 'create_inventory' || actType === 'update_inventory') && action?.category === 'spices';
+  const showQuantityUnit = ['create_shopping_item', 'purchase_shopping', 'create_inventory', 'update_inventory'].includes(actType) && !isSpiceInventory;
+  const showGeneralTime = ['meal', 'expense', 'income', 'transfer', 'pay_debt', 'borrow_more_debt', 'record_weight', 'update_transaction'].includes(actType);
+
+  const baseFallback = fallbackTime ? new Date(fallbackTime) : new Date();
+
+  // Calendar event date & times
+  const calStartIso = action?.start_time ? String(action.start_time) : '';
+  const calEndIso = action?.end_time ? String(action.end_time) : '';
+  const calDateStr = calStartIso ? getVnDateStr(calStartIso) : getVnDateStr(baseFallback);
+  const calStartTimeOnly = calStartIso ? formatVnDisplayTime(calStartIso) : '09:00';
+  const calEndTimeOnly = calEndIso ? formatVnDisplayTime(calEndIso) : '10:00';
+
+  // Task due date & time
+  const taskDueIso = action?.due_date ? String(action.due_date) : '';
+  const taskDueDateStr = taskDueIso ? getVnDateStr(taskDueIso) : getVnDateStr(baseFallback);
+  const taskDueTimeStr = taskDueIso ? formatVnDisplayTime(taskDueIso) : '23:59';
+
+  // Inventory / Shopping dates
+  const invCustomIso = action?.custom_time ? String(action.custom_time) : '';
+  const invDateStr = invCustomIso ? getVnDateStr(invCustomIso) : getVnDateStr(baseFallback);
+
+  // Debt dates
+  const debtCustomIso = action?.custom_time ? String(action.custom_time) : '';
+  const debtCustomDateStr = debtCustomIso ? getVnDateStr(debtCustomIso) : getVnDateStr(baseFallback);
+
+  // General custom_time
+  const genCustomIso = action?.custom_time ? String(action.custom_time) : '';
+  const generalDateStr = genCustomIso ? getVnDateStr(genCustomIso) : getVnDateStr(baseFallback);
+  const generalTimeStr = genCustomIso ? formatVnDisplayTime(genCustomIso) : formatVnDisplayTime(baseFallback);
 
   const inventoryCategoryLabels: Record<string, string> = {
     food: t('finance.categories.food') || 'Thực phẩm',
@@ -346,6 +377,39 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
               min={50}
               value={action?.height ?? ''}
               onChange={(e) => onChange({ height: e.target.value === '' ? undefined : Number(e.target.value) })}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Row Mức sử dụng khi là gia vị */}
+      {isSpiceInventory && (
+        <div className={styles.inlineRow2}>
+          <div className={styles.inlineField}>
+            <label>{t('menu.spiceUsageLevel') || 'Mức sử dụng'}</label>
+            <select
+              value={action?.stock_status || 'stable'}
+              onChange={(e) => {
+                const val = e.target.value as 'stable' | 'low' | 'out';
+                onChange({
+                  stock_status: val,
+                  quantity: val === 'out' ? 0 : 1,
+                  unit: action?.unit || 'hộp'
+                });
+              }}
+            >
+              <option value="stable">{t('menu.spiceStable') || 'Dùng tốt / Còn nhiều'}</option>
+              <option value="low">{t('menu.spiceLow') || 'Sắp hết'}</option>
+              <option value="out">{t('menu.spiceOut') || 'Hết sạch'}</option>
+            </select>
+          </div>
+          <div className={styles.inlineField}>
+            <label>{t('yui.unit') || 'Đơn vị đóng gói'}</label>
+            <input
+              type="text"
+              value={action?.unit || 'hộp'}
+              placeholder="hộp, chai, lọ, gói..."
+              onChange={(e) => onChange({ unit: e.target.value })}
             />
           </div>
         </div>
@@ -621,88 +685,155 @@ function YuiPlanInlineEditor({ action, fallbackTime, wallets, onChange, onClose 
         </div>
       )}
 
-      {/* Mốc thời gian: custom_time, due_date, start_time/end_time, expiryDate, dueDate */}
-      {(showCustomTime || showTaskFields || showCalendarFields || ['debt_lent', 'debt_borrowed'].includes(actType) || ['create_inventory', 'update_inventory', 'purchase_shopping'].includes(actType)) && (
+      {/* 1. Lịch hẹn (Calendar): Ngày diễn ra bằng SaoDatePicker + Giờ bắt đầu & Giờ kết thúc */}
+      {showCalendarFields && (
+        <>
+          <div className={styles.inlineField}>
+            <label>{t('calendar.eventDate') || 'Ngày diễn ra'}</label>
+            <SaoDatePicker
+              className={styles.inlineDatePicker}
+              value={calDateStr}
+              onChange={(newDate) => {
+                if (!newDate) return;
+                onChange({
+                  start_time: `${newDate}T${calStartTimeOnly}:00+07:00`,
+                  end_time: `${newDate}T${calEndTimeOnly}:00+07:00`
+                });
+              }}
+            />
+          </div>
+          <div className={styles.inlineRow2}>
+            <div className={styles.inlineField}>
+              <label>{t('calendar.startTime')}</label>
+              <input
+                type="time"
+                value={calStartTimeOnly}
+                onChange={(e) => {
+                  onChange({ start_time: `${calDateStr}T${e.target.value}:00+07:00` });
+                }}
+              />
+            </div>
+            <div className={styles.inlineField}>
+              <label>{t('calendar.endTime')}</label>
+              <input
+                type="time"
+                value={calEndTimeOnly}
+                onChange={(e) => {
+                  onChange({ end_time: `${calDateStr}T${e.target.value}:00+07:00` });
+                }}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 2. Nhiệm vụ (Task): Hạn chót Ngày (SaoDatePicker) + Giờ */}
+      {showTaskFields && (
         <div className={styles.inlineRow2}>
-          {showCustomTime && (
-            <div className={styles.inlineField}>
-              <label>{t('common.time')}</label>
-              <input
-                type="datetime-local"
-                value={toVnDatetimeLocalValue(action?.custom_time, fallbackTime ? new Date(fallbackTime) : new Date())}
-                onChange={(e) => {
-                  const iso = fromVnDatetimeLocalValue(e.target.value);
-                  if (iso) onChange({ custom_time: iso });
-                }}
-              />
-            </div>
-          )}
+          <div className={styles.inlineField}>
+            <label>{t('tasks.deadline')}</label>
+            <SaoDatePicker
+              className={styles.inlineDatePicker}
+              value={taskDueDateStr}
+              onChange={(newDate) => {
+                if (!newDate) return;
+                onChange({ due_date: `${newDate}T${taskDueTimeStr || '23:59'}:00+07:00` });
+              }}
+            />
+          </div>
+          <div className={styles.inlineField}>
+            <label>{t('common.time')}</label>
+            <input
+              type="time"
+              value={taskDueTimeStr}
+              onChange={(e) => {
+                onChange({ due_date: `${taskDueDateStr}T${e.target.value}:00+07:00` });
+              }}
+            />
+          </div>
+        </div>
+      )}
 
-          {showTaskFields && (
-            <div className={styles.inlineField}>
-              <label>{t('tasks.deadline')}</label>
-              <input
-                type="datetime-local"
-                value={toVnDatetimeLocalValue(action?.due_date, fallbackTime ? new Date(fallbackTime) : new Date())}
-                onChange={(e) => {
-                  const iso = fromVnDatetimeLocalValue(e.target.value);
-                  if (iso) onChange({ due_date: iso });
-                }}
-              />
-            </div>
-          )}
+      {/* 3. Kho đồ & Mua sắm (Inventory / Purchase): Ngày nhập/mua + Hạn sử dụng (đều dùng SaoDatePicker) */}
+      {['create_inventory', 'update_inventory', 'purchase_shopping'].includes(actType) && (
+        <div className={styles.inlineRow2}>
+          <div className={styles.inlineField}>
+            <label>{actType === 'purchase_shopping' ? (t('shopping.purchaseDate') || 'Ngày mua') : (t('menu.purchaseDateStock') || 'Ngày nhập')}</label>
+            <SaoDatePicker
+              className={styles.inlineDatePicker}
+              value={invDateStr}
+              onChange={(newDate) => {
+                if (!newDate) return;
+                onChange({ custom_time: `${newDate}T12:00:00+07:00` });
+              }}
+            />
+          </div>
+          <div className={styles.inlineField}>
+            <label>{t('yui.expiryDate') || 'Hạn sử dụng'}</label>
+            <SaoDatePicker
+              className={styles.inlineDatePicker}
+              value={action?.expiryDate ? getVnDateStr(action.expiryDate) : ''}
+              onChange={(val) => onChange({ expiryDate: val ? `${val}T12:00:00+07:00` : undefined })}
+              onClear={() => onChange({ expiryDate: undefined })}
+              clearable
+              placeholder="YYYY-MM-DD"
+            />
+          </div>
+        </div>
+      )}
 
-          {['debt_lent', 'debt_borrowed'].includes(actType) && (
-            <div className={styles.inlineField}>
-              <label>{t('yui.dueDate') || 'Hạn trả nợ'}</label>
-              <input
-                type="datetime-local"
-                value={toVnDatetimeLocalValue(action?.dueDate || action?.custom_time, fallbackTime ? new Date(fallbackTime) : new Date())}
-                onChange={(e) => {
-                  const iso = fromVnDatetimeLocalValue(e.target.value);
-                  if (iso) onChange({ dueDate: iso });
-                }}
-              />
-            </div>
-          )}
+      {/* 4. Khoản nợ (Debt): Ngày ghi + Hạn trả nợ */}
+      {['debt_lent', 'debt_borrowed'].includes(actType) && (
+        <div className={styles.inlineRow2}>
+          <div className={styles.inlineField}>
+            <label>{t('common.date') || 'Ngày tạo'}</label>
+            <SaoDatePicker
+              className={styles.inlineDatePicker}
+              value={debtCustomDateStr}
+              onChange={(newDate) => {
+                if (!newDate) return;
+                onChange({ custom_time: `${newDate}T12:00:00+07:00` });
+              }}
+            />
+          </div>
+          <div className={styles.inlineField}>
+            <label>{t('yui.dueDate') || 'Hạn trả nợ'}</label>
+            <SaoDatePicker
+              className={styles.inlineDatePicker}
+              value={action?.dueDate ? getVnDateStr(action.dueDate) : ''}
+              onChange={(val) => onChange({ dueDate: val ? `${val}T12:00:00+07:00` : undefined })}
+              onClear={() => onChange({ dueDate: undefined })}
+              clearable
+              placeholder="YYYY-MM-DD"
+            />
+          </div>
+        </div>
+      )}
 
-          {['create_inventory', 'update_inventory', 'purchase_shopping'].includes(actType) && (
-            <div className={styles.inlineField}>
-              <label>{t('yui.expiryDate') || 'Hạn sử dụng'}</label>
-              <input
-                type="date"
-                value={action?.expiryDate ? action.expiryDate.slice(0, 10) : ''}
-                onChange={(e) => onChange({ expiryDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-              />
-            </div>
-          )}
-
-          {showCalendarFields && (
-            <>
-              <div className={styles.inlineField}>
-                <label>{t('calendar.startTime')}</label>
-                <input
-                  type="datetime-local"
-                  value={toVnDatetimeLocalValue(action?.start_time, fallbackTime ? new Date(fallbackTime) : new Date())}
-                  onChange={(e) => {
-                    const iso = fromVnDatetimeLocalValue(e.target.value);
-                    if (iso) onChange({ start_time: iso });
-                  }}
-                />
-              </div>
-              <div className={styles.inlineField}>
-                <label>{t('calendar.endTime')}</label>
-                <input
-                  type="datetime-local"
-                  value={toVnDatetimeLocalValue(action?.end_time || action?.start_time, fallbackTime ? new Date(fallbackTime) : new Date())}
-                  onChange={(e) => {
-                    const iso = fromVnDatetimeLocalValue(e.target.value);
-                    if (iso) onChange({ end_time: iso });
-                  }}
-                />
-              </div>
-            </>
-          )}
+      {/* 5. Giao dịch khác có thời gian (Bữa ăn, Chi tiêu, Thu nhập, Chuyển khoản, Cân nặng...) */}
+      {showGeneralTime && (
+        <div className={styles.inlineRow2}>
+          <div className={styles.inlineField}>
+            <label>{t('common.date') || 'Ngày'}</label>
+            <SaoDatePicker
+              className={styles.inlineDatePicker}
+              value={generalDateStr}
+              onChange={(newDate) => {
+                if (!newDate) return;
+                onChange({ custom_time: `${newDate}T${generalTimeStr || '12:00'}:00+07:00` });
+              }}
+            />
+          </div>
+          <div className={styles.inlineField}>
+            <label>{t('common.time') || 'Giờ'}</label>
+            <input
+              type="time"
+              value={generalTimeStr}
+              onChange={(e) => {
+                onChange({ custom_time: `${generalDateStr}T${e.target.value}:00+07:00` });
+              }}
+            />
+          </div>
         </div>
       )}
 
@@ -958,7 +1089,7 @@ export default function YuiAssistant() {
     }
 
     const rec = new SpeechRec();
-    rec.lang = 'vi-VN';
+    rec.lang = language === 'en' ? 'en-US' : 'vi-VN';
     rec.interimResults = true;
     rec.continuous = false;
 
@@ -985,6 +1116,14 @@ export default function YuiAssistant() {
   };
 
   const handleClearChat = () => {
+    if (msgs.length > 1) {
+      const ok = window.confirm(
+        language === 'en'
+          ? 'Clear all Yui conversation history?'
+          : 'Xóa toàn bộ lịch sử trò chuyện với Yui?'
+      );
+      if (!ok) return;
+    }
     setMsgs([getWelcomeMsg(t)]);
     setEditingRow(null);
     if (userId) {
@@ -1367,7 +1506,7 @@ export default function YuiAssistant() {
         return `Cập nhật kho: ${a.name}${a.quantity !== undefined ? ` (${a.quantity} ${a.unit || ''})` : ''}`.trim();
       }
       case 'record_weight':
-        return `Cập nhật cân nặng: ${a.weight} kg${a.height ? ` (Chiều cao: ${a.height} cm)` : ''} (+100 EXP)`;
+        return `Cập nhật cân nặng: ${a.weight} kg${a.height ? ` (Chiều cao: ${a.height} cm)` : ''} (+20 EXP)`;
       case 'create_recipe':
         return `Công thức: ${a.name || 'Món mới'} (${(a.ingredients || []).length} nguyên liệu)`;
       default:

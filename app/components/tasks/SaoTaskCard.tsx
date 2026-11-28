@@ -113,15 +113,6 @@ export default function SaoTaskCard({
         ${className}
       `}
       style={{ '--task-color': taskColor } as React.CSSProperties}
-      onClick={() => onToggle(task)}
-      tabIndex={0}
-      role="button"
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onToggle(task);
-        }
-      }}
     >
       {/* Cột năng lượng quang học mép trái (Left Accent Spine) */}
       <div className={styles.leftAccentBar} />

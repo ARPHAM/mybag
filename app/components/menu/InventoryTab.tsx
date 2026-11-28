@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import {
-  Package, Camera, ImageIcon, Sparkles, Plus
+  Package, Camera, ImageIcon, Sparkles, Plus, Trash2
 } from 'lucide-react';
 import SaoButton from '../SaoButton';
 import SaoSearchInput from '../SaoSearchInput';
@@ -21,6 +21,7 @@ interface Props {
   onEdit: (item: InventoryItem) => void;
   onUpdateQty: (id: string, delta: number) => void;
   onUpdateStockStatus?: (id: string, status: 'stable' | 'low' | 'out') => void;
+  onCleanupExpired?: () => void;
   onScanBill: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -33,11 +34,16 @@ export default function InventoryTab({
   onEdit,
   onUpdateQty,
   onUpdateStockStatus,
+  onCleanupExpired,
   onScanBill
 }: Props) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [filterCat, setFilterCat] = useState<'all' | 'food' | 'spices'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const expiredCount = inventory.filter(
+    i => i.category !== 'spices' && i.category !== 'utilities' && i.quantity > 0 && i.expiryDate && new Date(i.expiryDate).getTime() < Date.now()
+  ).length;
 
   const totalMainFood = inventory.filter(i => (i.category === 'food' || !i.category) && i.category !== 'utilities').length;
   const totalSpices = inventory.filter(i => i.category === 'spices').length;
@@ -97,6 +103,19 @@ export default function InventoryTab({
             options={filterOptions}
           />
         </div>
+        {expiredCount > 0 && onCleanupExpired && (
+          <SaoButton
+            type="button"
+            variant="danger"
+            onClick={onCleanupExpired}
+            style={{ whiteSpace: 'nowrap', fontSize: '0.78rem', padding: '6px 12px' }}
+          >
+            <Trash2 size={14} />
+            <span>
+              {language === 'en' ? `Clear ${expiredCount} expired` : `Dọn ${expiredCount} món quá hạn`}
+            </span>
+          </SaoButton>
+        )}
       </div>
 
       {sorted.length === 0 ? (

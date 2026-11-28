@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import ShoppingItem from '@/models/ShoppingItem';
 import { verifyToken } from '@/lib/auth';
+import { getRequestNow } from '@/lib/simClock';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,6 +23,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const resolvedParams = await params;
     const { id } = resolvedParams;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
     const body = await req.json();
 
     // Whitelist allowed fields to prevent Mass Assignment / IDOR tampering
@@ -59,7 +64,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     if (typeof body.checked === 'boolean') {
       updateData.checked = body.checked;
-      updateData.checkedAt = body.checked ? new Date() : null;
+      updateData.checkedAt = body.checked ? getRequestNow(req) : null;
     }
 
     const item = await ShoppingItem.findOneAndUpdate(
@@ -91,6 +96,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     const resolvedParams = await params;
     const { id } = resolvedParams;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
     const deletedItem = await ShoppingItem.findOneAndDelete({ _id: id, user_id: decoded.userId });
 
     if (!deletedItem) {

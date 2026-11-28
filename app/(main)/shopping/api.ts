@@ -15,3 +15,19 @@ export const updateShoppingItem = (id: string, updates: any) => {
 export const deleteShoppingItem = (id: string) => {
   return axiosClient.delete(`/api/shopping/${id}`);
 };
+
+export const purchaseShoppingItem = (
+  id: string,
+  payload: {
+    amount?: number;
+    wallet_id?: string;
+    quantity?: number;
+    unit?: string;
+    addToInventory?: boolean;
+    inventoryCategory?: 'food' | 'spices' | 'utilities';
+    expiryDate?: string;
+    isGift?: boolean;
+  }
+) => {
+  return axiosClient.post(`/api/shopping/${id}/purchase`, payload);
+};

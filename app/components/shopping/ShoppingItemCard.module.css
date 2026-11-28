@@ -212,6 +212,37 @@
   z-index: 2;
 }
 
+.purchaseBtn {
+  height: 34px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(0, 255, 170, 0.12);
+  border: 1px solid rgba(0, 255, 170, 0.45);
+  color: #00ffaa;
+  font-family: 'Tauri', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.purchaseBtn:hover {
+  background: rgba(0, 255, 170, 0.25);
+  border-color: #00ffaa;
+  box-shadow: 0 0 14px rgba(0, 255, 170, 0.4);
+  transform: translateY(-1px);
+}
+
+.purchaseBtnLabel {
+  display: inline;
+}
+
 .deleteBtn {
   width: 34px;
   height: 34px;
@@ -248,5 +279,11 @@
 
   .metaRow {
     gap: 6px;
+  }
+
+  .purchaseBtn {
+    padding: 0 8px;
+    font-size: 0.72rem;
+    gap: 4px;
   }
 }

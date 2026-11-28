@@ -20,7 +20,7 @@ import { useSaoAlert } from '../../contexts/AlertContext';
 import SaoButton from '@/app/components/SaoButton';
 import SaoInput from '@/app/components/SaoInput';
 import { getEvents, createEvent, updateEvent, deleteEvent } from './api';
-import { getTasks } from '../tasks/api';
+import { getTasks, updateTask } from '../tasks/api';
 import { getLocalDateKey, isSameLocalDate } from './utils';
 import { useI18n } from '@/lib/i18n';
 
@@ -43,6 +43,8 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [isUpdatingTask, setIsUpdatingTask] = useState(false);
 
   const { showAlert } = useSaoAlert();
 
@@ -173,6 +175,11 @@ export default function CalendarPage() {
     const [endH, endM] = endTimeStr.split(':').map(Number);
     const end = new Date(startYear, startMonth - 1, startDay, endH, endM, 0, 0);
 
+    if (end <= start) {
+      showAlert(language === 'en' ? 'End time must be after start time!' : 'Thời gian kết thúc phải sau thời gian bắt đầu!');
+      return;
+    }
+
     let recEndIso: string | undefined = undefined;
     if (isRecurring && recurrenceEndDateStr) {
       const [rY, rM, rD] = recurrenceEndDateStr.split('-').map(Number);
@@ -243,6 +250,33 @@ export default function CalendarPage() {
       fetchEvents(true);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleToggleCalendarTask = async (task: any) => {
+    if (!task || isUpdatingTask) return;
+    setIsUpdatingTask(true);
+    try {
+      const nextStatus = task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+      const res: any = await updateTask(task._id, { status: nextStatus });
+      if (nextStatus === 'COMPLETED' && res?.reward?.exp) {
+        showAlert(
+          res.reward.leveledUp
+            ? `Quest Cleared! +${res.reward.exp} EXP • LEVEL UP → Lv.${res.reward.newLevel}!`
+            : `Quest Cleared! +${res.reward.exp} EXP`
+        );
+      } else {
+        showAlert(res?.message || 'Đã cập nhật trạng thái Quest!');
+      }
+      setSelectedTask(null);
+      fetchTasks(true);
+      window.dispatchEvent(new Event('sao-tasks-updated'));
+      window.dispatchEvent(new Event('sao-user-updated'));
+    } catch (error: any) {
+      console.error(error);
+      showAlert(error?.response?.data?.error || 'Không thể cập nhật Quest');
+    } finally {
+      setIsUpdatingTask(false);
     }
   };
 
@@ -404,6 +438,7 @@ export default function CalendarPage() {
                         <CalendarQuestCard
                           key={task._id || idx}
                           task={task}
+                          onClick={(tk) => setSelectedTask(tk)}
                         />
                       ))
                     )
@@ -422,6 +457,7 @@ export default function CalendarPage() {
               tasks={tasks}
               onSelectDate={setSelectedDate}
               onEventClick={openEditModal}
+              onTaskClick={(tk) => setSelectedTask(tk)}
             />
           </div>
         )}
@@ -434,6 +470,7 @@ export default function CalendarPage() {
               tasks={tasks}
               onSelectDate={setSelectedDate}
               onEventClick={openEditModal}
+              onTaskClick={(tk) => setSelectedTask(tk)}
               onSwitchToDayView={() => setViewMode('day')}
             />
           </div>
@@ -549,6 +586,10 @@ export default function CalendarPage() {
                     {t('calendar.weekly')}
                   </label>
                   <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
+                    <input type="radio" name="recType" checked={recurrenceType === 'MONTHLY'} onChange={() => setRecurrenceType('MONTHLY')} className="accent-orange-500 w-4 h-4" />
+                    {language === 'en' ? 'Monthly' : 'Hàng tháng'}
+                  </label>
+                  <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
                     <input type="radio" name="recType" checked={recurrenceType === 'YEARLY'} onChange={() => setRecurrenceType('YEARLY')} className="accent-orange-500 w-4 h-4" />
                     {t('calendar.yearly')}
                   </label>
@@ -620,6 +661,78 @@ export default function CalendarPage() {
             </div>
           </div>
         </form>
+      </SaoModal>
+
+      {/* Modal Chi tiết & Tick nhanh Quest ngay trên Lịch (v1.1) */}
+      <SaoModal
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        title={language === 'en' ? 'Quest Details' : 'Chi tiết Nhiệm vụ (Quest)'}
+        icon={<Award size={20} />}
+      >
+        {selectedTask && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span
+                className="px-2.5 py-0.5 text-xs font-bold rounded border"
+                style={{
+                  background: (RANK_BADGES[selectedTask.quest_rank || 'C'] || RANK_BADGES.C).bg,
+                  color: (RANK_BADGES[selectedTask.quest_rank || 'C'] || RANK_BADGES.C).text,
+                  borderColor: (RANK_BADGES[selectedTask.quest_rank || 'C'] || RANK_BADGES.C).border
+                }}
+              >
+                RANK {selectedTask.quest_rank || 'C'}
+              </span>
+              <span className={`text-xs font-bold uppercase ${
+                selectedTask.status === 'COMPLETED'
+                  ? 'text-emerald-400'
+                  : selectedTask.status === 'OVERDUE'
+                    ? 'text-red-400'
+                    : 'text-cyan-400'
+              }`}>
+                {selectedTask.status === 'COMPLETED'
+                  ? t('tasks.completed')
+                  : selectedTask.status === 'OVERDUE'
+                    ? t('tasks.overdue')
+                    : t('tasks.pending')}
+              </span>
+            </div>
+
+            <div>
+              <h3 className="text-base font-bold text-white">{selectedTask.title}</h3>
+              {selectedTask.description && (
+                <p className="text-xs text-zinc-300 mt-1.5 whitespace-pre-wrap">{selectedTask.description}</p>
+              )}
+            </div>
+
+            {selectedTask.due_date && (
+              <div className="flex items-center gap-2 text-xs text-cyan-300/90 bg-black/30 px-3 py-2 border border-cyan-500/20">
+                <Clock size={14} />
+                <span>
+                  {language === 'en' ? 'Due' : 'Hạn chót'}:{' '}
+                  {new Date(selectedTask.due_date).toLocaleString(language === 'en' ? 'en-US' : 'vi-VN')}
+                </span>
+              </div>
+            )}
+
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 pt-2 border-t border-zinc-700/40">
+              <SaoButton type="button" variant="default" onClick={() => setSelectedTask(null)}>
+                {t('common.cancel')}
+              </SaoButton>
+              <SaoButton
+                type="button"
+                variant={selectedTask.status === 'COMPLETED' ? 'default' : 'primary'}
+                disabled={isUpdatingTask}
+                onClick={() => handleToggleCalendarTask(selectedTask)}
+              >
+                <CheckCircle2 size={16} />
+                {selectedTask.status === 'COMPLETED'
+                  ? (language === 'en' ? 'Undo Completion' : 'Hoàn tác hoàn thành')
+                  : (language === 'en' ? 'Mark Quest Completed' : 'Hoàn thành Quest (+EXP/MP)')}
+              </SaoButton>
+            </div>
+          </div>
+        )}
       </SaoModal>
 
       {/* Modal xác nhận cảnh báo xóa / tạm nghỉ sự kiện */}

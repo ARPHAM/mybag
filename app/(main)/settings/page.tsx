@@ -6,9 +6,10 @@ import {
   LogOut,
   Languages,
   Image as ImageIcon,
-  Shield
+  Shield,
+  Type
 } from 'lucide-react';
-import { logoutUser } from './api';
+import { logoutUser, updateUserPreferences } from './api';
 import { useI18n } from '@/lib/i18n';
 import SaoPanel from '@/app/components/SaoPanel';
 import SaoButton from '@/app/components/SaoButton';
@@ -32,6 +33,7 @@ const THEME_IDS = [
 export default function SettingsPage() {
   const { t, language, setLanguage } = useI18n();
   const [activeTheme, setActiveTheme] = useState('cyan');
+  const [fontScale, setFontScale] = useState<'normal' | 'large' | 'xlarge'>('normal');
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -39,6 +41,10 @@ export default function SettingsPage() {
     const saved = localStorage.getItem('sao-theme');
     if (saved) {
       setActiveTheme(saved);
+    }
+    const savedScale = localStorage.getItem('sao-font-scale');
+    if (savedScale === 'normal' || savedScale === 'large' || savedScale === 'xlarge') {
+      setFontScale(savedScale);
     }
   }, []);
 
@@ -49,6 +55,16 @@ export default function SettingsPage() {
     // Dispatch event to layout to update variables instantly
     const event = new CustomEvent('sao-theme-changed', { detail: themeId });
     window.dispatchEvent(event);
+
+    // Sync cross-device preference to server (v1.2)
+    updateUserPreferences({ theme_color: themeId }).catch((err) => console.error(err));
+  };
+
+  const handleFontScaleSelect = (scale: 'normal' | 'large' | 'xlarge') => {
+    setFontScale(scale);
+    localStorage.setItem('sao-font-scale', scale);
+    window.dispatchEvent(new CustomEvent('sao-font-scale-changed', { detail: scale }));
+    updateUserPreferences({ font_scale: scale }).catch((err) => console.error(err));
   };
 
   const handleLogout = async () => {
@@ -115,6 +131,47 @@ export default function SettingsPage() {
                 onSelect={handleThemeSelect}
               />
             ))}
+          </div>
+        </SaoPanel>
+
+        {/* SECTION 2B: ACCESSIBILITY & FONT SCALE (v1.2) */}
+        <SaoPanel
+          variant="cyan"
+          title={language === 'en' ? 'Display Font Size (Accessibility)' : 'Cỡ chữ hiển thị (Hỗ trợ dễ đọc)'}
+          icon={<Type size={20} />}
+          className={styles.sectionPanel}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
+            {[
+              { id: 'normal' as const, label: language === 'en' ? 'Default (100%)' : 'Mặc định (100%)', desc: language === 'en' ? 'Standard SAO HUD density' : 'Gọn gàng chuẩn SAO HUD', sample: '16px' },
+              { id: 'large' as const, label: language === 'en' ? 'Large (112%)' : 'Chữ lớn (112%)', desc: language === 'en' ? 'Comfortable reading on phone' : 'Thoải mái hơn trên điện thoại', sample: '18px' },
+              { id: 'xlarge' as const, label: language === 'en' ? 'Extra Large (122%)' : 'Siêu to rõ (122%)', desc: language === 'en' ? 'High visibility outdoors' : 'Dễ đọc ngoài trời / khi chạy xe', sample: '19.5px' }
+            ].map((opt) => {
+              const active = fontScale === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => handleFontScaleSelect(opt.id)}
+                  style={{
+                    textAlign: 'left',
+                    padding: '12px 14px',
+                    background: active ? 'rgba(var(--sao-primary-rgb, 0, 240, 255), 0.16)' : 'rgba(6, 18, 35, 0.55)',
+                    border: active ? '1.5px solid var(--sao-primary-hex, #00f0ff)' : '1px solid rgba(255, 255, 255, 0.14)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: opt.sample, color: active ? 'var(--sao-primary-hex, #00f0ff)' : '#ffffff' }}>
+                    {opt.label}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: 4 }}>
+                    {opt.desc}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </SaoPanel>
 

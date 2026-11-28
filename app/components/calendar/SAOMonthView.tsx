@@ -10,6 +10,7 @@ interface SAOMonthViewProps {
   tasks: any[];
   onSelectDate: (date: Date) => void;
   onEventClick: (event: any) => void;
+  onTaskClick?: (task: any) => void;
   onSwitchToDayView?: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function SAOMonthView({
   tasks,
   onSelectDate,
   onEventClick,
+  onTaskClick,
   onSwitchToDayView
 }: SAOMonthViewProps) {
   const { t, language } = useI18n();
@@ -168,7 +170,13 @@ export default function SAOMonthView({
                   </div>
                 )}
                 {dayEvents.length === 0 && dayTasks.length > 0 && (
-                  <div className="text-[10px] px-1 py-0.5 rounded truncate bg-amber-950/40 border-l border-amber-400 text-amber-200">
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onTaskClick) onTaskClick(dayTasks[0]);
+                    }}
+                    className="text-[10px] px-1 py-0.5 rounded truncate bg-amber-950/40 border-l border-amber-400 text-amber-200 hover:text-white"
+                  >
                     {dayTasks[0].title}
                   </div>
                 )}

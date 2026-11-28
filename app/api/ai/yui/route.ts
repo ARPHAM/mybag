@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
 import { parseYuiRequest, getYuiProactiveBriefing } from '@/lib/yuiEngine';
+import { getRequestNow } from '@/lib/simClock';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const lang = searchParams.get('lang') === 'en' ? 'en' : 'vi';
 
-    const briefing = await getYuiProactiveBriefing(auth, lang);
+    const briefing = await getYuiProactiveBriefing(auth, lang, getRequestNow(req));
     return NextResponse.json({ success: true, data: briefing });
   } catch (error: unknown) {
     console.error('GET /api/ai/yui error:', error);
@@ -55,7 +56,8 @@ export async function POST(req: Request) {
       cleanText,
       Array.isArray(history) ? history : [],
       hasValidImage ? imageData : undefined,
-      lang === 'en' ? 'en' : 'vi'
+      lang === 'en' ? 'en' : 'vi',
+      getRequestNow(req)
     );
 
     return NextResponse.json({

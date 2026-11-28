@@ -111,15 +111,19 @@ export default function SaoDebtCard({
         <div className={styles.remainingRow}>
           <div className={styles.dueDateBadge}>
             {debt.status !== 'paid' ? (
-              <>
-                <Calendar size={13} />
-                <span>{t('finance.dueDate')}: {debt.dueDate}</span>
-              </>
+              debt.dueDate ? (
+                <>
+                  <Calendar size={13} />
+                  <span>{t('finance.dueDate')}: {debt.dueDate}</span>
+                </>
+              ) : null
             ) : (
-              <span className={styles.completedText}>
-                <CheckCircle2 size={13} />
-                <span>{t('finance.completedDate')}: {debt.completedDate || debt.dueDate}</span>
-              </span>
+              (debt.completedDate || debt.dueDate) ? (
+                <span className={styles.completedText}>
+                  <CheckCircle2 size={13} />
+                  <span>{t('finance.completedDate')}: {debt.completedDate || debt.dueDate}</span>
+                </span>
+              ) : null
             )}
           </div>
 

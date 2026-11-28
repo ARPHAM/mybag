@@ -63,12 +63,14 @@ export async function getExpandedCalendarEvents(
   rangeStart: Date,
   rangeEnd: Date
 ) {
-  // 1. Lấy tất cả sự kiện bình thường (không lặp) + ngoại lệ (exceptions) nằm trong khoảng
+  // 1. Lấy tất cả sự kiện bình thường (không lặp) + ngoại lệ (exceptions) giao với khoảng xem HOẶC có exception_date trong khoảng
   const normalAndExceptions = await CalendarEvent.find({
     user_id: userId,
     is_recurring: false,
-    start_time: { $lte: rangeEnd },
-    end_time: { $gte: rangeStart }
+    $or: [
+      { start_time: { $lte: rangeEnd }, end_time: { $gte: rangeStart } },
+      { exception_date: { $gte: rangeStart, $lte: rangeEnd } }
+    ]
   }).lean();
 
   // 2. Lấy tất cả sự kiện lặp lại có khả năng xuất hiện trong khoảng đang xem
@@ -220,16 +222,21 @@ export async function getExpandedCalendarEvents(
     }
   }
 
-  // 4. Lọc bỏ các sự kiện ảo bị ghi đè bởi Exceptions
+  // 4. Lọc bỏ các sự kiện ảo bị ghi đè bởi Exceptions (kể cả khi exception bị dời sang ngày ngoài khung xem)
   const exceptionsMap = new Map<string, any>();
   const resultEvents: any[] = [];
+  const addedExceptionIds = new Set<string>();
 
-  // Tìm exceptions (có parent_event_id)
   (normalAndExceptions as any[]).forEach(ev => {
     if (ev.parent_event_id && ev.exception_date) {
       const key = `${ev.parent_event_id.toString()}_${new Date(ev.exception_date).toISOString()}`;
       exceptionsMap.set(key, ev);
-    } else {
+      // Nếu exception không bị hủy và bản thân thời gian mới nằm trong [rangeStart, rangeEnd], đưa thẳng vào kết quả
+      if (!ev.is_cancelled && new Date(ev.start_time) <= rangeEnd && new Date(ev.end_time) >= rangeStart) {
+        resultEvents.push(ev);
+        addedExceptionIds.add(ev._id.toString());
+      }
+    } else if (!ev.is_cancelled) {
       resultEvents.push(ev);
     }
   });
@@ -240,8 +247,9 @@ export async function getExpandedCalendarEvents(
     const key = `${parentId}_${new Date(vEv.start_time).toISOString()}`;
     if (exceptionsMap.has(key)) {
       const exEv = exceptionsMap.get(key);
-      if (!exEv.is_cancelled) {
+      if (!exEv.is_cancelled && !addedExceptionIds.has(exEv._id.toString())) {
         resultEvents.push(exEv);
+        addedExceptionIds.add(exEv._id.toString());
       }
     } else {
       resultEvents.push(vEv);

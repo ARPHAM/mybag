@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import dbConnect from '@/lib/db';
 import Recipe from '@/models/Recipe';
+import User from '@/models/User';
 import { verifyToken } from '@/lib/auth';
+import { calculateLevelProgression } from '@/lib/gameLevel';
+import { getRequestNow } from '@/lib/simClock';
 
 export async function GET(req: Request) {
   try {
@@ -60,7 +63,28 @@ export async function POST(req: Request) {
       instructions: typeof instructions === 'string' ? instructions.trim() : undefined,
     });
 
-    return NextResponse.json({ message: 'Đã tạo công thức mới!', recipe: newRecipe }, { status: 201 });
+    // Thưởng +50 EXP khi tạo công thức mới (tôn trọng giới hạn EXP ngày)
+    let rewardExp = 0;
+    const user = await User.findById(decoded.userId);
+    if (user) {
+      const vnDate = new Date(getRequestNow(req).getTime() + 7 * 60 * 60 * 1000);
+      const todayKey = `${vnDate.getUTCFullYear()}-${String(vnDate.getUTCMonth() + 1).padStart(2, '0')}-${String(vnDate.getUTCDate()).padStart(2, '0')}`;
+      if (user.last_task_exp_date !== todayKey) {
+        user.last_task_exp_date = todayKey;
+        user.today_task_exp = 0;
+      }
+      const available = Math.max(0, 3000 - (user.today_task_exp || 0));
+      rewardExp = Math.min(50, available);
+      if (rewardExp > 0) {
+        const prog = calculateLevelProgression((user.current_exp || 0) + rewardExp, user.level || 1);
+        user.level = prog.level;
+        user.current_exp = prog.currentExp;
+        user.today_task_exp = (user.today_task_exp || 0) + rewardExp;
+        await user.save();
+      }
+    }
+
+    return NextResponse.json({ message: 'Đã tạo công thức mới!', recipe: newRecipe, rewardExp }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: 'Server Error' }, { status: 500 });
   }

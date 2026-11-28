@@ -56,7 +56,7 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
       const res = await axiosClient.post('/api/finance/transactions', {
         type: actionType,
         amount,
-        date: action.custom_time ? new Date(action.custom_time).toISOString() : new Date().toISOString(),
+        date: action.custom_time || undefined,
         description: action.description || action.name || (actionType === 'expense' ? 'Chi tiêu' : 'Thu nhập'),
         category: action.category || 'other',
         wallet_id: action.wallet_id
@@ -76,7 +76,7 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
       const res = await axiosClient.post('/api/finance/transactions', {
         type: 'transfer',
         amount,
-        date: action.custom_time ? new Date(action.custom_time).toISOString() : new Date().toISOString(),
+        date: action.custom_time || undefined,
         description: action.description || 'Chuyển tiền',
         wallet_id: fromWallet,
         to_wallet_id: toWallet
@@ -96,12 +96,13 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
         personName: action.personName || action.name || 'Người quen',
         type,
         amount,
-        dueDate: action.dueDate || action.custom_time,
+        dueDate: action.dueDate || undefined,
+        date: action.custom_time || undefined,
         wallet_id: action.wallet_id
       });
       return {
         type: actionType,
-        id: res.data?.debt?._id,
+        id: res.data?._id || res.data?.debt?._id,
         amount,
         personName: action.personName || action.name
       };
@@ -112,9 +113,10 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
       if (!debtId) throw new Error('Thiếu ID khoản nợ');
       const amount = Math.round(Number(action.amount) || 0);
       await axiosClient.put(`/api/finance/debts/${debtId}`, {
-        type: 'repay',
-        amount,
-        wallet_id: action.wallet_id
+        action: 'pay_back',
+        actionAmount: amount,
+        wallet_id: action.wallet_id,
+        date: action.custom_time || undefined
       });
       return {
         type: 'pay_debt',
@@ -127,11 +129,11 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
       const debtId = action.debt_id || action.id;
       if (!debtId) throw new Error('Thiếu ID khoản nợ');
       const amount = Math.round(Number(action.amount) || 0);
-      const isLent = action.debt_type === 'lent';
       await axiosClient.put(`/api/finance/debts/${debtId}`, {
-        type: isLent ? 'lend_more' : 'borrow_more',
-        amount,
-        wallet_id: action.wallet_id
+        action: 'borrow_more',
+        actionAmount: amount,
+        wallet_id: action.wallet_id,
+        date: action.custom_time || undefined
       });
       return {
         type: 'borrow_more_debt',
@@ -146,11 +148,12 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
         category: action.category,
         limit,
         name: action.name || action.category,
-        month: action.month
+        month: action.month,
+        upsert: true
       });
       return {
         type: 'upsert_budget',
-        id: res.data?.budget?._id,
+        id: res.data?._id || res.data?.budget?._id,
         category: action.category,
         limit
       };
@@ -177,10 +180,12 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
     }
 
     case 'create_task': {
+      const rank = action.quest_rank || 'C';
+      const rankExpMap: Record<string, number> = { S: 1000, A: 600, B: 300, C: 150, D: 50 };
       const res = await axiosClient.post('/api/tasks', {
         title: action.title || action.name,
         description: action.description || '',
-        quest_rank: action.quest_rank || 'C',
+        quest_rank: rank,
         due_date: action.due_date || action.custom_time || new Date().toISOString()
       });
       const task = res.data?.task;
@@ -188,7 +193,7 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
         type: 'create_task',
         id: task?._id,
         title: task?.title || action.title,
-        rewardExp: action.exp_reward || 50
+        rewardExp: action.exp_reward || rankExpMap[rank] || 150
       };
     }
 
@@ -196,7 +201,7 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
       const taskId = action.task_id || action.id;
       if (!taskId) throw new Error('Thiếu ID nhiệm vụ');
       const res = await axiosClient.put(`/api/tasks/${taskId}`, { status: 'COMPLETED' });
-      const exp = res.data?.reward?.exp ?? 50;
+      const exp = res.data?.reward?.exp ?? 0;
       return {
         type: 'complete_task',
         id: taskId,
@@ -297,12 +302,12 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
           purchaseDate: action.custom_time || undefined,
           expiryDate: action.expiryDate || undefined
         });
-        itemId = invRes.data?.item?._id;
+        itemId = invRes.data?._id || invRes.data?.item?._id;
       } else if (amount > 0) {
         const txRes = await axiosClient.post('/api/finance/transactions', {
           type: 'expense',
           amount,
-          date: action.custom_time ? new Date(action.custom_time).toISOString() : new Date().toISOString(),
+          date: action.custom_time || undefined,
           description: `Mua sắm: ${action.name}`,
           category: action.inventory_category === 'food' || action.inventory_category === 'spices' ? 'food' : 'shopping',
           wallet_id: action.wallet_id
@@ -333,11 +338,12 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
         wallet_id: amount > 0 ? action.wallet_id : undefined,
         purchaseDate: action.purchaseDate || action.custom_time || undefined,
         expiryDate: action.expiryDate || undefined,
-        isGift: Boolean(action.isGift)
+        stock_status: action.stock_status || (action.category === 'spices' ? 'stable' : undefined),
+        isGift: Boolean(action.isGift || (!amount && !action.wallet_id))
       });
       return {
         type: 'create_inventory',
-        id: res.data?.item?._id,
+        id: res.data?._id || res.data?.item?._id,
         name: action.name,
         amount
       };
@@ -354,12 +360,16 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
         const updatePayload: any = {};
         if (action.name !== undefined) updatePayload.name = action.name;
         if (action.quantity !== undefined) updatePayload.quantity = Number(action.quantity);
+        if (action.delta_quantity !== undefined) updatePayload.delta_quantity = Number(action.delta_quantity);
+        if (action.operation !== undefined) updatePayload.operation = action.operation;
         if (action.unit !== undefined) updatePayload.unit = action.unit;
         if (action.category !== undefined) updatePayload.category = action.category;
         if (action.expiryDate !== undefined) updatePayload.expiryDate = action.expiryDate;
         if (action.stock_status !== undefined) {
           updatePayload.stock_status = action.stock_status;
           updatePayload.justUpdateStockStatus = true;
+        } else if (action.operation === 'add' || action.operation === 'deduct' || (action.quantity !== undefined && action.expiryDate === undefined)) {
+          updatePayload.justUpdateQty = true;
         }
         await axiosClient.put(`/api/finance/inventory/${invId}`, updatePayload);
         return { type: 'update_inventory', id: invId };
@@ -367,7 +377,7 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
     }
 
     case 'record_weight': {
-      await axiosClient.post('/api/health', {
+      const res = await axiosClient.post('/api/health', {
         weight: action.weight,
         height: action.height,
         date: action.custom_time
@@ -375,7 +385,7 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
       return {
         type: 'record_weight',
         weight: action.weight,
-        exp: 20
+        exp: res.data?.rewardExp ?? 0
       };
     }
 
@@ -388,7 +398,8 @@ export async function executeActionViaStandardApi(action: any): Promise<ActionRe
       return {
         type: 'create_recipe',
         id: res.data?.recipe?._id,
-        name: action.name
+        name: action.name,
+        exp: res.data?.rewardExp ?? 0
       };
     }
 

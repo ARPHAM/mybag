@@ -28,18 +28,18 @@
   transform: scale(0.95) !important;
 }
 
-/* Định vị tuyệt đối theo container */
+/* Định vị tuyệt đối theo container (Desktop né Yui ở bottom:24px right:24px) */
 .absolute {
   position: absolute;
-  bottom: 30px;
-  right: 30px;
+  bottom: 29px;
+  right: 100px;
 }
 
-/* Định vị cố định theo viewport */
+/* Định vị cố định theo viewport (Desktop né Yui ở bottom:24px right:24px) */
 .fixed {
   position: fixed;
-  bottom: 30px;
-  right: 30px;
+  bottom: 29px;
+  right: 100px;
 }
 
 /* =========================================

@@ -219,7 +219,7 @@ export default function TasksPage() {
 
   const pendingExp = useMemo(() => {
     return tasks
-      .filter(t => t.status !== 'COMPLETED')
+      .filter(t => t.status === 'PENDING' && new Date(t.due_date).getTime() >= Date.now())
       .reduce((sum, t) => sum + (RANK_EXP_MAP[t.quest_rank] || 50), 0);
   }, [tasks]);
 

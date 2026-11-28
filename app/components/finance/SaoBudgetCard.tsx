@@ -37,7 +37,7 @@ export default function SaoBudgetCard({ pocket, formatMoney, onEdit }: SaoBudget
   const cappedPercent = Math.min(percent, 100);
 
   let status: 'safe' | 'warning' | 'danger' = 'safe';
-  if (percent >= 100) {
+  if (percent > 100) {
     status = 'danger';
   } else if (percent >= 80) {
     status = 'warning';
@@ -77,6 +77,11 @@ export default function SaoBudgetCard({ pocket, formatMoney, onEdit }: SaoBudget
           </div>
           <span className={styles.pocketName} title={pocket.name}>
             {pocket.name}
+            {pocket.month && (
+              <span style={{ fontSize: '0.72rem', opacity: 0.7, marginLeft: '6px', fontWeight: 500 }}>
+                ({pocket.month})
+              </span>
+            )}
           </span>
         </div>
 

@@ -5,6 +5,8 @@ import dbConnect from '@/lib/db';
 import Budget from '@/models/Budget';
 import Transaction from '@/models/Transaction';
 import { verifyToken } from '@/lib/auth';
+import { getVnDateStr } from '@/lib/vnTime';
+import { getRequestNow } from '@/lib/simClock';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,28 +21,29 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const url = new URL(req.url);
-    const month = url.searchParams.get('month') || new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7);
+    const month = url.searchParams.get('month') || getVnDateStr(getRequestNow(req)).slice(0, 7);
 
     // Fetch budgets for this month
     const budgets = await Budget.find({ user_id: decoded.userId, month }).lean();
 
-    // Calculate spent for each category in this month
-    const startDate = new Date(`${month}-01T00:00:00.000Z`);
-    const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + 1);
+    // Calculate spent for each category in this month (Vietnam timezone UTC+7)
+    const [mYear, mNum] = month.split('-').map(Number);
+    const nextYear = mNum === 12 ? mYear + 1 : mYear;
+    const nextMonth = mNum === 12 ? 1 : mNum + 1;
+    const startDate = new Date(`${month}-01T00:00:00+07:00`);
+    const endDate = new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00+07:00`);
 
     const spendings = await Transaction.aggregate([
       {
         $match: {
           user_id: new mongoose.Types.ObjectId(decoded.userId),
           type: 'expense',
-          date: { $gte: startDate, $lt: endDate },
-          category: { $exists: true, $ne: null }
+          date: { $gte: startDate, $lt: endDate }
         }
       },
       {
         $group: {
-          _id: '$category',
+          _id: { $ifNull: ['$category', 'other'] },
           totalSpent: { $sum: '$amount' }
         }
       }
@@ -81,18 +84,25 @@ export async function POST(req: Request) {
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
-    const { name, category, month, limit } = await req.json();
+    const { name, category, month, limit, upsert } = await req.json();
 
-    const cleanLimit = Math.max(0, Math.round(Number(limit)));
-    if (!name || !category || !month || limit === undefined || cleanLimit < 0) {
+    const rawLimit = Number(limit);
+    const resolvedMonth = (typeof month === 'string' && month.trim()) ? month.trim() : getVnDateStr(getRequestNow(req)).slice(0, 7);
+    if (!name || !category || !/^\d{4}-(0[1-9]|1[0-2])$/.test(resolvedMonth) || limit === undefined || isNaN(rawLimit) || rawLimit < 0) {
       return NextResponse.json({ error: 'Thông tin không hợp lệ' }, { status: 400 });
     }
-
+    const cleanLimit = Math.round(rawLimit);
     const cleanCategory = category.trim().toLowerCase();
 
     // Check if budget for this category and month already exists
-    const existing = await Budget.findOne({ user_id: decoded.userId, category: cleanCategory, month });
+    const existing = await Budget.findOne({ user_id: decoded.userId, category: cleanCategory, month: resolvedMonth });
     if (existing) {
+      if (upsert) {
+        existing.limit = cleanLimit;
+        if (name && name !== cleanCategory) existing.name = name;
+        await existing.save();
+        return NextResponse.json({ ...existing.toObject(), spent: 0 }, { status: 200 });
+      }
       return NextResponse.json({ error: 'Danh mục này đã có hạn mức trong tháng' }, { status: 400 });
     }
 
@@ -100,7 +110,7 @@ export async function POST(req: Request) {
       user_id: decoded.userId,
       name,
       category: cleanCategory,
-      month,
+      month: resolvedMonth,
       limit: cleanLimit
     });
 

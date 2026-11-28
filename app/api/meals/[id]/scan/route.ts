@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import { verifyToken } from '@/lib/auth';
@@ -18,6 +19,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const resolvedParams = await params;
     const mealId = resolvedParams.id;
+    if (!mongoose.Types.ObjectId.isValid(mealId)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
 
     const meal = await MealLog.findOne({ _id: mealId, user_id: decoded.userId });
     if (!meal) return NextResponse.json({ error: 'Meal not found' }, { status: 404 });

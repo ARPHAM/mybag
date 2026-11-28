@@ -25,7 +25,10 @@ export const getMeals = (params?: GetMealsParams | boolean) => {
 export const getInventory = (force = false) => axiosClient.get(`/api/finance/inventory${force ? `?_t=${Date.now()}` : ''}`);
 export const createInventory = (data: any) => axiosClient.post('/api/finance/inventory', data);
 export const updateInventory = (id: string, data: any) => axiosClient.put(`/api/finance/inventory/${id}`, data);
-export const deleteInventory = (id: string) => axiosClient.delete(`/api/finance/inventory/${id}`);
+export const deleteInventory = (id: string, discard = false) =>
+  axiosClient.delete(`/api/finance/inventory/${id}${discard ? '?discard=true' : ''}`);
+export const cleanupExpiredInventory = () =>
+  axiosClient.post('/api/finance/inventory/cleanup-expired', {});
 
 export const calculateMacros = (payload: any) => axiosClient.post('/api/ai/calculate-macros', payload);
 

@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import Wallet from '@/models/Wallet';
 import { verifyToken } from '@/lib/auth';
+import { parseVnDateTime } from '@/lib/vnTime';
 
 export async function DELETE(
   req: Request,
@@ -19,6 +21,9 @@ export async function DELETE(
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
     const transaction = await Transaction.findOne({ _id: params.id, user_id: decoded.userId });
     if (!transaction) return NextResponse.json({ error: 'Giao dịch không tồn tại' }, { status: 404 });
 
@@ -72,13 +77,22 @@ export async function PUT(
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
     const oldTx = await Transaction.findOne({ _id: params.id, user_id: decoded.userId });
     if (!oldTx) return NextResponse.json({ error: 'Giao dịch không tồn tại' }, { status: 404 });
 
     const body = await req.json();
-    const { type, amount, date, description, category, wallet_id, to_wallet_id } = body;
+    const type = body.type ?? oldTx.type;
+    const rawAmount = body.amount !== undefined ? body.amount : oldTx.amount;
+    const date = body.date;
+    const description = body.description !== undefined ? body.description : oldTx.description;
+    const category = body.category !== undefined ? body.category : oldTx.category;
+    const wallet_id = body.wallet_id ?? oldTx.wallet_id?.toString();
+    const to_wallet_id = body.to_wallet_id ?? oldTx.to_wallet_id?.toString();
 
-    const cleanAmount = Math.round(Number(amount));
+    const cleanAmount = Math.round(Number(rawAmount));
     if (!type || !cleanAmount || !description || cleanAmount <= 0) {
       return NextResponse.json({ error: 'Thông tin không hợp lệ' }, { status: 400 });
     }
@@ -156,9 +170,9 @@ export async function PUT(
     // 3. Update Transaction record
     oldTx.type = type;
     oldTx.amount = cleanAmount;
-    oldTx.date = date ? new Date(`${date.split('T')[0]}T12:00:00.000Z`) : new Date();
+    oldTx.date = date ? (parseVnDateTime(date, '12:00:00') ?? oldTx.date) : oldTx.date;
     oldTx.description = description;
-    oldTx.category = category ? category.trim().toLowerCase() : undefined;
+    oldTx.category = category ? String(category).trim().toLowerCase() : undefined;
     oldTx.wallet_id = wallet_id;
     oldTx.to_wallet_id = type === 'transfer' ? to_wallet_id : undefined;
     oldTx.walletName = walletName;

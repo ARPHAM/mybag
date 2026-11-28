@@ -847,11 +847,11 @@
   box-shadow: 0 0 8px rgba(255, 68, 68, 0.25);
 }
 
-/* FAB in Inventory Tab */
+/* FAB in Inventory Tab (Desktop né Yui ở bottom:24px right:24px) */
 .inventoryFabGroup {
   position: absolute;
-  bottom: 30px;
-  right: 30px;
+  bottom: 29px;
+  right: 100px;
   z-index: 100;
   display: flex;
   flex-direction: column-reverse;

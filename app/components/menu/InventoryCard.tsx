@@ -28,6 +28,19 @@ export default function InventoryCard({
   const { t } = useI18n();
   const isSpice = item.category === 'spices';
 
+  // Smart fractional stepper (v1.1): kg/l ±0.25, g/ml ±100, đơn vị đếm ±1
+  const normalizedUnit = (item.unit || '').trim().toLowerCase();
+  const stepSize =
+    ['kg', 'l', 'lít', 'lit'].includes(normalizedUnit)
+      ? 0.25
+      : ['g', 'gr', 'gram', 'ml'].includes(normalizedUnit)
+        ? 100
+        : 1;
+  const decrementDelta = item.quantity <= stepSize
+    ? -Number(item.quantity.toFixed(4))
+    : -stepSize;
+  const formattedQty = Number(item.quantity.toFixed(2));
+
   // Xác định trạng thái tồn kho
   const resolvedStatus: 'stable' | 'low' | 'out' = item.stock_status
     ? item.stock_status
@@ -178,7 +191,7 @@ export default function InventoryCard({
       ) : (
         <div className={styles.actionsRow}>
           <div className={styles.qtyBox}>
-            <span className={styles.qtyNumber}>{item.quantity}</span>
+            <span className={styles.qtyNumber}>{formattedQty}</span>
             <span className={styles.qtyUnit}>{item.unit}</span>
           </div>
 
@@ -186,17 +199,19 @@ export default function InventoryCard({
             <button
               type="button"
               className={styles.stepperBtn}
-              onClick={() => onUpdateQty(item.id, -1)}
+              onClick={() => onUpdateQty(item.id, decrementDelta)}
               disabled={item.quantity <= 0}
-              title="-1"
+              title={`-${stepSize} ${item.unit}`}
+              aria-label={`Giảm ${stepSize} ${item.unit}`}
             >
               <Minus size={14} />
             </button>
             <button
               type="button"
               className={styles.stepperBtn}
-              onClick={() => onUpdateQty(item.id, 1)}
-              title="+1"
+              onClick={() => onUpdateQty(item.id, stepSize)}
+              title={`+${stepSize} ${item.unit}`}
+              aria-label={`Tăng ${stepSize} ${item.unit}`}
             >
               <Plus size={14} />
             </button>

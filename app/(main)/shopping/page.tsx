@@ -10,8 +10,10 @@ import SaoConfirmModal from '@/app/components/SaoConfirmModal';
 import SaoFab from '@/app/components/SaoFab';
 import ShoppingItemCard from '@/app/components/shopping/ShoppingItemCard';
 import ShoppingAddModal from '@/app/components/shopping/ShoppingAddModal';
+import ShoppingPurchaseModal, { WalletOption } from '@/app/components/shopping/ShoppingPurchaseModal';
 import { useSaoAlert } from '../../contexts/AlertContext';
-import { getShoppingItems, createShoppingItem, updateShoppingItem, deleteShoppingItem } from './api';
+import { getShoppingItems, createShoppingItem, updateShoppingItem, deleteShoppingItem, purchaseShoppingItem } from './api';
+import { getWallets } from '../finance/api';
 import { GroceryItem } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 import styles from './shopping.module.css';
@@ -31,13 +33,30 @@ export default function ShoppingPage() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [itemToPurchase, setItemToPurchase] = useState<GroceryItem | null>(null);
+  const [wallets, setWallets] = useState<WalletOption[]>([]);
 
   useEffect(() => {
     fetchItems();
+    fetchWallets();
     const handleShoppingUpdate = () => fetchItems(true);
+    const handleFinanceUpdate = () => fetchWallets(true);
     window.addEventListener('sao-shopping-updated', handleShoppingUpdate);
-    return () => window.removeEventListener('sao-shopping-updated', handleShoppingUpdate);
+    window.addEventListener('sao-finance-updated', handleFinanceUpdate);
+    return () => {
+      window.removeEventListener('sao-shopping-updated', handleShoppingUpdate);
+      window.removeEventListener('sao-finance-updated', handleFinanceUpdate);
+    };
   }, []);
+
+  const fetchWallets = async (force = false) => {
+    try {
+      const data: any = await getWallets(force);
+      setWallets(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchItems = async (force = false) => {
     try {
@@ -126,6 +145,33 @@ export default function ShoppingPage() {
     } catch (err) {
       console.error(err);
       showAlert(t('common.error', 'Không thể thêm món hàng'));
+    }
+  };
+
+  const handlePurchaseItem = async (
+    item: GroceryItem,
+    payload: {
+      amount: number;
+      wallet_id?: string;
+      quantity: number;
+      unit: string;
+      addToInventory: boolean;
+      inventoryCategory: 'food' | 'spices' | 'utilities';
+      expiryDate?: string;
+      isGift?: boolean;
+    }
+  ) => {
+    try {
+      const res: any = await purchaseShoppingItem(item._id, payload);
+      fetchItems(true);
+      fetchWallets(true);
+      window.dispatchEvent(new Event('sao-inventory-updated'));
+      window.dispatchEvent(new Event('sao-finance-updated'));
+      showAlert(res?.message || `Đã mua "${item.name}" và cất vào kho!`);
+    } catch (err: any) {
+      console.error(err);
+      showAlert(err?.response?.data?.error || err?.message || t('common.error', 'Không thể hoàn tất mua & cất kho'));
+      throw err;
     }
   };
 
@@ -344,6 +390,7 @@ export default function ShoppingPage() {
               key={item._id}
               item={item}
               onToggleCheck={toggleCheck}
+              onPurchase={(it) => setItemToPurchase(it)}
               onDelete={(id) => setItemToDelete(id)}
             />
           ))
@@ -366,6 +413,16 @@ export default function ShoppingPage() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAdd={handleAddItem}
+      />
+
+      {/* ========================================================
+         5. MODAL: MUA & CẤT KHO 1 CHẠM (v1.1)
+         ======================================================== */}
+      <ShoppingPurchaseModal
+        item={itemToPurchase}
+        wallets={wallets}
+        onClose={() => setItemToPurchase(null)}
+        onConfirm={handlePurchaseItem}
       />
 
       {/* ========================================================

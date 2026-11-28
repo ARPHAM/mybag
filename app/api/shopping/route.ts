@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import dbConnect from '@/lib/db';
 import ShoppingItem from '@/models/ShoppingItem';
 import { verifyToken } from '@/lib/auth';
+import { getRequestNow } from '@/lib/simClock';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
     }
 
     // Auto-delete items checked more than 24 hours ago
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const twentyFourHoursAgo = new Date(getRequestNow(req).getTime() - 24 * 60 * 60 * 1000);
     await ShoppingItem.deleteMany({
       user_id: decoded.userId,
       checked: true,

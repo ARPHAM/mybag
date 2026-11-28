@@ -151,7 +151,6 @@ export default function MealModal({
           value={formName}
           onChange={e => setFormName(e.target.value)}
           required={modalType === 'meal' && !formImageUrl}
-          readOnly={modalType === 'cook'}
         />
       </div>
 

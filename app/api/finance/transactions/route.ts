@@ -4,6 +4,8 @@ import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import Wallet from '@/models/Wallet';
 import { verifyToken } from '@/lib/auth';
+import { parseVnDateTime } from '@/lib/vnTime';
+import { getRequestNow } from '@/lib/simClock';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,10 +53,10 @@ export async function GET(req: Request) {
     if (startDate || endDate) {
       const dateCond: any = {};
       if (startDate) {
-        dateCond.$gte = new Date(`${startDate}T00:00:00.000Z`);
+        dateCond.$gte = new Date(`${startDate}T00:00:00+07:00`);
       }
       if (endDate) {
-        dateCond.$lte = new Date(`${endDate}T23:59:59.999Z`);
+        dateCond.$lte = new Date(`${endDate}T23:59:59.999+07:00`);
       }
       andConditions.push({ date: dateCond });
     }
@@ -185,11 +187,12 @@ export async function POST(req: Request) {
 
     let transaction;
     try {
+      const now = getRequestNow(req);
       transaction = await Transaction.create({
         user_id: decoded.userId,
         type,
         amount: cleanAmount,
-        date: date ? new Date(`${date.split('T')[0]}T12:00:00.000Z`) : new Date(),
+        date: date ? (parseVnDateTime(date, '12:00:00') ?? now) : now,
         description,
         category: category ? category.trim().toLowerCase() : undefined,
         wallet_id,

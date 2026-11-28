@@ -46,19 +46,18 @@ export default function HealthPage() {
 
   const fetchHealthData = async (force = false) => {
     try {
-      const data: any = await getHealthData(force);
+      const [data, macrosData, aiData]: any[] = await Promise.all([
+        getHealthData(force),
+        getHealthMacros(force),
+        getAiAnalysis()
+      ]);
       if (data) {
         setHeight(data.height || 170);
         setHeightForm(data.height?.toString() || '170');
         if (data.history) setWeightHistory(data.history);
       }
-
-      const macrosData: any = await getHealthMacros(force);
       if (macrosData) setMacros(macrosData);
-      
-      const aiData: any = await getAiAnalysis();
       if (aiData) setAiAnalysis(aiData);
-
     } catch (err) {
       console.error(err);
     } finally {
@@ -114,9 +113,10 @@ export default function HealthPage() {
   }, [height, currentWeight]);
 
   const getBmiStatus = (bmiValue: number): { label: string; variant: SummaryCardVariant } => {
+    if (!bmiValue || bmiValue <= 0) return { label: '--', variant: 'default' };
     if (bmiValue < 18.5) return { label: t('health.bmiUnderweight'), variant: 'balance' };
-    if (bmiValue >= 18.5 && bmiValue < 24.9) return { label: t('health.bmiNormal'), variant: 'income' };
-    if (bmiValue >= 25 && bmiValue < 29.9) return { label: t('health.bmiOverweight'), variant: 'balance' };
+    if (bmiValue < 25) return { label: t('health.bmiNormal'), variant: 'income' };
+    if (bmiValue < 30) return { label: t('health.bmiOverweight'), variant: 'balance' };
     return { label: t('health.bmiObese'), variant: 'expense' };
   };
 
@@ -139,7 +139,7 @@ export default function HealthPage() {
       } else {
         showAlert(data.message);
       }
-      fetchHealthData();
+      fetchHealthData(true);
       setIsWeightModalOpen(false);
     } catch (err) {
       console.error(err);

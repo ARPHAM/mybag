@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import Inventory from '@/models/Inventory';
@@ -126,6 +127,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
     const meal = await MealLog.findOne({ _id: id, user_id: decoded.userId });
     if (!meal) return NextResponse.json({ error: 'Meal not found' }, { status: 404 });
 
@@ -208,7 +212,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const decoded = await verifyToken(token);
       if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
-      const meal = await MealLog.findOne({ _id: id, user_id: decoded.userId });
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
+    const meal = await MealLog.findOne({ _id: id, user_id: decoded.userId });
       if (!meal) return NextResponse.json({ error: 'Meal not found' }, { status: 404 });
 
       const body = await req.json();

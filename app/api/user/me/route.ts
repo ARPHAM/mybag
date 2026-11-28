@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { verifyToken } from '@/lib/auth';
+import { getRequestNow } from '@/lib/simClock';
 import { copyS3Object, deleteS3Object, BUCKET_NAME } from '@/lib/s3';
 
 export const dynamic = 'force-dynamic';
@@ -21,46 +22,49 @@ export async function GET(req: Request) {
     const user = await User.findById(decoded.userId).select('-password_hash');
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    const now = new Date();
+    const now = getRequestNow(req);
     
-    // 1. Chuyển các task quá hạn thành OVERDUE
+    // 1. Tối ưu read-path: đọc gọn 1 lần các task chưa hoàn thành, chỉ updateMany khi thực sự có task mới quá hạn
     const Task = (await import('@/models/Task')).default;
-    await Task.updateMany({
+    const openTasks = await Task.find({
       user_id: user._id,
-      status: 'PENDING',
-      due_date: { $lt: now }
-    }, {
-      $set: { status: 'OVERDUE' }
-    });
+      status: { $in: ['PENDING', 'IN_PROGRESS', 'OVERDUE'] }
+    }).select('_id status due_date').lean();
 
-    // 2. Tính toán số lượng task đang OVERDUE
-    const overdueCount = await Task.countDocuments({
-      user_id: user._id,
-      status: 'OVERDUE'
-    });
+    const newlyOverdueIds: any[] = [];
+    let overdueCount = 0;
+    for (const t of openTasks as any[]) {
+      if (t.status === 'OVERDUE') {
+        overdueCount += 1;
+      } else if (t.due_date && new Date(t.due_date) < now) {
+        newlyOverdueIds.push(t._id);
+        overdueCount += 1;
+      }
+    }
+    if (newlyOverdueIds.length > 0) {
+      await Task.updateMany(
+        { _id: { $in: newlyOverdueIds }, user_id: user._id },
+        { $set: { status: 'OVERDUE' } }
+      );
+    }
 
-    // 3. Tính toán HP/MP theo thời gian (Throttled: chỉ ghi DB khi trôi qua ít nhất 1 phút)
-    // Nếu last_hp_mp_update chưa có (tài khoản cũ), khởi tạo bằng last_active_at hoặc now
+    // 2. Tính toán HP/MP theo thời gian (cân bằng v1.1: dịu nhịp tụt HP/MP và giới hạn mức phạt mỗi phiên check-in)
     const lastUpdate = user.last_hp_mp_update || user.last_active_at || now;
     const hoursPassed = (now.getTime() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60);
 
-    if (hoursPassed >= (1 / 60)) {
-      // HP tụt 50 mỗi giờ (làm tròn số nguyên không để số lẻ thập phân)
-      const hpLoss = hoursPassed * 50;
-      user.current_hp = Math.round(Math.max(0, user.current_hp - hpLoss));
+    if (hoursPassed >= (5 / 60)) {
+      const hpLoss = Math.min(600, Math.floor(hoursPassed * 20));
+      user.current_hp = Math.max(0, Math.round(user.current_hp - hpLoss));
 
-      // MP Drain or Regen
       if (overdueCount > 0) {
-        // Drain 20 MP / hour for each overdue task
-        const mpLoss = hoursPassed * 20 * overdueCount;
-        user.current_mp = Math.round(Math.max(0, user.current_mp - mpLoss));
+        const mpRatePerHour = Math.min(40, 8 * overdueCount);
+        const mpLoss = Math.min(250, Math.floor(hoursPassed * mpRatePerHour));
+        user.current_mp = Math.max(0, Math.round(user.current_mp - mpLoss));
       } else {
-        // Regen 30 MP / hour if no overdue tasks
-        const mpRegen = hoursPassed * 30;
-        user.current_mp = Math.round(Math.min(user.max_mp, user.current_mp + mpRegen));
+        const mpRegen = Math.floor(hoursPassed * 30);
+        user.current_mp = Math.min(user.max_mp, Math.round(user.current_mp + mpRegen));
       }
 
-      // 4. Cập nhật thời gian
       user.last_hp_mp_update = now;
       user.last_active_at = now;
       await user.save();
@@ -99,6 +103,7 @@ export async function PUT(req: Request) {
       user.username = cleanUsername;
     }
     
+    let oldAvatarKeyToDelete: string | null = null;
     if (body.avatar_url && body.avatar_url !== user.avatar_url) {
       let finalAvatarUrl = body.avatar_url;
 
@@ -119,15 +124,11 @@ export async function PUT(req: Request) {
         }
       }
 
-      // 2. Xóa ảnh cũ trên S3 (chỉ xóa nếu an toàn trong thư mục avatars/)
+      // 2. Ghi nhận ảnh cũ trên S3 để xóa SAU khi lưu DB thành công (tránh mất ảnh nếu đổi mật khẩu sai)
       if (user.avatar_url && user.avatar_url.includes('.amazonaws.com/avatars/')) {
-        try {
-          const oldKey = user.avatar_url.split('.amazonaws.com/')[1];
-          if (oldKey && oldKey.startsWith('avatars/') && !oldKey.includes('..')) {
-            await deleteS3Object(oldKey);
-          }
-        } catch (e) {
-          console.error("Lỗi khi xóa ảnh cũ trên S3:", e);
+        const oldKey = user.avatar_url.split('.amazonaws.com/')[1];
+        if (oldKey && oldKey.startsWith('avatars/') && !oldKey.includes('..')) {
+          oldAvatarKeyToDelete = oldKey;
         }
       }
 
@@ -162,7 +163,32 @@ export async function PUT(req: Request) {
       user.custom_wallpapers = { desktop, mobile, overlay_dim };
     }
 
+    // Đồng bộ màu chủ đề (theme_color) & cỡ chữ hỗ trợ đọc (font_scale) đa thiết bị (v1.2)
+    if (body.theme_color !== undefined) {
+      const allowedThemes = ['cyan', 'yellow', 'red', 'green', 'purple', 'magenta', 'orange', 'white'];
+      if (!allowedThemes.includes(String(body.theme_color))) {
+        return NextResponse.json({ error: 'Màu chủ đề không hợp lệ' }, { status: 400 });
+      }
+      user.theme_color = String(body.theme_color);
+    }
+
+    if (body.font_scale !== undefined) {
+      const allowedScales = ['normal', 'large', 'xlarge'];
+      if (!allowedScales.includes(String(body.font_scale))) {
+        return NextResponse.json({ error: 'Cỡ chữ hiển thị không hợp lệ' }, { status: 400 });
+      }
+      user.font_scale = body.font_scale;
+    }
+
     await user.save();
+
+    if (oldAvatarKeyToDelete) {
+      try {
+        await deleteS3Object(oldAvatarKeyToDelete);
+      } catch (e) {
+        console.error("Lỗi khi xóa ảnh cũ trên S3:", e);
+      }
+    }
     
     const userResponse = user.toObject();
     delete userResponse.password_hash;

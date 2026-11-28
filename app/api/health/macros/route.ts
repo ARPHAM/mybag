@@ -4,6 +4,7 @@ import dbConnect from '@/lib/db';
 import MealLog from '@/models/MealLog';
 import { verifyToken } from '@/lib/auth';
 import { getVnDateStr } from '@/lib/vnTime';
+import { getRequestNow } from '@/lib/simClock';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,14 +18,15 @@ export async function GET(req: Request) {
     const decoded = await verifyToken(token);
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
-    const now = new Date();
+    const now = getRequestNow(req);
     const todayVnStr = getVnDateStr(now);
     const todayStartVn = new Date(`${todayVnStr}T00:00:00+07:00`);
+    const todayEndVn = new Date(`${todayVnStr}T23:59:59.999+07:00`);
     const sevenDaysAgo = new Date(todayStartVn.getTime() - 6 * 86400000);
 
     const meals = await MealLog.find({
       user_id: decoded.userId,
-      consumed_at: { $gte: sevenDaysAgo }
+      consumed_at: { $gte: sevenDaysAgo, $lte: todayEndVn }
     }).sort({ consumed_at: 1 });
 
     // Aggregate by date (YYYY-MM-DD theo múi giờ Việt Nam)

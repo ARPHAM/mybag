@@ -30,11 +30,10 @@ export async function signRefreshToken(payload: { userId: string }) {
   return token;
 }
 
-export async function verifyToken(token: string, expectedType?: 'access' | 'refresh') {
+export async function verifyToken(token: string, expectedType: 'access' | 'refresh' = 'access') {
   try {
     const { payload } = await jwtVerify(token, getJwtSecretKey());
     const tokenType = payload.token_type as string | undefined;
-    // Backwards-compatible: if tokenType is present and expectedType is set, enforce matching
     if (expectedType && tokenType && tokenType !== expectedType) {
       return null;
     }

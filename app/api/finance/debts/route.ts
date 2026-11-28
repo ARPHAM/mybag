@@ -5,6 +5,8 @@ import Debt from '@/models/Debt';
 import Wallet from '@/models/Wallet';
 import Transaction from '@/models/Transaction';
 import { verifyToken } from '@/lib/auth';
+import { parseVnDateTime } from '@/lib/vnTime';
+import { getRequestNow } from '@/lib/simClock';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,12 +42,16 @@ export async function POST(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const body = await req.json();
-    const { personName, type, amount, dueDate, wallet_id } = body;
+    const { personName, type, amount, dueDate, wallet_id, date } = body;
 
     const cleanAmount = Math.round(Number(amount));
     if (!personName || !type || !cleanAmount || !wallet_id || cleanAmount <= 0) {
       return NextResponse.json({ error: 'Thông tin không hợp lệ' }, { status: 400 });
     }
+
+    const now = getRequestNow(req);
+    const txDate = date ? (parseVnDateTime(date, '12:00:00') ?? now) : now;
+    const parsedDueDate = dueDate ? (parseVnDateTime(dueDate, '12:00:00') ?? undefined) : undefined;
 
     let wallet;
     if (type === 'lent') {
@@ -74,7 +80,7 @@ export async function POST(req: Request) {
         user_id: decoded.userId,
         type: type === 'lent' ? 'expense' : 'income',
         amount: cleanAmount,
-        date: new Date(),
+        date: txDate,
         description: type === 'lent' ? `Cho ${personName} vay tiền` : `Vay tiền của ${personName}`,
         category: 'debt_loan',
         wallet_id,
@@ -88,7 +94,7 @@ export async function POST(req: Request) {
         type,
         totalAmount: cleanAmount,
         remainingAmount: cleanAmount,
-        dueDate: dueDate ? new Date(`${dueDate.split('T')[0]}T12:00:00.000Z`) : undefined,
+        dueDate: parsedDueDate,
         status: 'unpaid',
         history: []
       });

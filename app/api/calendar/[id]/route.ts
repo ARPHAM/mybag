@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import CalendarEvent from '@/models/CalendarEvent';
 import { verifyToken } from '@/lib/auth';
+import { getRequestNow } from '@/lib/simClock';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,6 +17,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
     const body = await req.json();
     const { updateType, exceptionDate } = body; 
     // updateType: 'single' (normal event), 'series' (update parent), 'exception' (update one virtual instance)
@@ -91,11 +96,19 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
     const { searchParams } = new URL(req.url);
     const deleteType = searchParams.get('type');
     const exceptionDate = searchParams.get('date');
 
     if (deleteType === 'exception' && exceptionDate) {
+      // Xác minh sự kiện cha thực sự thuộc về user hiện tại
+      const parentEvent = await CalendarEvent.findOne({ _id: id, user_id: decoded.userId });
+      if (!parentEvent) {
+        return NextResponse.json({ error: 'Sự kiện cha không tồn tại' }, { status: 404 });
+      }
       // Tạm nghỉ (Pause) 1 ngày: tạo exception với cờ is_cancelled = true
       const exceptionEvent = await CalendarEvent.create({
         user_id: decoded.userId,
@@ -116,7 +129,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       if (eventToDel.is_recurring) {
         // If it's a recurring event, we don't delete it physically immediately.
         // We set recurrence_end to now (or yesterday) to stop it from generating future instances.
-        const yesterday = new Date();
+        const yesterday = getRequestNow(req);
         yesterday.setDate(yesterday.getDate() - 1);
         eventToDel.recurrence_end = yesterday;
         await eventToDel.save();

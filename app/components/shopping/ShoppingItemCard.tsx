@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Check, Trash2, Apple, Home as HomeIcon, Package, Clock } from 'lucide-react';
+import { Check, Trash2, Apple, Home as HomeIcon, Package, Clock, PackageCheck } from 'lucide-react';
 import { GroceryItem } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 import styles from './ShoppingItemCard.module.css';
@@ -9,15 +9,17 @@ import styles from './ShoppingItemCard.module.css';
 interface ShoppingItemCardProps {
   item: GroceryItem;
   onToggleCheck: (item: GroceryItem) => void;
+  onPurchase?: (item: GroceryItem) => void;
   onDelete: (id: string) => void;
 }
 
 export default function ShoppingItemCard({
   item,
   onToggleCheck,
+  onPurchase,
   onDelete
 }: ShoppingItemCardProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -114,6 +116,23 @@ export default function ShoppingItemCard({
 
       {/* Actions */}
       <div className={styles.itemActions} onClick={(e) => e.stopPropagation()}>
+        {!item.checked && onPurchase && (
+          <button
+            type="button"
+            className={styles.purchaseBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPurchase(item);
+            }}
+            title={language === 'en' ? 'Buy & Store in Inventory' : 'Mua & cất vào kho'}
+            aria-label={language === 'en' ? 'Buy & Store' : 'Mua & cất kho'}
+          >
+            <PackageCheck size={15} />
+            <span className={styles.purchaseBtnLabel}>
+              {language === 'en' ? 'Buy & Store' : 'Mua & cất kho'}
+            </span>
+          </button>
+        )}
         <button
           type="button"
           className={styles.deleteBtn}

@@ -85,6 +85,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Kiểu lặp lại không hợp lệ' }, { status: 400 });
     }
 
+    const resolvedRecurrenceEnd = recurrence_end
+      ? (/^\d{4}-\d{2}-\d{2}$/.test(String(recurrence_end).trim())
+        ? new Date(`${String(recurrence_end).trim()}T23:59:59.999+07:00`)
+        : new Date(recurrence_end))
+      : undefined;
+
     const newEvent = await CalendarEvent.create({
       user_id: decoded.userId,
       title: titleStr,
@@ -95,7 +101,7 @@ export async function POST(req: Request) {
       is_recurring: is_recurring || false,
       recurrence_type,
       recurrence_days: Array.isArray(recurrence_days) ? recurrence_days : [],
-      recurrence_end: recurrence_end ? new Date(recurrence_end) : undefined
+      recurrence_end: resolvedRecurrenceEnd
     });
 
     return NextResponse.json({ message: 'Event created', event: newEvent }, { status: 201 });

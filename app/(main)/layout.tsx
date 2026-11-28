@@ -66,6 +66,15 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             window.dispatchEvent(new CustomEvent('sao-wallpaper-changed'));
           }
         }
+        // Đồng bộ theme_color & font_scale từ server (v1.2)
+        if (data.user.theme_color && data.user.theme_color !== localStorage.getItem('sao-theme')) {
+          localStorage.setItem('sao-theme', data.user.theme_color);
+          setThemeColor(data.user.theme_color);
+        }
+        if (data.user.font_scale && data.user.font_scale !== localStorage.getItem('sao-font-scale')) {
+          localStorage.setItem('sao-font-scale', data.user.font_scale);
+          setFontScale(data.user.font_scale);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -93,17 +102,36 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const isMobileSecondaryActive = mobileSecondaryItems.some(isItemActive);
 
   const [themeColor, setThemeColor] = useState('cyan');
+  const [fontScale, setFontScale] = useState<'normal' | 'large' | 'xlarge'>('normal');
 
   useEffect(() => {
     const saved = localStorage.getItem('sao-theme');
     if (saved) setThemeColor(saved);
+    const savedScale = localStorage.getItem('sao-font-scale');
+    if (savedScale === 'normal' || savedScale === 'large' || savedScale === 'xlarge') {
+      setFontScale(savedScale);
+    }
 
     const handleThemeChange = (e: any) => {
       if (e.detail) setThemeColor(e.detail);
     };
+    const handleFontScaleChange = (e: any) => {
+      if (e.detail === 'normal' || e.detail === 'large' || e.detail === 'xlarge') {
+        setFontScale(e.detail);
+      }
+    };
     window.addEventListener('sao-theme-changed', handleThemeChange);
-    return () => window.removeEventListener('sao-theme-changed', handleThemeChange);
+    window.addEventListener('sao-font-scale-changed', handleFontScaleChange);
+    return () => {
+      window.removeEventListener('sao-theme-changed', handleThemeChange);
+      window.removeEventListener('sao-font-scale-changed', handleFontScaleChange);
+    };
   }, []);
+
+  useEffect(() => {
+    const rootPx = fontScale === 'xlarge' ? '19.5px' : fontScale === 'large' ? '18px' : '16px';
+    document.documentElement.style.fontSize = rootPx;
+  }, [fontScale]);
 
   const getThemeVars = () => {
     switch (themeColor) {

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import Debt from '@/models/Debt';
 import Wallet from '@/models/Wallet';
 import Transaction from '@/models/Transaction';
 import { verifyToken } from '@/lib/auth';
+import { getRequestNow } from '@/lib/simClock';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,12 +21,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json();
     const { action, actionAmount, wallet_id, personName, dueDate, date } = body;
     const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
 
     const debt = await Debt.findOne({ _id: id, user_id: decoded.userId });
     if (!debt) return NextResponse.json({ error: 'Không tìm thấy sổ nợ' }, { status: 404 });
 
     // Handle Action (Pay back / Borrow more)
     if (action) {
+      if (!['pay_back', 'borrow_more'].includes(action)) {
+        return NextResponse.json({ error: 'Loại thao tác nợ không hợp lệ' }, { status: 400 });
+      }
       const cleanActionAmount = Math.round(Number(actionAmount));
       if (!cleanActionAmount || cleanActionAmount <= 0 || !wallet_id) {
         return NextResponse.json({ error: 'Thông tin giao dịch không hợp lệ' }, { status: 400 });
@@ -37,7 +45,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       let wallet;
       let transactionType: 'income' | 'expense';
       let description = '';
-      const actionDate = date ? new Date(date) : new Date();
+      const actionDate = date ? new Date(date) : getRequestNow(req);
 
       if (action === 'pay_back') {
         if (debt.type === 'lent') {
@@ -170,6 +178,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'ID không hợp lệ' }, { status: 400 });
+    }
 
     // Chỉ xóa record sổ nợ, KHÔNG rollback transactions để tránh sai lệch ví nếu transactions đã cũ
     const debt = await Debt.findOneAndDelete({ _id: id, user_id: decoded.userId });

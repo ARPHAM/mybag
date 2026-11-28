@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import dbConnect from '@/lib/db';
 import Task from '@/models/Task';
 import { verifyToken } from '@/lib/auth';
+import { getRequestNow } from '@/lib/simClock';
 
 export async function GET(req: Request) {
   try {
@@ -19,19 +20,23 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
     }
 
-    const user = await import('@/models/User').then(m => m.default).then(User => User.findById(decoded.userId));
-    
-    // Auto-fail overdue tasks
-    const now = new Date();
-    await Task.updateMany({
-      user_id: decoded.userId,
-      status: 'PENDING',
-      due_date: { $lt: now }
-    }, {
-      $set: { status: 'OVERDUE' }
-    });
-
+    // Tối ưu read-path: chỉ ghi DB (updateMany) khi thực sự có task mới quá hạn
+    const now = getRequestNow(req);
     const tasks = await Task.find({ user_id: decoded.userId }).sort({ createdAt: -1 });
+    const newlyOverdueIds: any[] = [];
+    for (const task of tasks) {
+      if ((task.status === 'PENDING' || task.status === 'IN_PROGRESS') && task.due_date && new Date(task.due_date) < now) {
+        task.status = 'OVERDUE';
+        newlyOverdueIds.push(task._id);
+      }
+    }
+    if (newlyOverdueIds.length > 0) {
+      await Task.updateMany(
+        { _id: { $in: newlyOverdueIds }, user_id: decoded.userId },
+        { $set: { status: 'OVERDUE' } }
+      );
+    }
+
     return NextResponse.json(tasks, {
       headers: {
         'Cache-Control': 'no-store, max-age=0',

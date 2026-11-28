@@ -5,6 +5,7 @@ import Inventory from '@/models/Inventory';
 import Wallet from '@/models/Wallet';
 import Transaction from '@/models/Transaction';
 import { verifyToken } from '@/lib/auth';
+import { getRequestNow } from '@/lib/simClock';
 
 export async function GET(req: Request) {
   try {
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ error: 'Invalid Token' }, { status: 401 });
 
     // Tự động dọn dẹp kho: xóa các món thực phẩm chính (không phải gia vị) có số lượng = 0 và đã không cập nhật từ 7 ngày trước
-    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(getRequestNow(req).getTime() - 7 * 24 * 60 * 60 * 1000);
     await Inventory.deleteMany({
       user_id: decoded.userId,
       category: { $ne: 'spices' },
@@ -73,13 +74,15 @@ export async function POST(req: Request) {
       }
       walletName = wallet.name;
 
+      const now = getRequestNow(req);
+      const txCategory = (category === 'food' || category === 'spices') ? 'food' : 'shopping';
       const transaction = await Transaction.create({
         user_id: decoded.userId,
         type: 'expense',
         amount: totalValue,
-        date: purchaseDate ? new Date(`${purchaseDate.split('T')[0]}T12:00:00.000Z`) : new Date(),
+        date: purchaseDate ? new Date(`${purchaseDate.split('T')[0]}T12:00:00+07:00`) : now,
         description: `Mua dự trữ: ${name}`,
-        category: category,
+        category: txCategory,
         wallet_id,
         walletName
       });
@@ -94,7 +97,7 @@ export async function POST(req: Request) {
       quantity,
       originalQuantity: quantity,
       unit,
-      purchaseDate: purchaseDate ? new Date(`${purchaseDate.split('T')[0]}T12:00:00.000Z`) : new Date(),
+      purchaseDate: purchaseDate ? new Date(`${purchaseDate.split('T')[0]}T12:00:00+07:00`) : getRequestNow(req),
       expiryDate: expiryDate ? new Date(`${expiryDate.split('T')[0]}T12:00:00.000Z`) : undefined,
       isGift,
       totalValue,

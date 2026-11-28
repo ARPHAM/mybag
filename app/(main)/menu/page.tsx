@@ -10,7 +10,7 @@ import SaoConfirmModal from '@/app/components/SaoConfirmModal';
 import {
   getRecipes, getMeals, getInventory, calculateMacros, createRecipe, updateRecipe, deleteRecipe,
   createMeal, getWallets, updateMeal, deleteMeal,
-  createInventory, updateInventory, deleteInventory, createTransaction
+  createInventory, updateInventory, deleteInventory, cleanupExpiredInventory, createTransaction
 } from './api';
 import InventoryTab from '@/app/components/menu/InventoryTab';
 import MealHistoryTab from '@/app/components/menu/MealHistoryTab';
@@ -375,7 +375,7 @@ export default function MenuPage() {
     } else {
       setSelectedIngredients([]);
     }
-    setFormImageUrl('');
+    setFormImageUrl(meal.image_url || '');
     setIsModalOpen(true);
   };
 
@@ -522,6 +522,17 @@ export default function MenuPage() {
       window.dispatchEvent(new Event('sao-finance-updated'));
     } catch (e: any) {
       showAlert(e.response?.data?.error || e.message || 'Lỗi xóa mặt hàng khỏi kho');
+    }
+  };
+
+  const handleCleanupExpired = async () => {
+    try {
+      const res: any = await cleanupExpiredInventory();
+      showAlert(res?.message || 'Đã dọn sạch đồ quá hạn khỏi tủ lạnh!');
+      fetchData(true, true);
+      window.dispatchEvent(new Event('sao-inventory-updated'));
+    } catch (e: any) {
+      showAlert(e?.response?.data?.error || 'Lỗi khi dọn đồ quá hạn');
     }
   };
 
@@ -923,6 +934,7 @@ export default function MenuPage() {
             onEdit={openEditInventoryModal}
             onUpdateQty={handleUpdateInventoryQty}
             onUpdateStockStatus={handleUpdateStockStatus}
+            onCleanupExpired={handleCleanupExpired}
             onScanBill={handleScanBill}
           />
         ) : (
